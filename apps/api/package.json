@@ -1,0 +1,26 @@
+{
+  "name": "@stack-start/api",
+  "private": true,
+  "scripts": {
+    "dev": "node --watch -r ts-node/register src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "migration:run": "tsx src/db/run-migrations.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11",
+    "@nestjs/core": "^11",
+    "@nestjs/platform-express": "^11",
+    "@nestjs/typeorm": "^11",
+    "pg": "^8",
+    "reflect-metadata": "^0.2",
+    "rxjs": "^7",
+    "typeorm": "^0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "ts-node": "^10.9.2",
+    "tsx": "^4",
+    "typescript": "^5.5"
+  }
+}

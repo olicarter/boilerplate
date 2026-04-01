@@ -1,0 +1,27 @@
+{
+  "name": "@stack-start/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@electric-sql/client": "^1",
+    "@tanstack/db": "^0",
+    "@tanstack/electric-db-collection": "^0",
+    "@tanstack/react-db": "^0",
+    "react": "^19",
+    "react-dom": "^19",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4",
+    "typescript": "^5.5",
+    "vite": "^6"
+  }
+}

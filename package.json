@@ -1,0 +1,15 @@
+{
+  "name": "stack-start",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/api & npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run migration:run --workspace=apps/api",
+    "db:reset": "docker compose down -v && docker compose up -d && sleep 3 && npm run db:migrate"
+  }
+}
