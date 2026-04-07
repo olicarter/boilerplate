@@ -1,0 +1,27 @@
+import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
+
+export type ProposalStatus = 'open' | 'closed';
+
+@Entity('proposals')
+export class Proposal {
+  @PrimaryColumn('uuid')
+  id!: string;
+
+  @Column({ name: 'topic_id', type: 'uuid' })
+  topic_id!: string;
+
+  @Column({ type: 'varchar', length: 500 })
+  title!: string;
+
+  @Column({ type: 'text', default: '' })
+  description!: string;
+
+  @Column({ type: 'varchar', length: 10, default: 'open' })
+  status!: ProposalStatus;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  created_at!: Date;
+
+  @Column({ name: 'closed_at', type: 'timestamptz', nullable: true })
+  closed_at!: Date | null;
+}

@@ -1,0 +1,21 @@
+import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
+
+export type VoteChoice = 'yes' | 'no' | 'abstain';
+
+@Entity('votes')
+export class Vote {
+  @PrimaryColumn('uuid')
+  id!: string;
+
+  @Column({ name: 'proposal_id', type: 'uuid' })
+  proposal_id!: string;
+
+  @Column({ name: 'user_id', type: 'uuid' })
+  user_id!: string;
+
+  @Column({ type: 'varchar', length: 10 })
+  choice!: VoteChoice;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  created_at!: Date;
+}

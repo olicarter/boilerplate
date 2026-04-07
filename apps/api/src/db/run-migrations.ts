@@ -6,7 +6,7 @@ const dataSource = new DataSource({
   type: 'postgres',
   url:
     process.env.DATABASE_URL ??
-    'postgresql://postgres:password@localhost:5432/stackstart',
+    'postgresql://postgres:password@localhost:5432/ripple',
   migrations: [path.join(__dirname, 'migrations', '*.ts')],
 });
 

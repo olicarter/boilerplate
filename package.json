@@ -1,5 +1,5 @@
 {
-  "name": "stack-start",
+  "name": "ripple",
   "private": true,
   "workspaces": ["apps/*"],
   "scripts": {

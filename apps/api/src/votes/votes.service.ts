@@ -1,0 +1,52 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Vote, VoteChoice } from './vote.entity';
+
+@Injectable()
+export class VotesService {
+  constructor(
+    @InjectRepository(Vote)
+    private readonly voteRepo: Repository<Vote>,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  findAll(): Promise<Vote[]> {
+    return this.voteRepo.find({ order: { created_at: 'ASC' } });
+  }
+
+  findByProposal(proposalId: string): Promise<Vote[]> {
+    return this.voteRepo.findBy({ proposal_id: proposalId });
+  }
+
+  async create(data: {
+    id: string;
+    proposal_id: string;
+    user_id: string;
+    choice: VoteChoice;
+  }): Promise<{ item: Vote; txid: number }> {
+    return this.dataSource.transaction(async (manager) => {
+      const vote = manager.create(Vote, data);
+      const saved = await manager.save(vote);
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item: saved, txid: parseInt(row.txid, 10) };
+    });
+  }
+
+  async update(id: string, data: Pick<Vote, 'choice'>): Promise<{ item: Vote; txid: number }> {
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Vote, id, data);
+      const item = await manager.findOneByOrFail(Vote, { id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
+  async delete(id: string): Promise<{ txid: number }> {
+    return this.dataSource.transaction(async (manager) => {
+      await manager.delete(Vote, id);
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { txid: parseInt(row.txid, 10) };
+    });
+  }
+}
