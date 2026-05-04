@@ -9,9 +9,11 @@
   },
   "dependencies": {
     "@electric-sql/client": "^1",
+    "@simplewebauthn/browser": "^13.3.0",
     "@tanstack/db": "^0",
     "@tanstack/electric-db-collection": "^0",
     "@tanstack/react-db": "^0",
+    "@tanstack/react-router": "^1.168.10",
     "react": "^19",
     "react-dom": "^19",
     "uuid": "^11.1.0"

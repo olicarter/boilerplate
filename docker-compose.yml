@@ -11,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-electric-publication.sql
     command:
       - postgres
       - -c
@@ -26,6 +27,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/ripple?sslmode=disable
       ELECTRIC_INSECURE: "true"
+      ELECTRIC_MANUAL_TABLE_PUBLISHING: "true"
     ports:
       - "3000:3000"
     depends_on:

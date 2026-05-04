@@ -1,7 +1,9 @@
 {
   "name": "ripple",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/api & npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=apps/api",
@@ -11,5 +13,9 @@
     "db:down": "docker compose down",
     "db:migrate": "npm run migration:run --workspace=apps/api",
     "db:reset": "docker compose down -v && docker compose up -d && sleep 3 && npm run db:migrate"
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.2",
+    "@types/express": "^5.0.6"
   }
 }

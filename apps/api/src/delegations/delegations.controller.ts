@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { DelegationsService } from './delegations.service';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('delegations')
 export class DelegationsController {
@@ -11,11 +12,13 @@ export class DelegationsController {
   }
 
   @Post()
+  @UseGuards(AuthGuard)
   create(@Body() body: { id: string; delegator_id: string; delegate_id: string; topic_id?: string | null }) {
     return this.delegationsService.create(body);
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {
     return this.delegationsService.delete(id);
   }

@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ProposalsService } from './proposals.service';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('proposals')
 export class ProposalsController {
@@ -21,11 +22,13 @@ export class ProposalsController {
   }
 
   @Post()
+  @UseGuards(AuthGuard)
   create(@Body() body: { id: string; topic_id: string; title: string; description?: string }) {
     return this.proposalsService.create(body);
   }
 
   @Patch(':id')
+  @UseGuards(AuthGuard)
   update(
     @Param('id') id: string,
     @Body() body: { title?: string; description?: string; status?: 'open' | 'closed'; closed_at?: string | null },
@@ -34,6 +37,7 @@ export class ProposalsController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {
     return this.proposalsService.delete(id);
   }

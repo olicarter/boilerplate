@@ -11,7 +11,7 @@ export const usersCollection = createCollection(
   electricCollectionOptions<User>({
     id: 'users',
     shapeOptions: { url: shapeUrl, params: { table: 'users' } },
-    getKey: (row) => (row as User).id,
+    getKey: (row: unknown) => (row as User).id,
     onInsert: async ({ transaction }) => {
       const user = transaction.mutations[0].modified as User;
       const result = await usersApi.create({ id: user.id, name: user.name, email: user.email });
@@ -34,7 +34,7 @@ export const topicsCollection = createCollection(
   electricCollectionOptions<Topic>({
     id: 'topics',
     shapeOptions: { url: shapeUrl, params: { table: 'topics' } },
-    getKey: (row) => (row as Topic).id,
+    getKey: (row: unknown) => (row as Topic).id,
     onInsert: async ({ transaction }) => {
       const topic = transaction.mutations[0].modified as Topic;
       const result = await topicsApi.create({ id: topic.id, name: topic.name, description: topic.description });
@@ -57,7 +57,7 @@ export const proposalsCollection = createCollection(
   electricCollectionOptions<Proposal>({
     id: 'proposals',
     shapeOptions: { url: shapeUrl, params: { table: 'proposals' } },
-    getKey: (row) => (row as Proposal).id,
+    getKey: (row: unknown) => (row as Proposal).id,
     onInsert: async ({ transaction }) => {
       const p = transaction.mutations[0].modified as Proposal;
       const result = await proposalsApi.create({ id: p.id, topic_id: p.topic_id, title: p.title, description: p.description });
@@ -80,7 +80,7 @@ export const delegationsCollection = createCollection(
   electricCollectionOptions<Delegation>({
     id: 'delegations',
     shapeOptions: { url: shapeUrl, params: { table: 'delegations' } },
-    getKey: (row) => (row as Delegation).id,
+    getKey: (row: unknown) => (row as Delegation).id,
     onInsert: async ({ transaction }) => {
       const d = transaction.mutations[0].modified as Delegation;
       const result = await delegationsApi.create({ id: d.id, delegator_id: d.delegator_id, delegate_id: d.delegate_id, topic_id: d.topic_id });
@@ -98,7 +98,7 @@ export const votesCollection = createCollection(
   electricCollectionOptions<Vote>({
     id: 'votes',
     shapeOptions: { url: shapeUrl, params: { table: 'votes' } },
-    getKey: (row) => (row as Vote).id,
+    getKey: (row: unknown) => (row as Vote).id,
     onInsert: async ({ transaction }) => {
       const v = transaction.mutations[0].modified as Vote;
       const result = await votesApi.create({ id: v.id, proposal_id: v.proposal_id, user_id: v.user_id, choice: v.choice });
