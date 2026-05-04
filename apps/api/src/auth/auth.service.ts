@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import type { Request } from 'express';
 import {
   generateRegistrationOptions,
@@ -33,7 +34,7 @@ export class AuthService {
     let user = await this.userRepo.findOneBy({ email: data.email });
     if (!user) {
       user = await this.userRepo.save(
-        this.userRepo.create({ name: data.name, email: data.email }),
+        this.userRepo.create({ id: randomUUID(), name: data.name, email: data.email }),
       );
     }
 
@@ -163,7 +164,7 @@ export class AuthService {
   async testSetup(data: { name: string; email: string }, req: Request): Promise<User> {
     let user = await this.userRepo.findOneBy({ email: data.email });
     if (!user) {
-      user = await this.userRepo.save(this.userRepo.create(data));
+      user = await this.userRepo.save(this.userRepo.create({ id: randomUUID(), ...data }));
     }
     req.session!.userId = user.id;
     return user;

@@ -93,8 +93,9 @@ function AuthPanel({ onLogin }: { onLogin: (user: User) => void }) {
       ) : (
         <form onSubmit={handleRegister}>
           <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>Name</label>
+            <label htmlFor="reg-name" style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>Name</label>
             <input
+              id="reg-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -103,8 +104,9 @@ function AuthPanel({ onLogin }: { onLogin: (user: User) => void }) {
             />
           </div>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>Email</label>
+            <label htmlFor="reg-email" style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>Email</label>
             <input
+              id="reg-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

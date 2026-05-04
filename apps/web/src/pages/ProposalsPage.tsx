@@ -118,8 +118,9 @@ export function ProposalsPage() {
         >
           <h3 style={{ margin: '0 0 1rem', fontSize: 15 }}>New proposal</h3>
           <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Title</label>
+            <label htmlFor="new-proposal-title" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Title</label>
             <input
+              id="new-proposal-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -128,8 +129,9 @@ export function ProposalsPage() {
             />
           </div>
           <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Description</label>
+            <label htmlFor="new-proposal-description" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Description</label>
             <textarea
+              id="new-proposal-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -137,8 +139,9 @@ export function ProposalsPage() {
             />
           </div>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Topic</label>
+            <label htmlFor="new-proposal-topic" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Topic</label>
             <select
+              id="new-proposal-topic"
               value={topicId}
               onChange={(e) => setTopicId(e.target.value)}
               required
@@ -153,8 +156,9 @@ export function ProposalsPage() {
           </div>
           {topicId === '__new__' && (
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>New topic name</label>
+              <label htmlFor="new-topic-name" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>New topic name</label>
               <input
+                id="new-topic-name"
                 type="text"
                 value={newTopicName}
                 onChange={(e) => setNewTopicName(e.target.value)}

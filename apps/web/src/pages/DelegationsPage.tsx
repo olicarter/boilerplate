@@ -209,8 +209,9 @@ export function DelegationsPage() {
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Scope</label>
+            <label htmlFor="delegation-scope" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Scope</label>
             <select
+              id="delegation-scope"
               value={scopeTopicId}
               onChange={(e) => setScopeTopicId(e.target.value)}
               style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
