@@ -12,9 +12,12 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "npm run migration:run --workspace=apps/api",
-    "db:reset": "docker compose down -v && docker compose up -d && sleep 3 && npm run db:migrate"
+    "db:reset": "docker compose down -v && docker compose up -d && sleep 3 && npm run db:migrate",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/diff": "^7.0.2",
     "@types/express": "^5.0.6"
   }

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
 import { AuthService } from './auth.service';
@@ -30,5 +30,17 @@ export class AuthController {
   @Post('logout')
   logout(@Req() req: Request) {
     return this.authService.logout(req);
+  }
+
+  @Post('test-reset')
+  testReset() {
+    if (process.env.NODE_ENV !== 'test') throw new ForbiddenException();
+    return this.authService.testReset();
+  }
+
+  @Post('test-setup')
+  testSetup(@Body() body: { name: string; email: string }, @Req() req: Request) {
+    if (process.env.NODE_ENV !== 'test') throw new ForbiddenException();
+    return this.authService.testSetup(body, req);
   }
 }

@@ -152,4 +152,20 @@ export class AuthService {
     req.session!.userId = undefined;
     return { success: true };
   }
+
+  async testReset(): Promise<{ success: boolean }> {
+    await this.dataSource.query(
+      `TRUNCATE users, topics, proposals, delegations, votes, credentials CASCADE`,
+    );
+    return { success: true };
+  }
+
+  async testSetup(data: { name: string; email: string }, req: Request): Promise<User> {
+    let user = await this.userRepo.findOneBy({ email: data.email });
+    if (!user) {
+      user = await this.userRepo.save(this.userRepo.create(data));
+    }
+    req.session!.userId = user.id;
+    return user;
+  }
 }
