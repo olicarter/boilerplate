@@ -282,8 +282,9 @@ export function ProposalsPage() {
             : undefined;
 
           const isOpen = p.status === 'open';
+          const isWithdrawn = p.status === 'withdrawn';
           const deadline = isOpen && p.closes_at ? formatDeadline(p.closes_at) : null;
-          const result = !isOpen ? computeResult(yes, no, p.threshold ?? 50) : null;
+          const result = p.status === 'closed' ? computeResult(yes, no, p.threshold ?? 50) : null;
 
           return (
             <Link
@@ -331,6 +332,11 @@ export function ProposalsPage() {
                       {result === 'no-votes' && (
                         <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
                           No votes
+                        </span>
+                      )}
+                      {isWithdrawn && (
+                        <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
+                          Withdrawn
                         </span>
                       )}
                       {isOpen && !deadline && (

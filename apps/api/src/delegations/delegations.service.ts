@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Delegation } from './delegation.entity';
+
+const MAX_DELEGATION_DEPTH = 10;
 
 @Injectable()
 export class DelegationsService {
@@ -19,12 +21,47 @@ export class DelegationsService {
     return this.delegationRepo.findBy({ delegator_id: delegatorId });
   }
 
+  private wouldCreateCycle(
+    delegatorId: string,
+    delegateId: string,
+    existing: Delegation[],
+  ): boolean {
+    // Build adjacency list across all scopes (conservative: any path counts)
+    const graph = new Map<string, string[]>();
+    for (const d of existing) {
+      if (!graph.has(d.delegator_id)) graph.set(d.delegator_id, []);
+      graph.get(d.delegator_id)!.push(d.delegate_id);
+    }
+
+    // BFS from delegateId — if we reach delegatorId, adding this edge creates a cycle
+    const visited = new Set<string>();
+    const queue = [delegateId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current === delegatorId) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      if (visited.size > MAX_DELEGATION_DEPTH) break;
+      for (const next of graph.get(current) ?? []) queue.push(next);
+    }
+    return false;
+  }
+
   async create(data: {
     id: string;
     delegator_id: string;
     delegate_id: string;
     topic_id?: string | null;
   }): Promise<{ item: Delegation; txid: number }> {
+    if (data.delegator_id === data.delegate_id) {
+      throw new BadRequestException('You cannot delegate to yourself');
+    }
+
+    const existing = await this.delegationRepo.find();
+    if (this.wouldCreateCycle(data.delegator_id, data.delegate_id, existing)) {
+      throw new BadRequestException('This delegation would create a circular chain');
+    }
+
     return this.dataSource.transaction(async (manager) => {
       const delegation = manager.create(Delegation, { topic_id: null, ...data });
       const saved = await manager.save(delegation);

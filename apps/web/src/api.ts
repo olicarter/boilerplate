@@ -39,7 +39,7 @@ export interface Proposal {
   author_id: string | null;
   title: string;
   description: string;
-  status: 'open' | 'closed';
+  status: 'open' | 'closed' | 'withdrawn';
   threshold: number;
   created_at: string;
   closes_at: string | null;
@@ -95,6 +95,12 @@ export const proposalsApi = {
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  close: (id: string) =>
+    request<MutationResult<Proposal>>(`/proposals/${id}/close`, { method: 'POST' }),
+  reopen: (id: string) =>
+    request<MutationResult<Proposal>>(`/proposals/${id}/reopen`, { method: 'POST' }),
+  withdraw: (id: string) =>
+    request<MutationResult<Proposal>>(`/proposals/${id}/withdraw`, { method: 'POST' }),
   delete: (id: string) =>
     request<{ txid: number }>(`/proposals/${id}`, { method: 'DELETE' }),
   tally: (id: string) =>

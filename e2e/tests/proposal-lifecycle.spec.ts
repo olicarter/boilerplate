@@ -67,9 +67,11 @@ test('create proposal form has a passing threshold field', async ({ page, asAlic
 
 test('closed proposal with majority yes shows Passed', async ({ page, asAlice, bob }) => {
   const topic = await createTopic(page.request, 'Budget');
-  const proposal = await createProposal(page.request, topic.id, 'Budget increase', { status: 'closed' });
+  // Vote before closing — the lock only applies to closed proposals
+  const proposal = await createProposal(page.request, topic.id, 'Budget increase');
   await createVote(page.request, proposal.id, asAlice.id, 'yes');
   await createVote(page.request, proposal.id, bob.id, 'yes');
+  await page.request.post(`http://localhost:5173/api/proposals/${proposal.id}/close`);
 
   await page.goto('/proposals');
   await expect(page.getByText('Passed')).toBeVisible();
@@ -77,9 +79,10 @@ test('closed proposal with majority yes shows Passed', async ({ page, asAlice, b
 
 test('closed proposal with minority yes shows Failed', async ({ page, asAlice, bob }) => {
   const topic = await createTopic(page.request, 'Budget');
-  const proposal = await createProposal(page.request, topic.id, 'Cut budget', { status: 'closed' });
+  const proposal = await createProposal(page.request, topic.id, 'Cut budget');
   await createVote(page.request, proposal.id, asAlice.id, 'no');
   await createVote(page.request, proposal.id, bob.id, 'no');
+  await page.request.post(`http://localhost:5173/api/proposals/${proposal.id}/close`);
 
   await page.goto('/proposals');
   await expect(page.getByText('Failed')).toBeVisible();
@@ -87,9 +90,10 @@ test('closed proposal with minority yes shows Failed', async ({ page, asAlice, b
 
 test('closed proposal detail shows result banner with percentage', async ({ page, asAlice, bob }) => {
   const topic = await createTopic(page.request, 'Policy');
-  const proposal = await createProposal(page.request, topic.id, 'New policy', { status: 'closed', threshold: 60 });
+  const proposal = await createProposal(page.request, topic.id, 'New policy', { threshold: 60 });
   await createVote(page.request, proposal.id, asAlice.id, 'yes');
   await createVote(page.request, proposal.id, bob.id, 'no');
+  await page.request.post(`http://localhost:5173/api/proposals/${proposal.id}/close`);
 
   await page.goto(`/proposals/${proposal.id}`);
   // 50% yes, requires 60% → Failed

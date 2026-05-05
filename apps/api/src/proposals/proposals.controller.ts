@@ -39,6 +39,24 @@ export class ProposalsController {
     return this.proposalsService.update(id, body as any);
   }
 
+  @Post(':id/close')
+  @UseGuards(AuthGuard)
+  close(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.close(id, req.user!.id);
+  }
+
+  @Post(':id/reopen')
+  @UseGuards(AuthGuard)
+  reopen(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.reopen(id, req.user!.id);
+  }
+
+  @Post(':id/withdraw')
+  @UseGuards(AuthGuard)
+  withdraw(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.withdraw(id, req.user!.id);
+  }
+
   @Delete(':id')
   @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {

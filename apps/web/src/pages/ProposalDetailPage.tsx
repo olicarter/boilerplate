@@ -7,6 +7,14 @@ import { proposalsApi, type TallyResult, type Proposal, type Topic, type Vote, t
 import { VoteTally } from '../components/VoteTally';
 import { useCurrentUser } from '../context';
 
+async function callAction(action: () => Promise<unknown>, setError: (e: string) => void) {
+  try {
+    await action();
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Action failed');
+  }
+}
+
 type VoteChoice = 'yes' | 'no' | 'abstain';
 
 const choiceColors: Record<VoteChoice, string> = {
@@ -47,6 +55,8 @@ export function ProposalDetailPage() {
   const [voting, setVoting] = useState(false);
   const [voteError, setVoteError] = useState('');
   const [changingVote, setChangingVote] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actioning, setActioning] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -135,9 +145,19 @@ export function ProposalDetailPage() {
   }
 
   const isOpen = proposal.status === 'open';
+  const isWithdrawn = proposal.status === 'withdrawn';
+  const isAuthor = currentUser?.id === proposal.author_id;
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
-  const result = !isOpen && tally ? computeResult(tally, threshold) : null;
+  const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold) : null;
+
+  async function handleAction(label: string, action: () => Promise<unknown>) {
+    if (!window.confirm(`${label}?`)) return;
+    setActioning(true);
+    setActionError('');
+    await callAction(action, setActionError);
+    setActioning(false);
+  }
 
   return (
     <div style={{ maxWidth: 680 }}>
@@ -179,6 +199,16 @@ export function ProposalDetailPage() {
         >
           {proposal.status}
         </span>
+        {result === 'passed' && (
+          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
+            Passed
+          </span>
+        )}
+        {result === 'failed' && (
+          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500, background: '#fdecea', color: '#d94040', border: '1px solid #f5c0c0' }}>
+            Failed
+          </span>
+        )}
       </div>
 
       <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.4rem' }}>{proposal.title}</h2>
@@ -359,8 +389,59 @@ export function ProposalDetailPage() {
         </div>
       )}
 
-      {!isOpen && (
+      {isWithdrawn && (
+        <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#f9f9f9', marginBottom: '1.5rem' }}>
+          <p style={{ margin: 0, fontSize: 14, color: '#888' }}>This proposal was withdrawn — voting is no longer available.</p>
+        </div>
+      )}
+
+      {!isOpen && !isWithdrawn && (
         <p style={{ fontSize: 13, color: '#aaa' }}>This proposal is closed — voting is no longer available.</p>
+      )}
+
+      {/* Author management actions */}
+      {isAuthor && !isWithdrawn && (
+        <div
+          style={{
+            marginTop: '2rem',
+            borderTop: '1px solid #eee',
+            paddingTop: '1.5rem',
+          }}
+        >
+          <h3 style={{ margin: '0 0 0.75rem', fontSize: 13, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Manage proposal
+          </h3>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {isOpen && (
+              <button
+                onClick={() => handleAction('Close voting on this proposal', () => proposalsApi.close(id))}
+                disabled={actioning}
+                style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none' }}
+              >
+                Close voting
+              </button>
+            )}
+            {proposal.status === 'closed' && (
+              <button
+                onClick={() => handleAction('Reopen this proposal for voting', () => proposalsApi.reopen(id))}
+                disabled={actioning}
+                style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none' }}
+              >
+                Reopen
+              </button>
+            )}
+            <button
+              onClick={() => handleAction('Withdraw this proposal permanently', () => proposalsApi.withdraw(id))}
+              disabled={actioning}
+              style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none' }}
+            >
+              Withdraw
+            </button>
+          </div>
+          {actionError && (
+            <p style={{ color: '#d94040', fontSize: 13, margin: '0.75rem 0 0' }}>{actionError}</p>
+          )}
+        </div>
       )}
     </div>
   );

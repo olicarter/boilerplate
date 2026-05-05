@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
-import { Proposal } from './proposal.entity';
+import { Proposal, ProposalStatus } from './proposal.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
 
@@ -72,6 +72,34 @@ export class ProposalsService {
     });
   }
 
+  private async transition(
+    id: string,
+    userId: string,
+    from: ProposalStatus | ProposalStatus[],
+    to: ProposalStatus,
+    patch: Partial<Pick<Proposal, 'status' | 'closed_at'>>,
+  ): Promise<{ item: Proposal; txid: number }> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id });
+    if (proposal.author_id !== userId) throw new ForbiddenException('Only the author can perform this action');
+    const allowed = Array.isArray(from) ? from : [from];
+    if (!allowed.includes(proposal.status)) {
+      throw new BadRequestException(`Proposal must be ${allowed.join(' or ')} to ${to}`);
+    }
+    return this.update(id, patch);
+  }
+
+  close(id: string, userId: string) {
+    return this.transition(id, userId, 'open', 'closed', { status: 'closed', closed_at: new Date() });
+  }
+
+  reopen(id: string, userId: string) {
+    return this.transition(id, userId, 'closed', 'open', { status: 'open', closed_at: null });
+  }
+
+  withdraw(id: string, userId: string) {
+    return this.transition(id, userId, ['open', 'closed'], 'withdrawn', { status: 'withdrawn', closed_at: new Date() });
+  }
+
   async autoCloseExpired(): Promise<number> {
     const expired = await this.proposalRepo.find({
       where: { status: 'open', closes_at: LessThanOrEqual(new Date()) },
@@ -107,11 +135,12 @@ export class ProposalsService {
       delegationMap.get(d.delegator_id)!.set(d.topic_id, d.delegate_id);
     }
 
+    const MAX_DEPTH = 10;
     const resolveChoice = (startUserId: string): string => {
       const visited = new Set<string>();
       let current = startUserId;
       while (true) {
-        if (visited.has(current)) return 'abstain';
+        if (visited.has(current) || visited.size >= MAX_DEPTH) return 'abstain';
         visited.add(current);
         if (directVotes.has(current)) return directVotes.get(current)!;
         const userDelegations = delegationMap.get(current);
