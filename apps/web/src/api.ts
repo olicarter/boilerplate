@@ -8,8 +8,21 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
   return res.json() as Promise<T>;
 }
 
+export interface Passkey {
+  id: string;
+  userId: string;
+  createdAt: string;
+  transports: string[] | null;
+}
+
 export const authApi = {
   logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
+  listPasskeys: () => request<Passkey[]>('/auth/passkeys'),
+  addPasskeyBegin: () => request<never>('/auth/add-passkey/begin', { method: 'POST' }),
+  addPasskeyFinish: (credential: unknown) =>
+    request<{ success: boolean }>('/auth/add-passkey/finish', { method: 'POST', body: JSON.stringify(credential) }),
+  deletePasskey: (id: string) =>
+    request<{ success: boolean }>(`/auth/passkeys/${id}`, { method: 'DELETE' }),
 };
 
 export interface MutationResult<T> {

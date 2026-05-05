@@ -82,12 +82,12 @@ export function UserProfilePage() {
       </div>
 
       {isOwnProfile && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <Link
-            to="/delegations"
-            style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}
-          >
+        <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.25rem' }}>
+          <Link to="/delegations" style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}>
             Manage your delegations →
+          </Link>
+          <Link to="/settings" style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}>
+            Account settings →
           </Link>
         </div>
       )}
@@ -106,7 +106,14 @@ export function UserProfilePage() {
           Votes ({votes.length})
         </h3>
         {votes.length === 0 ? (
-          <p style={{ fontSize: 14, color: '#999' }}>No votes cast yet.</p>
+          <div>
+            <p style={{ fontSize: 14, color: '#888', margin: '0 0 0.5rem' }}>No votes cast yet.</p>
+            {isOwnProfile && (
+              <Link to="/proposals" style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}>
+                Browse proposals to get started →
+              </Link>
+            )}
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {votes.map((v: Vote) => {
@@ -185,7 +192,14 @@ export function UserProfilePage() {
           Delegations ({outgoing.length})
         </h3>
         {outgoing.length === 0 ? (
-          <p style={{ fontSize: 14, color: '#999' }}>No delegations set.</p>
+          <div>
+            <p style={{ fontSize: 14, color: '#888', margin: '0 0 0.5rem' }}>No delegations set.</p>
+            {isOwnProfile && (
+              <Link to="/delegations" style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}>
+                Delegate your vote to a trusted member →
+              </Link>
+            )}
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {outgoing.map((d: Delegation) => {

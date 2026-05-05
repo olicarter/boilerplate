@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -147,6 +147,83 @@ export class AuthService {
 
     req.session!.userId = credential.user.id;
     return credential.user;
+  }
+
+  async listPasskeys(userId: string) {
+    return this.credentialRepo.findBy({ userId });
+  }
+
+  async addPasskeyBegin(userId: string) {
+    const user = await this.userRepo.findOneByOrFail({ id: userId });
+    const existingCredentials = await this.credentialRepo.findBy({ userId });
+
+    const options = await generateRegistrationOptions({
+      rpName: RP_NAME,
+      rpID: RP_ID,
+      userName: user.email,
+      userDisplayName: user.name,
+      userID: Buffer.from(user.id),
+      attestationType: 'none',
+      authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' },
+      excludeCredentials: existingCredentials.map((c) => ({
+        id: c.id,
+        transports: (c.transports ?? []) as AuthenticatorTransportFuture[],
+      })),
+    });
+
+    challengeStore.set(options.challenge, userId);
+    setTimeout(() => challengeStore.delete(options.challenge), 5 * 60 * 1000);
+
+    return options;
+  }
+
+  async addPasskeyFinish(response: RegistrationResponseJSON, userId: string) {
+    const { clientDataJSON } = response.response;
+    const clientData = JSON.parse(Buffer.from(clientDataJSON, 'base64url').toString());
+    const challenge = clientData.challenge as string;
+
+    const storedUserId = challengeStore.get(challenge);
+    if (!storedUserId || storedUserId === true || storedUserId !== userId) {
+      throw new UnauthorizedException('Invalid or expired challenge');
+    }
+    challengeStore.delete(challenge);
+
+    const verification = await verifyRegistrationResponse({
+      response,
+      expectedChallenge: challenge,
+      expectedOrigin: ORIGIN,
+      expectedRPID: RP_ID,
+      requireUserVerification: false,
+    });
+
+    if (!verification.verified || !verification.registrationInfo) {
+      throw new UnauthorizedException('Registration verification failed');
+    }
+
+    const { credential } = verification.registrationInfo;
+
+    await this.credentialRepo.save(
+      this.credentialRepo.create({
+        id: credential.id,
+        userId,
+        publicKey: Buffer.from(credential.publicKey),
+        counter: credential.counter,
+        transports: (response.response.transports ?? []) as string[],
+      }),
+    );
+
+    return { success: true };
+  }
+
+  async deletePasskey(credentialId: string, userId: string) {
+    const count = await this.credentialRepo.countBy({ userId });
+    if (count <= 1) throw new BadRequestException('Cannot remove your only passkey');
+
+    const credential = await this.credentialRepo.findOneBy({ id: credentialId, userId });
+    if (!credential) throw new NotFoundException('Passkey not found');
+
+    await this.credentialRepo.delete(credentialId);
+    return { success: true };
   }
 
   logout(req: Request) {

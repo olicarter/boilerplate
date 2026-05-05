@@ -329,7 +329,9 @@ export function ProposalsPage() {
           <ProposalSkeleton />
         </div>
       ) : proposals.length === 0 ? (
-        <p style={{ color: '#999', fontSize: 14 }}>No proposals yet.</p>
+        <p style={{ color: '#999', fontSize: 14 }}>
+          {topicFilter !== null ? 'No proposals in this topic yet.' : 'No proposals yet.'}
+        </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {proposals.map((p: Proposal) => {

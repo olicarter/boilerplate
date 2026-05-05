@@ -1,0 +1,183 @@
+import { useState, useEffect, useCallback } from 'react';
+import { startRegistration } from '@simplewebauthn/browser';
+import { authApi, usersApi, type Passkey } from '../api';
+import { useCurrentUser } from '../context';
+import { useToast } from '../components/Toast';
+
+export function SettingsPage() {
+  const currentUser = useCurrentUser();
+  const addToast = useToast();
+
+  const [name, setName] = useState(currentUser?.name ?? '');
+  const [savingName, setSavingName] = useState(false);
+
+  const [passkeys, setPasskeys] = useState<Passkey[] | null>(null);
+  const [addingPasskey, setAddingPasskey] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadPasskeys = useCallback(async () => {
+    try {
+      const list = await authApi.listPasskeys();
+      setPasskeys(list);
+    } catch {
+      // silently fail
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) loadPasskeys();
+  }, [currentUser, loadPasskeys]);
+
+  useEffect(() => {
+    setName(currentUser?.name ?? '');
+  }, [currentUser?.name]);
+
+  if (!currentUser) {
+    return <p style={{ fontSize: 14, color: '#999' }}>Sign in to access settings.</p>;
+  }
+
+  async function handleSaveName(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === currentUser!.name) return;
+    setSavingName(true);
+    try {
+      await usersApi.update(currentUser!.id, { name: trimmed });
+      addToast('Name updated', 'success');
+    } catch {
+      addToast('Failed to update name', 'error');
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function handleAddPasskey() {
+    setAddingPasskey(true);
+    try {
+      const options = await authApi.addPasskeyBegin();
+      const credential = await startRegistration({ optionsJSON: options });
+      await authApi.addPasskeyFinish(credential);
+      addToast('Passkey added', 'success');
+      await loadPasskeys();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to add passkey';
+      addToast(msg, 'error');
+    } finally {
+      setAddingPasskey(false);
+    }
+  }
+
+  async function handleDeletePasskey(id: string) {
+    setDeletingId(id);
+    try {
+      await authApi.deletePasskey(id);
+      addToast('Passkey removed', 'success');
+      setPasskeys((prev) => (prev ?? []).filter((p) => p.id !== id));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to remove passkey';
+      addToast(msg, 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <h2 style={{ marginTop: 0, fontSize: '1.25rem' }}>Settings</h2>
+
+      {/* Display name */}
+      <section style={{ marginBottom: '2rem', border: '1px solid #ddd', borderRadius: 8, padding: '1.25rem' }}>
+        <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Display name
+        </h3>
+        <form onSubmit={handleSaveName} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <label htmlFor="settings-name" style={{ display: 'block', fontSize: 13, color: '#666', marginBottom: 4 }}>
+              Name
+            </label>
+            <input
+              id="settings-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              style={{ width: '100%', padding: '0.45rem 0.6rem', boxSizing: 'border-box', fontSize: 14, border: '1px solid #ccc', borderRadius: 4 }}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={savingName || !name.trim() || name.trim() === currentUser.name}
+            style={{ padding: '0.45rem 1rem', fontSize: 14, whiteSpace: 'nowrap' }}
+          >
+            {savingName ? 'Saving…' : 'Save'}
+          </button>
+        </form>
+        <p style={{ margin: '0.75rem 0 0', fontSize: 13, color: '#888' }}>{currentUser.email}</p>
+      </section>
+
+      {/* Passkeys */}
+      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0, fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Passkeys
+          </h3>
+          <button
+            onClick={handleAddPasskey}
+            disabled={addingPasskey}
+            style={{ fontSize: 13, padding: '0.35rem 0.85rem' }}
+          >
+            {addingPasskey ? 'Waiting for device…' : '+ Add passkey'}
+          </button>
+        </div>
+
+        {passkeys === null ? (
+          <p style={{ fontSize: 14, color: '#999', margin: 0 }}>Loading…</p>
+        ) : passkeys.length === 0 ? (
+          <p style={{ fontSize: 14, color: '#999', margin: 0 }}>No passkeys found.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {passkeys.map((pk) => (
+              <div
+                key={pk.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.6rem 0.85rem',
+                  border: '1px solid #eee',
+                  borderRadius: 6,
+                  background: '#fafafa',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: 14, fontFamily: 'monospace', color: '#555' }}>
+                    {pk.id.slice(0, 16)}…
+                  </span>
+                  <span style={{ marginLeft: '0.75rem', fontSize: 12, color: '#aaa' }}>
+                    Added {new Date(pk.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleDeletePasskey(pk.id)}
+                  disabled={deletingId === pk.id || passkeys.length <= 1}
+                  title={passkeys.length <= 1 ? 'Cannot remove your only passkey' : 'Remove passkey'}
+                  style={{
+                    fontSize: 12,
+                    padding: '0.25rem 0.6rem',
+                    color: passkeys.length <= 1 ? '#ccc' : '#d94040',
+                    border: `1px solid ${passkeys.length <= 1 ? '#eee' : '#f5c5c5'}`,
+                    background: 'none',
+                    borderRadius: 4,
+                    cursor: passkeys.length <= 1 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {deletingId === pk.id ? 'Removing…' : 'Remove'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

@@ -1,7 +1,8 @@
-import { Body, Controller, ForbiddenException, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
 import { AuthService } from './auth.service';
+import { AuthGuard, type AuthenticatedRequest } from './auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -25,6 +26,30 @@ export class AuthController {
   @Post('login/finish')
   loginFinish(@Body() body: AuthenticationResponseJSON, @Req() req: Request) {
     return this.authService.loginFinish(body, req);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('passkeys')
+  listPasskeys(@Req() req: AuthenticatedRequest) {
+    return this.authService.listPasskeys(req.user!.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('add-passkey/begin')
+  addPasskeyBegin(@Req() req: AuthenticatedRequest) {
+    return this.authService.addPasskeyBegin(req.user!.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('add-passkey/finish')
+  addPasskeyFinish(@Body() body: RegistrationResponseJSON, @Req() req: AuthenticatedRequest) {
+    return this.authService.addPasskeyFinish(body, req.user!.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete('passkeys/:id')
+  deletePasskey(@Param('id') credentialId: string, @Req() req: AuthenticatedRequest) {
+    return this.authService.deletePasskey(credentialId, req.user!.id);
   }
 
   @Post('logout')

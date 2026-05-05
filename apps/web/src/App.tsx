@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import {
   createRootRoute,
@@ -16,6 +16,7 @@ import { ProposalsPage } from './pages/ProposalsPage';
 import { ProposalDetailPage } from './pages/ProposalDetailPage';
 import { DelegationsPage } from './pages/DelegationsPage';
 import { UserProfilePage } from './pages/UserProfilePage';
+import { SettingsPage } from './pages/SettingsPage';
 
 const STORAGE_KEY = 'ripple_user';
 
@@ -26,6 +27,16 @@ function getStoredUser(): User | null {
   } catch {
     return null;
   }
+}
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return isMobile;
 }
 
 function AuthPanel({ onLogin }: { onLogin: (user: User) => void }) {
@@ -147,8 +158,43 @@ const linkStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
+function NavLinks({ user, onClose }: { user: User | null; onClose?: () => void }) {
+  return (
+    <div style={{ flex: 1 }}>
+      <Link
+        to="/proposals"
+        style={linkStyle}
+        activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
+        onClick={onClose}
+      >
+        Proposals
+      </Link>
+      <Link
+        to="/delegations"
+        style={linkStyle}
+        activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
+        onClick={onClose}
+      >
+        Delegations
+      </Link>
+      {user && (
+        <Link
+          to="/settings"
+          style={linkStyle}
+          activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
+          onClick={onClose}
+        >
+          Settings
+        </Link>
+      )}
+    </div>
+  );
+}
+
 function RootComponent() {
   const [user, setUser] = useState<User | null>(getStoredUser);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   async function handleLogin(u: User) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
@@ -158,15 +204,94 @@ function RootComponent() {
   async function handleLogout() {
     try {
       await authApi.logout();
-      localStorage.removeItem(STORAGE_KEY);
-      setUser(null);
     } catch (err) {
       console.error('Logout failed:', err);
-      localStorage.removeItem(STORAGE_KEY);
-      setUser(null);
     }
+    localStorage.removeItem(STORAGE_KEY);
+    setUser(null);
   }
 
+  const userSection = (
+    <div style={{ padding: '0 1.25rem', borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
+      {user ? (
+        <>
+          <Link
+            to="/users/$id"
+            params={{ id: user.id }}
+            style={{ display: 'block', fontSize: 13, color: '#555', marginBottom: '0.5rem', textDecoration: 'none' }}
+          >
+            {user.name}
+          </Link>
+          <button onClick={handleLogout} style={{ fontSize: 13 }}>Sign out</button>
+        </>
+      ) : (
+        <AuthPanel onLogin={handleLogin} />
+      )}
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <UserContext.Provider value={user}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+          {/* Mobile top bar */}
+          <header style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.75rem 1rem',
+            borderBottom: '1px solid #ddd',
+            background: '#f8f8f8',
+            flexShrink: 0,
+          }}>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open menu"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: '0.25rem', color: '#333' }}
+            >
+              ☰
+            </button>
+            <span style={{ fontWeight: 700, fontSize: '1rem' }}>Ripple</span>
+          </header>
+
+          {/* Slide-in overlay */}
+          {sidebarOpen && (
+            <>
+              <div
+                onClick={() => setSidebarOpen(false)}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 10 }}
+              />
+              <div style={{
+                position: 'fixed', top: 0, left: 0, bottom: 0, width: 240,
+                zIndex: 11, background: '#f8f8f8',
+                boxShadow: '2px 0 12px rgba(0,0,0,0.15)',
+                display: 'flex', flexDirection: 'column', padding: '1.5rem 0',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.25rem', marginBottom: '1.5rem' }}>
+                  <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Ripple</h1>
+                  <button
+                    onClick={() => setSidebarOpen(false)}
+                    aria-label="Close menu"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#555' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <NavLinks user={user} onClose={() => setSidebarOpen(false)} />
+                {userSection}
+              </div>
+            </>
+          )}
+
+          <main style={{ flex: 1, padding: '1.25rem 1rem', overflowY: 'auto' }}>
+            <Outlet />
+          </main>
+        </div>
+      </UserContext.Provider>
+    );
+  }
+
+  // Desktop layout — sidebar always visible
   return (
     <UserContext.Provider value={user}>
       <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -180,32 +305,8 @@ function RootComponent() {
           padding: '1.5rem 0',
         }}>
           <h1 style={{ margin: '0 0 1.5rem', padding: '0 1.25rem', fontSize: '1.25rem' }}>Ripple</h1>
-          <div style={{ flex: 1 }}>
-            <Link
-              to="/proposals"
-              style={linkStyle}
-              activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-            >
-              Proposals
-            </Link>
-            <Link
-              to="/delegations"
-              style={linkStyle}
-              activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-            >
-              Delegations
-            </Link>
-          </div>
-          <div style={{ padding: '0 1.25rem', borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
-            {user ? (
-              <>
-                <span style={{ display: 'block', fontSize: 13, color: '#666', marginBottom: '0.5rem' }}>{user.name}</span>
-                <button onClick={handleLogout} style={{ fontSize: 13 }}>Sign out</button>
-              </>
-            ) : (
-              <AuthPanel onLogin={handleLogin} />
-            )}
-          </div>
+          <NavLinks user={user} />
+          {userSection}
         </nav>
         <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
           <Outlet />
@@ -247,12 +348,19 @@ const userProfileRoute = createRoute({
   component: UserProfilePage,
 });
 
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: SettingsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   proposalsRoute,
   proposalDetailRoute,
   delegationsRoute,
   userProfileRoute,
+  settingsRoute,
 ]);
 
 const router = createRouter({ routeTree });
