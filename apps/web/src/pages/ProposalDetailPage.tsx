@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
-import { proposalsCollection, topicsCollection, votesCollection } from '../collections';
-import { proposalsApi, type TallyResult, type Proposal, type Topic, type Vote } from '../api';
+import { proposalsCollection, topicsCollection, votesCollection, usersCollection } from '../collections';
+import { proposalsApi, type TallyResult, type Proposal, type Topic, type Vote, type User } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { useCurrentUser } from '../context';
 
@@ -15,6 +15,24 @@ const choiceColors: Record<VoteChoice, string> = {
   abstain: '#888',
 };
 
+function formatDeadline(closesAt: string): { label: string; subtext: string; urgent: boolean } {
+  const ms = new Date(closesAt).getTime() - Date.now();
+  if (ms <= 0) return { label: 'Closing shortly', subtext: '', urgent: true };
+  const minutes = Math.floor(ms / 60000);
+  const hours = Math.floor(ms / 3600000);
+  const days = Math.floor(ms / 86400000);
+  const date = new Date(closesAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (minutes < 60) return { label: `${minutes} minutes left`, subtext: `Closes ${date}`, urgent: true };
+  if (hours < 24) return { label: `${hours} hour${hours !== 1 ? 's' : ''} left`, subtext: `Closes ${date}`, urgent: hours < 6 };
+  return { label: `${days} day${days !== 1 ? 's' : ''} left`, subtext: `Closes ${date}`, urgent: false };
+}
+
+function computeResult(tally: TallyResult, threshold: number): 'passed' | 'failed' | 'no-votes' {
+  const decisive = tally.yes + tally.no;
+  if (decisive === 0) return 'no-votes';
+  return (tally.yes / decisive) * 100 >= threshold ? 'passed' : 'failed';
+}
+
 export function ProposalDetailPage() {
   const { id } = useParams({ strict: false }) as { id: string };
   const currentUser = useCurrentUser();
@@ -22,6 +40,7 @@ export function ProposalDetailPage() {
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
+  const { data: allUsers } = useLiveQuery(usersCollection);
 
   const [tally, setTally] = useState<TallyResult | null>(null);
   const [tallyLoading, setTallyLoading] = useState(true);
@@ -32,6 +51,9 @@ export function ProposalDetailPage() {
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
     ? (allTopics ?? []).find((t: Topic) => t.id === proposal.topic_id)
+    : undefined;
+  const author = proposal?.author_id
+    ? (allUsers ?? []).find((u: User) => u.id === proposal.author_id)
     : undefined;
   const myVote = currentUser
     ? (allVotes ?? []).find((v: Vote) => v.proposal_id === id && v.user_id === currentUser.id)
@@ -113,6 +135,9 @@ export function ProposalDetailPage() {
   }
 
   const isOpen = proposal.status === 'open';
+  const threshold = proposal.threshold ?? 50;
+  const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
+  const result = !isOpen && tally ? computeResult(tally, threshold) : null;
 
   return (
     <div style={{ maxWidth: 680 }}>
@@ -159,15 +184,70 @@ export function ProposalDetailPage() {
       <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.4rem' }}>{proposal.title}</h2>
 
       {proposal.description && (
-        <p style={{ fontSize: 14, color: '#444', lineHeight: 1.6, margin: '0 0 1.5rem' }}>
+        <p style={{ fontSize: 14, color: '#444', lineHeight: 1.6, margin: '0 0 1rem' }}>
           {proposal.description}
         </p>
       )}
 
       <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 1.5rem' }}>
-        Created {new Date(proposal.created_at).toLocaleDateString()}
-        {proposal.closed_at && ` · Closed ${new Date(proposal.closed_at).toLocaleDateString()}`}
+        {author ? (
+          <>
+            by{' '}
+            <Link to="/users/$id" params={{ id: author.id }} style={{ color: '#888', textDecoration: 'none' }}>
+              {author.name}
+            </Link>
+            {' · '}
+          </>
+        ) : null}
+        {new Date(proposal.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+        {proposal.closed_at && ` · Closed ${new Date(proposal.closed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`}
       </p>
+
+      {/* Deadline countdown */}
+      {deadline && (
+        <div
+          style={{
+            border: `1px solid ${deadline.urgent ? '#fde68a' : '#ddd'}`,
+            borderRadius: 6,
+            padding: '0.75rem 1.25rem',
+            marginBottom: '1.5rem',
+            background: deadline.urgent ? '#fffbeb' : '#f9f9f9',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 600, color: deadline.urgent ? '#b45309' : '#555' }}>
+            {deadline.label}
+          </span>
+          {deadline.subtext && (
+            <span style={{ fontSize: 13, color: '#888' }}>{deadline.subtext}</span>
+          )}
+        </div>
+      )}
+
+      {/* Result banner */}
+      {result && (
+        <div
+          style={{
+            border: `1px solid ${result === 'passed' ? '#b3e5c2' : result === 'failed' ? '#f5c0c0' : '#ddd'}`,
+            borderRadius: 6,
+            padding: '0.75rem 1.25rem',
+            marginBottom: '1.5rem',
+            background: result === 'passed' ? '#e6f9ed' : result === 'failed' ? '#fdecea' : '#f5f5f5',
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: result === 'passed' ? '#2d9a4e' : result === 'failed' ? '#d94040' : '#888' }}>
+            {result === 'passed' ? 'Proposal passed' : result === 'failed' ? 'Proposal failed' : 'No decisive votes cast'}
+          </p>
+          {result !== 'no-votes' && tally && (
+            <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
+              {Math.round((tally.yes / (tally.yes + tally.no)) * 100)}% yes
+              {' '}({threshold}% required to pass)
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Tally */}
       <div

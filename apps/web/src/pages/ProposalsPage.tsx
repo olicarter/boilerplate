@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
-import { proposalsCollection, topicsCollection, votesCollection } from '../collections';
+import { proposalsCollection, topicsCollection, votesCollection, usersCollection } from '../collections';
 import { useCurrentUser } from '../context';
-import type { Topic, Proposal, Vote } from '../api';
+import type { Topic, Proposal, Vote, User } from '../api';
 
 const badge: React.CSSProperties = {
   display: 'inline-block',
@@ -14,20 +14,43 @@ const badge: React.CSSProperties = {
   fontWeight: 500,
 };
 
+function toLocalDatetimeString(date: Date): string {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
+}
+
+function formatDeadline(closesAt: string): { label: string; urgent: boolean } {
+  const ms = new Date(closesAt).getTime() - Date.now();
+  if (ms <= 0) return { label: 'Closing soon', urgent: true };
+  const minutes = Math.floor(ms / 60000);
+  const hours = Math.floor(ms / 3600000);
+  const days = Math.floor(ms / 86400000);
+  if (minutes < 60) return { label: `${minutes}m left`, urgent: true };
+  if (hours < 24) return { label: `${hours}h left`, urgent: hours < 6 };
+  return { label: `${days}d left`, urgent: false };
+}
+
+function computeResult(yes: number, no: number, threshold: number): 'passed' | 'failed' | 'no-votes' {
+  if (yes + no === 0) return 'no-votes';
+  return (yes / (yes + no)) * 100 >= threshold ? 'passed' : 'failed';
+}
+
 export function ProposalsPage() {
   const currentUser = useCurrentUser();
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
+  const { data: allUsers } = useLiveQuery(usersCollection);
 
   const [topicFilter, setTopicFilter] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [topicId, setTopicId] = useState('');
   const [newTopicName, setNewTopicName] = useState('');
+  const [closesAt, setClosesAt] = useState('');
+  const [threshold, setThreshold] = useState(50);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -36,6 +59,7 @@ export function ProposalsPage() {
   );
 
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
+  const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -71,18 +95,23 @@ export function ProposalsPage() {
       const proposalTx = proposalsCollection.insert({
         id: uuid(),
         topic_id: resolvedTopicId,
+        author_id: currentUser.id,
         title: title.trim(),
         description: description.trim(),
         status: 'open',
+        threshold,
         created_at: new Date().toISOString(),
+        closes_at: closesAt ? new Date(closesAt).toISOString() : null,
         closed_at: null,
-      });
+      } as Proposal);
       await proposalTx.isPersisted.promise;
 
       setTitle('');
       setDescription('');
       setTopicId('');
       setNewTopicName('');
+      setClosesAt('');
+      setThreshold(50);
       setShowForm(false);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create proposal.');
@@ -138,7 +167,7 @@ export function ProposalsPage() {
               style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
             />
           </div>
-          <div style={{ marginBottom: '1rem' }}>
+          <div style={{ marginBottom: '0.75rem' }}>
             <label htmlFor="new-proposal-topic" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Topic</label>
             <select
               id="new-proposal-topic"
@@ -155,7 +184,7 @@ export function ProposalsPage() {
             </select>
           </div>
           {topicId === '__new__' && (
-            <div style={{ marginBottom: '1rem' }}>
+            <div style={{ marginBottom: '0.75rem' }}>
               <label htmlFor="new-topic-name" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>New topic name</label>
               <input
                 id="new-topic-name"
@@ -166,6 +195,38 @@ export function ProposalsPage() {
               />
             </div>
           )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div>
+              <label htmlFor="new-proposal-closes-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+                Voting deadline <span style={{ color: '#aaa' }}>(optional)</span>
+              </label>
+              <input
+                id="new-proposal-closes-at"
+                type="datetime-local"
+                value={closesAt}
+                onChange={(e) => setClosesAt(e.target.value)}
+                min={toLocalDatetimeString(new Date())}
+                style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+              />
+            </div>
+            <div>
+              <label htmlFor="new-proposal-threshold" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+                Passing threshold
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input
+                  id="new-proposal-threshold"
+                  type="number"
+                  value={threshold}
+                  onChange={(e) => setThreshold(Math.min(100, Math.max(1, parseInt(e.target.value) || 50)))}
+                  min={1}
+                  max={100}
+                  style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+                />
+                <span style={{ fontSize: 14, color: '#555', flexShrink: 0 }}>% yes</span>
+              </div>
+            </div>
+          </div>
           {formError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{formError}</p>}
           <button type="submit" disabled={submitting} style={{ padding: '0.4rem 1.25rem', fontSize: 13 }}>
             {submitting ? 'Creating…' : 'Create proposal'}
@@ -175,19 +236,19 @@ export function ProposalsPage() {
 
       {/* Topic filter pills */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-<button
-           onClick={() => setTopicFilter(null)}
-           style={{
-             ...badge,
-             cursor: 'pointer',
-             border: topicFilter === null ? '1px solid #555' : '1px solid #ddd',
-             background: topicFilter === null ? '#555' : '#f0f0f0',
-             color: topicFilter === null ? '#fff' : '#444',
-           }}
-         >
-           All
-         </button>
-         {(allTopics ?? []).map((t: Topic) => (
+        <button
+          onClick={() => setTopicFilter(null)}
+          style={{
+            ...badge,
+            cursor: 'pointer',
+            border: topicFilter === null ? '1px solid #555' : '1px solid #ddd',
+            background: topicFilter === null ? '#555' : '#f0f0f0',
+            color: topicFilter === null ? '#fff' : '#444',
+          }}
+        >
+          All
+        </button>
+        {(allTopics ?? []).map((t: Topic) => (
           <button
             key={t.id}
             onClick={() => setTopicFilter(topicFilter === t.id ? null : t.id)}
@@ -211,6 +272,7 @@ export function ProposalsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {proposals.map((p: Proposal) => {
           const topic = topicMap[p.topic_id];
+          const author = p.author_id ? userMap[p.author_id] : undefined;
           const votes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === p.id);
           const yes = votes.filter((v: Vote) => v.choice === 'yes').length;
           const no = votes.filter((v: Vote) => v.choice === 'no').length;
@@ -218,6 +280,10 @@ export function ProposalsPage() {
           const myVote = currentUser
             ? votes.find((v: Vote) => v.user_id === currentUser.id)
             : undefined;
+
+          const isOpen = p.status === 'open';
+          const deadline = isOpen && p.closes_at ? formatDeadline(p.closes_at) : null;
+          const result = !isOpen ? computeResult(yes, no, p.threshold ?? 50) : null;
 
           return (
             <Link
@@ -235,12 +301,8 @@ export function ProposalsPage() {
                   cursor: 'pointer',
                   transition: 'border-color 0.15s',
                 }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = '#aaa';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = '#ddd';
-                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#aaa'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#ddd'; }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -256,22 +318,47 @@ export function ProposalsPage() {
                           {topic.name}
                         </span>
                       )}
-                      <span
-                        style={{
+                      {result === 'passed' && (
+                        <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
+                          Passed
+                        </span>
+                      )}
+                      {result === 'failed' && (
+                        <span style={{ ...badge, background: '#fdecea', color: '#d94040', border: '1px solid #f5c0c0' }}>
+                          Failed
+                        </span>
+                      )}
+                      {result === 'no-votes' && (
+                        <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
+                          No votes
+                        </span>
+                      )}
+                      {isOpen && !deadline && (
+                        <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
+                          Open
+                        </span>
+                      )}
+                      {deadline && (
+                        <span style={{
                           ...badge,
-                          background: p.status === 'open' ? '#e6f9ed' : '#f5f5f5',
-                          color: p.status === 'open' ? '#2d9a4e' : '#888',
-                          border: `1px solid ${p.status === 'open' ? '#b3e5c2' : '#ddd'}`,
-                        }}
-                      >
-                        {p.status}
-                      </span>
+                          background: deadline.urgent ? '#fff8e1' : '#f5f5f5',
+                          color: deadline.urgent ? '#b45309' : '#666',
+                          border: `1px solid ${deadline.urgent ? '#fde68a' : '#ddd'}`,
+                        }}>
+                          {deadline.label}
+                        </span>
+                      )}
                       {myVote && (
                         <span style={{ fontSize: 12, color: '#888' }}>
                           Your vote: <strong>{myVote.choice}</strong>
                         </span>
                       )}
                     </div>
+                    {author && (
+                      <p style={{ margin: '0.4rem 0 0', fontSize: 12, color: '#aaa' }}>
+                        by {author.name}
+                      </p>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, fontSize: 13, color: '#666' }}>
                     <div style={{ color: '#2d9a4e' }}>↑ {yes}</div>

@@ -10,6 +10,9 @@ export class Proposal {
   @Column({ name: 'topic_id', type: 'uuid' })
   topic_id!: string;
 
+  @Column({ name: 'author_id', type: 'uuid', nullable: true })
+  author_id!: string | null;
+
   @Column({ type: 'varchar', length: 500 })
   title!: string;
 
@@ -19,8 +22,14 @@ export class Proposal {
   @Column({ type: 'varchar', length: 10, default: 'open' })
   status!: ProposalStatus;
 
+  @Column({ type: 'integer', default: 50 })
+  threshold!: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
+
+  @Column({ name: 'closes_at', type: 'timestamptz', nullable: true })
+  closes_at!: Date | null;
 
   @Column({ name: 'closed_at', type: 'timestamptz', nullable: true })
   closed_at!: Date | null;

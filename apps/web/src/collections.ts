@@ -60,7 +60,14 @@ export const proposalsCollection = createCollection(
     getKey: (row: unknown) => (row as Proposal).id,
     onInsert: async ({ transaction }) => {
       const p = transaction.mutations[0].modified as Proposal;
-      const result = await proposalsApi.create({ id: p.id, topic_id: p.topic_id, title: p.title, description: p.description });
+      const result = await proposalsApi.create({
+        id: p.id,
+        topic_id: p.topic_id,
+        title: p.title,
+        description: p.description,
+        closes_at: p.closes_at,
+        threshold: p.threshold,
+      });
       return { txid: result.txid };
     },
     onUpdate: async ({ transaction }) => {

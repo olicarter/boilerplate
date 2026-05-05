@@ -36,10 +36,13 @@ export interface Topic {
 export interface Proposal {
   id: string;
   topic_id: string;
+  author_id: string | null;
   title: string;
   description: string;
   status: 'open' | 'closed';
+  threshold: number;
   created_at: string;
+  closes_at: string | null;
   closed_at: string | null;
   [key: string]: unknown;
 }
@@ -88,9 +91,9 @@ export const topicsApi = {
 };
 
 export const proposalsApi = {
-  create: (data: { id: string; topic_id: string; title: string; description?: string }) =>
+  create: (data: { id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at'>>) =>
+  update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/proposals/${id}`, { method: 'DELETE' }),

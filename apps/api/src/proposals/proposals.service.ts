@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
 import { Proposal } from './proposal.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
@@ -31,11 +31,21 @@ export class ProposalsService {
   async create(data: {
     id: string;
     topic_id: string;
+    author_id: string;
     title: string;
     description?: string;
+    closes_at?: string | null;
+    threshold?: number;
   }): Promise<{ item: Proposal; txid: number }> {
     return this.dataSource.transaction(async (manager) => {
-      const proposal = manager.create(Proposal, { description: '', status: 'open', closed_at: null, ...data });
+      const proposal = manager.create(Proposal, {
+        description: '',
+        status: 'open',
+        closed_at: null,
+        threshold: 50,
+        ...data,
+        closes_at: data.closes_at ? new Date(data.closes_at) : null,
+      });
       const saved = await manager.save(proposal);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };
@@ -44,7 +54,7 @@ export class ProposalsService {
 
   async update(
     id: string,
-    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at'>>,
+    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>,
   ): Promise<{ item: Proposal; txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       await manager.update(Proposal, id, data);
@@ -62,6 +72,21 @@ export class ProposalsService {
     });
   }
 
+  async autoCloseExpired(): Promise<number> {
+    const expired = await this.proposalRepo.find({
+      where: { status: 'open', closes_at: LessThanOrEqual(new Date()) },
+    });
+    if (expired.length === 0) return 0;
+
+    const now = new Date();
+    await Promise.all(
+      expired.map((p) =>
+        this.proposalRepo.update(p.id, { status: 'closed', closed_at: now }),
+      ),
+    );
+    return expired.length;
+  }
+
   /**
    * Tally votes for a proposal, walking delegation chains.
    * For each user who hasn't voted directly, follow their topic-specific
@@ -74,10 +99,8 @@ export class ProposalsService {
     const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
     const delegations = await this.dataSource.getRepository(Delegation).find();
 
-    // Map: userId -> choice (direct votes)
     const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice]));
 
-    // Build delegation map: delegatorId -> { topicId | null -> delegateId }
     const delegationMap = new Map<string, Map<string | null, string>>();
     for (const d of delegations) {
       if (!delegationMap.has(d.delegator_id)) delegationMap.set(d.delegator_id, new Map());
@@ -88,10 +111,9 @@ export class ProposalsService {
       const visited = new Set<string>();
       let current = startUserId;
       while (true) {
-        if (visited.has(current)) return 'abstain'; // cycle
+        if (visited.has(current)) return 'abstain';
         visited.add(current);
         if (directVotes.has(current)) return directVotes.get(current)!;
-        // Follow topic-specific delegation, then global
         const userDelegations = delegationMap.get(current);
         if (!userDelegations) return 'abstain';
         const next = userDelegations.get(proposal.topic_id) ?? userDelegations.get(null);
@@ -100,7 +122,6 @@ export class ProposalsService {
       }
     };
 
-    // Collect all unique user IDs who have any involvement
     const allUsers = new Set<string>([
       ...votes.map((v) => v.user_id),
       ...delegations.map((d) => d.delegator_id),

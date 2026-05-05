@@ -14,10 +14,17 @@ export async function createProposal(
   request: APIRequestContext,
   topicId: string,
   title: string,
-  options: { description?: string; status?: 'open' | 'closed' } = {},
+  options: { description?: string; status?: 'open' | 'closed'; closes_at?: string; threshold?: number } = {},
 ) {
   const res = await request.post(`${API}/api/proposals`, {
-    data: { id: crypto.randomUUID(), topic_id: topicId, title, description: options.description ?? '' },
+    data: {
+      id: crypto.randomUUID(),
+      topic_id: topicId,
+      title,
+      description: options.description ?? '',
+      closes_at: options.closes_at,
+      threshold: options.threshold,
+    },
   });
   const body = await res.json();
   if (options.status === 'closed') {
@@ -25,7 +32,7 @@ export async function createProposal(
       data: { status: 'closed', closed_at: new Date().toISOString() },
     });
   }
-  return body.item as { id: string; title: string; topic_id: string; status: string };
+  return body.item as { id: string; title: string; topic_id: string; status: string; threshold: number };
 }
 
 export async function createVote(

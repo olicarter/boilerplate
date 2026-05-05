@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ProposalsService } from './proposals.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 
 @Controller('proposals')
 export class ProposalsController {
@@ -23,15 +23,18 @@ export class ProposalsController {
 
   @Post()
   @UseGuards(AuthGuard)
-  create(@Body() body: { id: string; topic_id: string; title: string; description?: string }) {
-    return this.proposalsService.create(body);
+  create(
+    @Body() body: { id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.create({ ...body, author_id: req.user!.id });
   }
 
   @Patch(':id')
   @UseGuards(AuthGuard)
   update(
     @Param('id') id: string,
-    @Body() body: { title?: string; description?: string; status?: 'open' | 'closed'; closed_at?: string | null },
+    @Body() body: { title?: string; description?: string; status?: 'open' | 'closed'; closed_at?: string | null; closes_at?: string | null; threshold?: number },
   ) {
     return this.proposalsService.update(id, body as any);
   }
