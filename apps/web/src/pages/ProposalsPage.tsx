@@ -64,6 +64,7 @@ export function ProposalsPage() {
   const { data: allUsers } = useLiveQuery(usersCollection);
 
   const [topicFilter, setTopicFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
 
   const [title, setTitle] = useState('');
@@ -77,8 +78,8 @@ export function ProposalsPage() {
 
   const proposals = (allProposals ?? []).filter((p: Proposal) => {
     if (topicFilter !== null && p.topic_id !== topicFilter) return false;
-    // Drafts are only visible to their author
     if (p.status === 'draft' && p.author_id !== currentUser?.id) return false;
+    if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -290,6 +291,17 @@ export function ProposalsPage() {
           </div>
         </form>
       )}
+
+      {/* Search */}
+      <div style={{ marginBottom: '1rem' }}>
+        <input
+          type="search"
+          placeholder="Search proposals…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: '100%', padding: '0.45rem 0.75rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
+        />
+      </div>
 
       {/* Topic filter pills */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>

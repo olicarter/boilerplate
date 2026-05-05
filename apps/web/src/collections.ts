@@ -1,8 +1,8 @@
 import { electricCollectionOptions } from '@tanstack/electric-db-collection';
 import { createCollection } from '@tanstack/react-db';
 import {
-  usersApi, topicsApi, proposalsApi, delegationsApi, votesApi,
-  type User, type Topic, type Proposal, type Delegation, type Vote,
+  usersApi, topicsApi, proposalsApi, delegationsApi, votesApi, commentsApi,
+  type User, type Topic, type Proposal, type Delegation, type Vote, type Comment,
 } from './api';
 
 const shapeUrl = `${window.location.origin}/electric/v1/shape`;
@@ -126,6 +126,24 @@ export const votesCollection = createCollection(
     onDelete: async ({ transaction }) => {
       const v = transaction.mutations[0].original as Vote;
       const result = await votesApi.delete(v.id);
+      return { txid: result.txid };
+    },
+  }),
+);
+
+export const commentsCollection = createCollection(
+  electricCollectionOptions<Comment>({
+    id: 'comments',
+    shapeOptions: { url: shapeUrl, params: { table: 'comments' } },
+    getKey: (row: unknown) => (row as Comment).id,
+    onInsert: async ({ transaction }) => {
+      const c = transaction.mutations[0].modified as Comment;
+      const result = await commentsApi.create(c.proposal_id, { id: c.id, body: c.body });
+      return { txid: result.txid };
+    },
+    onDelete: async ({ transaction }) => {
+      const c = transaction.mutations[0].original as Comment;
+      const result = await commentsApi.delete(c.id);
       return { txid: result.txid };
     },
   }),

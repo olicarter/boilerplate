@@ -6,12 +6,14 @@ import { ProposalsModule } from './proposals/proposals.module';
 import { DelegationsModule } from './delegations/delegations.module';
 import { VotesModule } from './votes/votes.module';
 import { AuthModule } from './auth/auth.module';
+import { CommentsModule } from './comments/comments.module';
 import { User } from './users/user.entity';
 import { Topic } from './topics/topic.entity';
 import { Proposal } from './proposals/proposal.entity';
 import { Delegation } from './delegations/delegation.entity';
 import { Vote } from './votes/vote.entity';
 import { Credential } from './auth/credential.entity';
+import { Comment } from './comments/comment.entity';
 
 @Module({
   imports: [
@@ -20,7 +22,7 @@ import { Credential } from './auth/credential.entity';
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
-      entities: [User, Topic, Proposal, Delegation, Vote, Credential],
+      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,
@@ -31,6 +33,7 @@ import { Credential } from './auth/credential.entity';
     DelegationsModule,
     VotesModule,
     AuthModule,
+    CommentsModule,
   ],
 })
 export class AppModule {}

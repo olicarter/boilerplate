@@ -3,6 +3,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { delegationsCollection, topicsCollection, usersCollection } from '../collections';
 import { UserSearch } from '../components/UserSearch';
+import { ConfirmButton } from '../components/ConfirmButton';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import type { User, Delegation, Topic } from '../api';
@@ -163,12 +164,13 @@ export function DelegationsPage() {
                       <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888' }}>· expires {expiresDate}</span>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleRemove(d.id)}
+                  <ConfirmButton
+                    label="Remove"
+                    confirmLabel="Yes, remove"
+                    onConfirm={() => handleRemove(d.id)}
                     style={{ fontSize: 12, color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4, padding: '0.25rem 0.6rem', cursor: 'pointer' }}
-                  >
-                    Remove
-                  </button>
+                    confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                  />
                 </div>
               );
             })}

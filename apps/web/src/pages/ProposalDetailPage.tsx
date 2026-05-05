@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
-import { proposalsCollection, topicsCollection, votesCollection, usersCollection } from '../collections';
-import { proposalsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User } from '../api';
+import { proposalsCollection, topicsCollection, votesCollection, usersCollection, commentsCollection } from '../collections';
+import { proposalsApi, commentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
+import { ConfirmButton } from '../components/ConfirmButton';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
+
+const COMMENT_MAX = 5000;
 
 type VoteChoice = 'yes' | 'no' | 'abstain';
 
@@ -43,6 +46,7 @@ export function ProposalDetailPage() {
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
   const { data: allUsers } = useLiveQuery(usersCollection);
+  const { data: allComments } = useLiveQuery(commentsCollection);
 
   const addToast = useToast();
 
@@ -54,6 +58,8 @@ export function ProposalDetailPage() {
   const [changingVote, setChangingVote] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actioning, setActioning] = useState(false);
+  const [commentBody, setCommentBody] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -173,9 +179,12 @@ export function ProposalDetailPage() {
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
   const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold) : null;
+  const comments = (allComments ?? [])
+    .filter((c: Comment) => c.proposal_id === id)
+    .sort((a: Comment, b: Comment) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
-  async function handleAction(label: string, successMsg: string, action: () => Promise<unknown>) {
-    if (!window.confirm(`${label}?`)) return;
+  async function handleAction(successMsg: string, action: () => Promise<unknown>) {
     setActioning(true);
     setActionError('');
     try {
@@ -185,6 +194,38 @@ export function ProposalDetailPage() {
       setActionError(err instanceof Error ? err.message : 'Action failed');
     }
     setActioning(false);
+  }
+
+  async function postComment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentUser || !commentBody.trim()) return;
+    setPostingComment(true);
+    try {
+      const tx = commentsCollection.insert({
+        id: uuid(),
+        proposal_id: id,
+        author_id: currentUser.id,
+        body: commentBody.trim(),
+        created_at: new Date().toISOString(),
+      } as Comment);
+      await tx.isPersisted.promise;
+      setCommentBody('');
+      addToast('Comment posted', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to post comment', 'error');
+    } finally {
+      setPostingComment(false);
+    }
+  }
+
+  async function deleteComment(commentId: string) {
+    try {
+      const tx = commentsCollection.delete(commentId);
+      await tx.isPersisted.promise;
+      addToast('Comment deleted', 'info');
+    } catch {
+      addToast('Failed to delete comment', 'error');
+    }
   }
 
   return (
@@ -278,7 +319,7 @@ export function ProposalDetailPage() {
             This proposal is a draft — not yet visible to other members.
           </span>
           <button
-            onClick={() => handleAction('Publish this proposal', 'Proposal published', () => proposalsApi.publish(id))}
+            onClick={() => handleAction('Proposal published', () => proposalsApi.publish(id))}
             disabled={actioning}
             style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: '#b45309', color: '#fff', border: 'none', borderRadius: 4, flexShrink: 0 }}
           >
@@ -410,13 +451,14 @@ export function ProposalDetailPage() {
                 >
                   Change vote
                 </button>
-                <button
-                  onClick={removeVote}
+                <ConfirmButton
+                  label="Remove vote"
+                  confirmLabel="Yes, remove"
+                  onConfirm={removeVote}
                   disabled={voting}
                   style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none' }}
-                >
-                  Remove vote
-                </button>
+                  confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                />
               </div>
             </div>
           ) : (
@@ -488,36 +530,122 @@ export function ProposalDetailPage() {
           </h3>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {isOpen && (
-              <button
-                onClick={() => handleAction('Close voting on this proposal', 'Voting closed', () => proposalsApi.close(id))}
+              <ConfirmButton
+                label="Close voting"
+                confirmLabel="Yes, close"
+                onConfirm={() => handleAction('Voting closed', () => proposalsApi.close(id))}
                 disabled={actioning}
                 style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none' }}
-              >
-                Close voting
-              </button>
+              />
             )}
             {proposal.status === 'closed' && (
               <button
-                onClick={() => handleAction('Reopen this proposal for voting', 'Proposal reopened', () => proposalsApi.reopen(id))}
+                onClick={() => handleAction('Proposal reopened', () => proposalsApi.reopen(id))}
                 disabled={actioning}
                 style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none' }}
               >
                 Reopen
               </button>
             )}
-            <button
-              onClick={() => handleAction('Withdraw this proposal permanently', 'Proposal withdrawn', () => proposalsApi.withdraw(id))}
+            <ConfirmButton
+              label="Withdraw"
+              confirmLabel="Yes, withdraw"
+              onConfirm={() => handleAction('Proposal withdrawn', () => proposalsApi.withdraw(id))}
               disabled={actioning}
               style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none' }}
-            >
-              Withdraw
-            </button>
+              confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+            />
           </div>
           {actionError && (
             <p style={{ color: '#d94040', fontSize: 13, margin: '0.75rem 0 0' }}>{actionError}</p>
           )}
         </div>
       )}
+
+      {/* Comments */}
+      <div style={{ marginTop: '2.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+        <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Discussion ({comments.length})
+        </h3>
+
+        {comments.length === 0 && (
+          <p style={{ fontSize: 14, color: '#aaa', margin: '0 0 1.25rem' }}>No comments yet. Be the first to comment.</p>
+        )}
+
+        {comments.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.25rem' }}>
+            {comments.map((c: Comment) => {
+              const commentAuthor = c.author_id ? userMap[c.author_id] : undefined;
+              const isOwn = currentUser?.id === c.author_id;
+              return (
+                <div key={c.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%', background: '#e8e8e8',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 13, fontWeight: 600, color: '#666', flexShrink: 0,
+                  }}>
+                    {commentAuthor ? commentAuthor.name.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>
+                        {commentAuthor?.name ?? 'Unknown'}
+                      </span>
+                      <span style={{ fontSize: 12, color: '#aaa' }}>
+                        {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                      {isOwn && (
+                        <ConfirmButton
+                          label="Delete"
+                          confirmLabel="Yes"
+                          onConfirm={() => deleteComment(c.id)}
+                          style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer', marginLeft: 'auto' }}
+                          confirmStyle={{ background: 'none', border: '1px solid #ddd', borderRadius: 3, color: '#d94040' }}
+                        />
+                      )}
+                    </div>
+                    <p style={{ margin: 0, fontSize: 14, color: '#333', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      {c.body}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {currentUser ? (
+          <form onSubmit={postComment}>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <label htmlFor="comment-body" style={{ fontSize: 13, color: '#555' }}>Add a comment</label>
+                {commentBody.length > COMMENT_MAX - 500 && (
+                  <span style={{ fontSize: 11, color: commentBody.length >= COMMENT_MAX ? '#d94040' : '#aaa' }}>
+                    {COMMENT_MAX - commentBody.length} left
+                  </span>
+                )}
+              </div>
+              <textarea
+                id="comment-body"
+                value={commentBody}
+                onChange={(e) => setCommentBody(e.target.value.slice(0, COMMENT_MAX))}
+                rows={3}
+                placeholder="Share your thoughts…"
+                style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical' }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={postingComment || !commentBody.trim()}
+              style={{ fontSize: 13, padding: '0.35rem 1rem' }}
+            >
+              {postingComment ? 'Posting…' : 'Post comment'}
+            </button>
+          </form>
+        ) : (
+          <p style={{ fontSize: 14, color: '#888' }}>Sign in to join the discussion.</p>
+        )}
+      </div>
     </div>
   );
 }

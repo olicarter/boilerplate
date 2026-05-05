@@ -49,6 +49,18 @@ export async function createVote(
   return body.item as { id: string; choice: string };
 }
 
+export async function createComment(
+  request: APIRequestContext,
+  proposalId: string,
+  body: string,
+) {
+  const res = await request.post(`${API}/api/proposals/${proposalId}/comments`, {
+    data: { id: crypto.randomUUID(), body },
+  });
+  const json = await res.json();
+  return json.item as { id: string; body: string; author_id: string };
+}
+
 export async function createDelegation(
   request: APIRequestContext,
   delegatorId: string,

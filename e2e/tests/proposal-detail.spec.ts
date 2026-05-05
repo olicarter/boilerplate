@@ -96,6 +96,7 @@ test('can remove a vote', async ({ page, asAlice }) => {
   await expect(page.getByText('You voted')).toBeVisible();
 
   await page.getByRole('button', { name: 'Remove vote' }).click();
+  await page.getByRole('button', { name: 'Yes, remove', exact: true }).click();
   await expect(page.getByRole('button', { name: 'yes' })).toBeVisible();
   await expect(page.getByText('You voted')).not.toBeVisible();
 });

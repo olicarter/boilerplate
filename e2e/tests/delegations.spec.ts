@@ -71,6 +71,7 @@ test('can remove a delegation', async ({ page, asAlice, bob }) => {
   await expect(page.getByText('Global', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Remove' }).click();
+  await page.getByRole('button', { name: 'Yes, remove' }).click();
   await expect(page.getByText('No delegations set.')).toBeVisible();
 });
 

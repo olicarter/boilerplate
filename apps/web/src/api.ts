@@ -137,6 +137,22 @@ export const delegationsApi = {
     request<{ txid: number }>(`/delegations/${id}`, { method: 'DELETE' }),
 };
 
+export interface Comment {
+  id: string;
+  proposal_id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export const commentsApi = {
+  create: (proposalId: string, data: { id: string; body: string }) =>
+    request<MutationResult<Comment>>(`/proposals/${proposalId}/comments`, { method: 'POST', body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    request<{ txid: number }>(`/comments/${id}`, { method: 'DELETE' }),
+};
+
 export const votesApi = {
   create: (data: { id: string; proposal_id: string; user_id: string; choice: Vote['choice'] }) =>
     request<MutationResult<Vote>>('/votes', { method: 'POST', body: JSON.stringify(data) }),
