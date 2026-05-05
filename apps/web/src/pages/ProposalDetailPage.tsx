@@ -5,15 +5,9 @@ import { v4 as uuid } from 'uuid';
 import { proposalsCollection, topicsCollection, votesCollection, usersCollection } from '../collections';
 import { proposalsApi, type TallyResult, type Proposal, type Topic, type Vote, type User } from '../api';
 import { VoteTally } from '../components/VoteTally';
+import { MarkdownContent } from '../components/MarkdownContent';
 import { useCurrentUser } from '../context';
-
-async function callAction(action: () => Promise<unknown>, setError: (e: string) => void) {
-  try {
-    await action();
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'Action failed');
-  }
-}
+import { useToast } from '../components/Toast';
 
 type VoteChoice = 'yes' | 'no' | 'abstain';
 
@@ -49,6 +43,8 @@ export function ProposalDetailPage() {
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
   const { data: allUsers } = useLiveQuery(usersCollection);
+
+  const addToast = useToast();
 
   const [tally, setTally] = useState<TallyResult | null>(null);
   const [tallyLoading, setTallyLoading] = useState(true);
@@ -100,6 +96,7 @@ export function ProposalDetailPage() {
       await tx.isPersisted.promise;
       await fetchTally();
       setChangingVote(false);
+      addToast('Vote cast', 'success');
     } catch (err) {
       setVoteError(err instanceof Error ? err.message : 'Failed to cast vote.');
     } finally {
@@ -118,6 +115,7 @@ export function ProposalDetailPage() {
       await tx.isPersisted.promise;
       await fetchTally();
       setChangingVote(false);
+      addToast('Vote updated', 'success');
     } catch (err) {
       setVoteError(err instanceof Error ? err.message : 'Failed to update vote.');
     } finally {
@@ -133,6 +131,7 @@ export function ProposalDetailPage() {
       const tx = votesCollection.delete(myVote.id);
       await tx.isPersisted.promise;
       await fetchTally();
+      addToast('Vote removed', 'info');
     } catch (err) {
       setVoteError(err instanceof Error ? err.message : 'Failed to remove vote.');
     } finally {
@@ -151,11 +150,16 @@ export function ProposalDetailPage() {
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
   const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold) : null;
 
-  async function handleAction(label: string, action: () => Promise<unknown>) {
+  async function handleAction(label: string, successMsg: string, action: () => Promise<unknown>) {
     if (!window.confirm(`${label}?`)) return;
     setActioning(true);
     setActionError('');
-    await callAction(action, setActionError);
+    try {
+      await action();
+      addToast(successMsg, 'success');
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Action failed');
+    }
     setActioning(false);
   }
 
@@ -214,9 +218,9 @@ export function ProposalDetailPage() {
       <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.4rem' }}>{proposal.title}</h2>
 
       {proposal.description && (
-        <p style={{ fontSize: 14, color: '#444', lineHeight: 1.6, margin: '0 0 1rem' }}>
-          {proposal.description}
-        </p>
+        <div style={{ margin: '0 0 1rem' }}>
+          <MarkdownContent content={proposal.description} />
+        </div>
       )}
 
       <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 1.5rem' }}>
@@ -414,7 +418,7 @@ export function ProposalDetailPage() {
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {isOpen && (
               <button
-                onClick={() => handleAction('Close voting on this proposal', () => proposalsApi.close(id))}
+                onClick={() => handleAction('Close voting on this proposal', 'Voting closed', () => proposalsApi.close(id))}
                 disabled={actioning}
                 style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none' }}
               >
@@ -423,7 +427,7 @@ export function ProposalDetailPage() {
             )}
             {proposal.status === 'closed' && (
               <button
-                onClick={() => handleAction('Reopen this proposal for voting', () => proposalsApi.reopen(id))}
+                onClick={() => handleAction('Reopen this proposal for voting', 'Proposal reopened', () => proposalsApi.reopen(id))}
                 disabled={actioning}
                 style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none' }}
               >
@@ -431,7 +435,7 @@ export function ProposalDetailPage() {
               </button>
             )}
             <button
-              onClick={() => handleAction('Withdraw this proposal permanently', () => proposalsApi.withdraw(id))}
+              onClick={() => handleAction('Withdraw this proposal permanently', 'Proposal withdrawn', () => proposalsApi.withdraw(id))}
               disabled={actioning}
               style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none' }}
             >

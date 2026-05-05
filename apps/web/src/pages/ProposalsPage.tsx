@@ -4,7 +4,11 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { proposalsCollection, topicsCollection, votesCollection, usersCollection } from '../collections';
 import { useCurrentUser } from '../context';
+import { useToast } from '../components/Toast';
 import type { Topic, Proposal, Vote, User } from '../api';
+
+const TITLE_MAX = 200;
+const DESC_MAX = 10000;
 
 const badge: React.CSSProperties = {
   display: 'inline-block',
@@ -37,6 +41,7 @@ function computeResult(yes: number, no: number, threshold: number): 'passed' | '
 
 export function ProposalsPage() {
   const currentUser = useCurrentUser();
+  const addToast = useToast();
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
@@ -106,6 +111,7 @@ export function ProposalsPage() {
       } as Proposal);
       await proposalTx.isPersisted.promise;
 
+      addToast('Proposal created');
       setTitle('');
       setDescription('');
       setTopicId('');
@@ -147,23 +153,41 @@ export function ProposalsPage() {
         >
           <h3 style={{ margin: '0 0 1rem', fontSize: 15 }}>New proposal</h3>
           <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="new-proposal-title" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Title</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <label htmlFor="new-proposal-title" style={{ fontSize: 13 }}>Title</label>
+              {title.length > TITLE_MAX - 40 && (
+                <span style={{ fontSize: 11, color: title.length >= TITLE_MAX ? '#d94040' : '#aaa' }}>
+                  {TITLE_MAX - title.length} left
+                </span>
+              )}
+            </div>
             <input
               id="new-proposal-title"
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
               required
+              maxLength={TITLE_MAX}
               style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
             />
           </div>
           <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="new-proposal-description" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Description</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <label htmlFor="new-proposal-description" style={{ fontSize: 13 }}>
+                Description <span style={{ color: '#aaa', fontWeight: 400 }}>(Markdown supported)</span>
+              </label>
+              {description.length > DESC_MAX - 500 && (
+                <span style={{ fontSize: 11, color: description.length >= DESC_MAX ? '#d94040' : '#aaa' }}>
+                  {DESC_MAX - description.length} left
+                </span>
+              )}
+            </div>
             <textarea
               id="new-proposal-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
               rows={3}
+              maxLength={DESC_MAX}
               style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
             />
           </div>

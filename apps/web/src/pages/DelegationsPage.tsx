@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { delegationsCollection, topicsCollection, usersCollection } from '../collections';
 import { UserSearch } from '../components/UserSearch';
 import { useCurrentUser } from '../context';
+import { useToast } from '../components/Toast';
 import type { User, Delegation, Topic } from '../api';
 
 export function DelegationsPage() {
@@ -12,6 +13,8 @@ export function DelegationsPage() {
   const { data: allDelegations } = useLiveQuery(delegationsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allUsers } = useLiveQuery(usersCollection);
+
+  const addToast = useToast();
 
   const [selectedDelegate, setSelectedDelegate] = useState<User | null>(null);
   const [scopeTopicId, setScopeTopicId] = useState<string>('__global__');
@@ -81,6 +84,7 @@ export function DelegationsPage() {
       await tx.isPersisted.promise;
       setSelectedDelegate(null);
       setScopeTopicId('__global__');
+      addToast('Delegation added', 'success');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add delegation.');
     } finally {
@@ -92,6 +96,7 @@ export function DelegationsPage() {
     try {
       const tx = delegationsCollection.delete(delegationId);
       await tx.isPersisted.promise;
+      addToast('Delegation removed', 'info');
     } catch {
       // ignore
     }

@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-router';
 import { request, authApi, type User } from './api';
 import { UserContext } from './context';
+import { ToastProvider } from './components/Toast';
 import { ProposalsPage } from './pages/ProposalsPage';
 import { ProposalDetailPage } from './pages/ProposalDetailPage';
 import { DelegationsPage } from './pages/DelegationsPage';
@@ -263,5 +264,9 @@ declare module '@tanstack/react-router' {
 }
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ToastProvider>
+      <RouterProvider router={router} />
+    </ToastProvider>
+  );
 }

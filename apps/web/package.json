@@ -14,11 +14,14 @@
     "@tanstack/electric-db-collection": "^0",
     "@tanstack/react-db": "^0",
     "@tanstack/react-router": "^1.168.10",
+    "dompurify": "^3.4.2",
+    "marked": "^18.0.3",
     "react": "^19",
     "react-dom": "^19",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",

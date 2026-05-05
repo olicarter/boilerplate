@@ -1,49 +1,35 @@
 import type { TallyResult } from '../api';
 
-const rows = [
-  { key: 'yes' as const, label: 'Yes', color: '#2d9a4e' },
-  { key: 'no' as const, label: 'No', color: '#d94040' },
-  { key: 'abstain' as const, label: 'Abstain', color: '#aaa' },
-];
-
 export function VoteTally({ tally }: { tally: TallyResult }) {
-  const pct = (n: number) =>
-    tally.total > 0 ? Math.round((n / tally.total) * 100) : 0;
+  const decisive = tally.yes + tally.no;
+
+  // Yes/No percentages are relative to decisive votes only (abstentions are neutral).
+  const yesWidth  = decisive > 0 ? Math.round((tally.yes / decisive) * 100) : 0;
+  const noWidth   = decisive > 0 ? Math.round((tally.no  / decisive) * 100) : 0;
 
   return (
     <div>
-      {rows.map(({ key, label, color }) => (
-        <div
-          key={key}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}
-        >
-          <span style={{ width: 52, fontSize: 13, color: '#555' }}>{label}</span>
-          <div
-            style={{
-              flex: 1,
-              height: 12,
-              background: '#eee',
-              borderRadius: 6,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: `${pct(tally[key])}%`,
-                height: '100%',
-                background: color,
-                transition: 'width 0.3s ease',
-              }}
-            />
+      {/* Yes / No bar */}
+      {decisive > 0 ? (
+        <div style={{ marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#555', marginBottom: 4 }}>
+            <span style={{ color: '#2d9a4e' }}>Yes — {tally.yes} ({yesWidth}%)</span>
+            <span style={{ color: '#d94040' }}>No — {tally.no} ({noWidth}%)</span>
           </div>
-          <span style={{ width: 72, fontSize: 13, textAlign: 'right', color: '#555' }}>
-            {tally[key]} ({pct(tally[key])}%)
-          </span>
+          <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', background: '#eee' }}>
+            <div style={{ width: `${yesWidth}%`, background: '#2d9a4e', transition: 'width 0.3s ease' }} />
+            <div style={{ width: `${noWidth}%`, background: '#d94040', transition: 'width 0.3s ease' }} />
+          </div>
         </div>
-      ))}
-      <p style={{ fontSize: 12, color: '#999', margin: '0.5rem 0 0' }}>
-        {tally.total} vote{tally.total !== 1 ? 's' : ''} total (delegation-resolved)
-      </p>
+      ) : (
+        <p style={{ fontSize: 13, color: '#aaa', margin: '0 0 0.75rem' }}>No yes/no votes yet.</p>
+      )}
+
+      {/* Abstain count (shown separately) */}
+      <div style={{ display: 'flex', gap: '1rem', fontSize: 12, color: '#888' }}>
+        <span>{tally.total} {tally.total === 1 ? 'vote' : 'votes'} total (delegation-resolved)</span>
+        {tally.abstain > 0 && <span>· {tally.abstain} abstain</span>}
+      </div>
     </div>
   );
 }
