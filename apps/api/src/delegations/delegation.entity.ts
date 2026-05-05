@@ -15,6 +15,9 @@ export class Delegation {
   @Column({ name: 'topic_id', type: 'uuid', nullable: true })
   topic_id!: string | null;
 
+  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  expires_at!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

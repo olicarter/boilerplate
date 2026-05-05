@@ -39,6 +39,22 @@ function computeResult(yes: number, no: number, threshold: number): 'passed' | '
   return (yes / (yes + no)) * 100 >= threshold ? 'passed' : 'failed';
 }
 
+function ProposalSkeleton() {
+  return (
+    <div style={{
+      border: '1px solid #eee',
+      borderRadius: 6,
+      padding: '1rem 1.25rem',
+      background: '#fafafa',
+      animation: 'skeleton-pulse 1.5s ease-in-out infinite',
+    }}>
+      <div style={{ width: '55%', height: 15, background: '#e4e4e4', borderRadius: 4, marginBottom: '0.5rem' }} />
+      <div style={{ width: '85%', height: 12, background: '#e4e4e4', borderRadius: 4, marginBottom: '0.4rem' }} />
+      <div style={{ width: '30%', height: 12, background: '#e4e4e4', borderRadius: 4 }} />
+    </div>
+  );
+}
+
 export function ProposalsPage() {
   const currentUser = useCurrentUser();
   const addToast = useToast();
@@ -59,15 +75,28 @@ export function ProposalsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
-  const proposals = (allProposals ?? []).filter(
-    (p: Proposal) => topicFilter === null || p.topic_id === topicFilter,
-  );
+  const proposals = (allProposals ?? []).filter((p: Proposal) => {
+    if (topicFilter !== null && p.topic_id !== topicFilter) return false;
+    // Drafts are only visible to their author
+    if (p.status === 'draft' && p.author_id !== currentUser?.id) return false;
+    return true;
+  });
 
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
+  function resetForm() {
+    setTitle('');
+    setDescription('');
+    setTopicId('');
+    setNewTopicName('');
+    setClosesAt('');
+    setThreshold(50);
+    setShowForm(false);
+    setFormError('');
+  }
+
+  async function handleCreate(asDraft = false) {
     if (!currentUser) return;
     setFormError('');
     setSubmitting(true);
@@ -103,7 +132,7 @@ export function ProposalsPage() {
         author_id: currentUser.id,
         title: title.trim(),
         description: description.trim(),
-        status: 'open',
+        status: asDraft ? 'draft' : 'open',
         threshold,
         created_at: new Date().toISOString(),
         closes_at: closesAt ? new Date(closesAt).toISOString() : null,
@@ -111,14 +140,8 @@ export function ProposalsPage() {
       } as Proposal);
       await proposalTx.isPersisted.promise;
 
-      addToast('Proposal created');
-      setTitle('');
-      setDescription('');
-      setTopicId('');
-      setNewTopicName('');
-      setClosesAt('');
-      setThreshold(50);
-      setShowForm(false);
+      addToast(asDraft ? 'Draft saved' : 'Proposal created');
+      resetForm();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create proposal.');
     } finally {
@@ -142,7 +165,7 @@ export function ProposalsPage() {
 
       {showForm && (
         <form
-          onSubmit={handleCreate}
+          onSubmit={(e) => { e.preventDefault(); handleCreate(false); }}
           style={{
             border: '1px solid #ddd',
             borderRadius: 6,
@@ -252,9 +275,19 @@ export function ProposalsPage() {
             </div>
           </div>
           {formError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{formError}</p>}
-          <button type="submit" disabled={submitting} style={{ padding: '0.4rem 1.25rem', fontSize: 13 }}>
-            {submitting ? 'Creating…' : 'Create proposal'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="submit" disabled={submitting} style={{ padding: '0.4rem 1.25rem', fontSize: 13 }}>
+              {submitting ? 'Creating…' : 'Create proposal'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCreate(true)}
+              disabled={submitting}
+              style={{ padding: '0.4rem 1.25rem', fontSize: 13, border: '1px solid #ddd', background: 'none', cursor: 'pointer' }}
+            >
+              Save as draft
+            </button>
+          </div>
         </form>
       )}
 
@@ -289,118 +322,132 @@ export function ProposalsPage() {
         ))}
       </div>
 
-      {proposals.length === 0 && (
+      {allProposals === null ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <ProposalSkeleton />
+          <ProposalSkeleton />
+          <ProposalSkeleton />
+        </div>
+      ) : proposals.length === 0 ? (
         <p style={{ color: '#999', fontSize: 14 }}>No proposals yet.</p>
-      )}
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {proposals.map((p: Proposal) => {
+            const topic = topicMap[p.topic_id];
+            const author = p.author_id ? userMap[p.author_id] : undefined;
+            const votes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === p.id);
+            const yes = votes.filter((v: Vote) => v.choice === 'yes').length;
+            const no = votes.filter((v: Vote) => v.choice === 'no').length;
+            const abstain = votes.filter((v: Vote) => v.choice === 'abstain').length;
+            const myVote = currentUser
+              ? votes.find((v: Vote) => v.user_id === currentUser.id)
+              : undefined;
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {proposals.map((p: Proposal) => {
-          const topic = topicMap[p.topic_id];
-          const author = p.author_id ? userMap[p.author_id] : undefined;
-          const votes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === p.id);
-          const yes = votes.filter((v: Vote) => v.choice === 'yes').length;
-          const no = votes.filter((v: Vote) => v.choice === 'no').length;
-          const abstain = votes.filter((v: Vote) => v.choice === 'abstain').length;
-          const myVote = currentUser
-            ? votes.find((v: Vote) => v.user_id === currentUser.id)
-            : undefined;
+            const isDraft = p.status === 'draft';
+            const isOpen = p.status === 'open';
+            const isWithdrawn = p.status === 'withdrawn';
+            const deadline = isOpen && p.closes_at ? formatDeadline(p.closes_at) : null;
+            const result = p.status === 'closed' ? computeResult(yes, no, p.threshold ?? 50) : null;
 
-          const isOpen = p.status === 'open';
-          const isWithdrawn = p.status === 'withdrawn';
-          const deadline = isOpen && p.closes_at ? formatDeadline(p.closes_at) : null;
-          const result = p.status === 'closed' ? computeResult(yes, no, p.threshold ?? 50) : null;
-
-          return (
-            <Link
-              key={p.id}
-              to="/proposals/$id"
-              params={{ id: p.id }}
-              style={{ textDecoration: 'none', color: 'inherit' }}
-            >
-              <div
-                style={{
-                  border: '1px solid #ddd',
-                  borderRadius: 6,
-                  padding: '1rem 1.25rem',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.15s',
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#aaa'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#ddd'; }}
+            return (
+              <Link
+                key={p.id}
+                to="/proposals/$id"
+                params={{ id: p.id }}
+                style={{ textDecoration: 'none', color: 'inherit' }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: '0 0 0.4rem', fontWeight: 600, fontSize: 15 }}>{p.title}</p>
-                    {p.description && (
-                      <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.description}
-                      </p>
-                    )}
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                      {topic && (
-                        <span style={{ ...badge, background: '#e8f0fe', color: '#1a56d6', border: '1px solid #c3d6fb' }}>
-                          {topic.name}
-                        </span>
+                <div
+                  style={{
+                    border: `1px solid ${isDraft ? '#fde68a' : '#ddd'}`,
+                    borderRadius: 6,
+                    padding: '1rem 1.25rem',
+                    background: isDraft ? '#fffdf0' : '#fff',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.15s',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = isDraft ? '#f6cc00' : '#aaa'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = isDraft ? '#fde68a' : '#ddd'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: '0 0 0.4rem', fontWeight: 600, fontSize: 15 }}>{p.title}</p>
+                      {p.description && (
+                        <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.description}
+                        </p>
                       )}
-                      {result === 'passed' && (
-                        <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
-                          Passed
-                        </span>
-                      )}
-                      {result === 'failed' && (
-                        <span style={{ ...badge, background: '#fdecea', color: '#d94040', border: '1px solid #f5c0c0' }}>
-                          Failed
-                        </span>
-                      )}
-                      {result === 'no-votes' && (
-                        <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
-                          No votes
-                        </span>
-                      )}
-                      {isWithdrawn && (
-                        <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
-                          Withdrawn
-                        </span>
-                      )}
-                      {isOpen && !deadline && (
-                        <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
-                          Open
-                        </span>
-                      )}
-                      {deadline && (
-                        <span style={{
-                          ...badge,
-                          background: deadline.urgent ? '#fff8e1' : '#f5f5f5',
-                          color: deadline.urgent ? '#b45309' : '#666',
-                          border: `1px solid ${deadline.urgent ? '#fde68a' : '#ddd'}`,
-                        }}>
-                          {deadline.label}
-                        </span>
-                      )}
-                      {myVote && (
-                        <span style={{ fontSize: 12, color: '#888' }}>
-                          Your vote: <strong>{myVote.choice}</strong>
-                        </span>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {topic && (
+                          <span style={{ ...badge, background: '#e8f0fe', color: '#1a56d6', border: '1px solid #c3d6fb' }}>
+                            {topic.name}
+                          </span>
+                        )}
+                        {isDraft && (
+                          <span style={{ ...badge, background: '#fff8e1', color: '#b45309', border: '1px solid #fde68a' }}>
+                            Draft
+                          </span>
+                        )}
+                        {result === 'passed' && (
+                          <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
+                            Passed
+                          </span>
+                        )}
+                        {result === 'failed' && (
+                          <span style={{ ...badge, background: '#fdecea', color: '#d94040', border: '1px solid #f5c0c0' }}>
+                            Failed
+                          </span>
+                        )}
+                        {result === 'no-votes' && (
+                          <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
+                            No votes
+                          </span>
+                        )}
+                        {isWithdrawn && (
+                          <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
+                            Withdrawn
+                          </span>
+                        )}
+                        {isOpen && !deadline && (
+                          <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
+                            Open
+                          </span>
+                        )}
+                        {deadline && (
+                          <span style={{
+                            ...badge,
+                            background: deadline.urgent ? '#fff8e1' : '#f5f5f5',
+                            color: deadline.urgent ? '#b45309' : '#666',
+                            border: `1px solid ${deadline.urgent ? '#fde68a' : '#ddd'}`,
+                          }}>
+                            {deadline.label}
+                          </span>
+                        )}
+                        {myVote && (
+                          <span style={{ fontSize: 12, color: '#888' }}>
+                            Your vote: <strong>{myVote.choice}</strong>
+                          </span>
+                        )}
+                      </div>
+                      {author && (
+                        <p style={{ margin: '0.4rem 0 0', fontSize: 12, color: '#aaa' }}>
+                          by {author.name}
+                        </p>
                       )}
                     </div>
-                    {author && (
-                      <p style={{ margin: '0.4rem 0 0', fontSize: 12, color: '#aaa' }}>
-                        by {author.name}
-                      </p>
+                    {!isDraft && (
+                      <div style={{ textAlign: 'right', flexShrink: 0, fontSize: 13, color: '#666' }}>
+                        <div style={{ color: '#2d9a4e' }}>↑ {yes}</div>
+                        <div style={{ color: '#d94040' }}>↓ {no}</div>
+                        {abstain > 0 && <div style={{ color: '#aaa' }}>— {abstain}</div>}
+                      </div>
                     )}
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0, fontSize: 13, color: '#666' }}>
-                    <div style={{ color: '#2d9a4e' }}>↑ {yes}</div>
-                    <div style={{ color: '#d94040' }}>↓ {no}</div>
-                    {abstain > 0 && <div style={{ color: '#aaa' }}>— {abstain}</div>}
-                  </div>
                 </div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -18,6 +18,7 @@ export function DelegationsPage() {
 
   const [selectedDelegate, setSelectedDelegate] = useState<User | null>(null);
   const [scopeTopicId, setScopeTopicId] = useState<string>('__global__');
+  const [expiresAt, setExpiresAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -79,11 +80,13 @@ export function DelegationsPage() {
         delegator_id: currentUser!.id,
         delegate_id: selectedDelegate.id,
         topic_id: resolvedTopicId,
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
         created_at: new Date().toISOString(),
-      });
+      } as Delegation);
       await tx.isPersisted.promise;
       setSelectedDelegate(null);
       setScopeTopicId('__global__');
+      setExpiresAt('');
       addToast('Delegation added', 'success');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add delegation.');
@@ -117,6 +120,10 @@ export function DelegationsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {outgoing.map((d: Delegation) => {
               const delegate = userMap[d.delegate_id];
+              const expired = d.expires_at ? new Date(d.expires_at) <= new Date() : false;
+              const expiresDate = d.expires_at
+                ? new Date(d.expires_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                : null;
               return (
                 <div
                   key={d.id}
@@ -124,10 +131,11 @@ export function DelegationsPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    border: '1px solid #ddd',
+                    border: `1px solid ${expired ? '#f5c0c0' : '#ddd'}`,
                     borderRadius: 6,
                     padding: '0.6rem 1rem',
                     fontSize: 14,
+                    opacity: expired ? 0.7 : 1,
                   }}
                 >
                   <div>
@@ -148,6 +156,12 @@ export function DelegationsPage() {
                     >
                       {scopeLabel(d.topic_id)}
                     </span>
+                    {expired && (
+                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#d94040' }}>Expired</span>
+                    )}
+                    {!expired && expiresDate && (
+                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888' }}>· expires {expiresDate}</span>
+                    )}
                   </div>
                   <button
                     onClick={() => handleRemove(d.id)}
@@ -213,21 +227,35 @@ export function DelegationsPage() {
             )}
           </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label htmlFor="delegation-scope" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Scope</label>
-            <select
-              id="delegation-scope"
-              value={scopeTopicId}
-              onChange={(e) => setScopeTopicId(e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
-            >
-              <option value="__global__">Global (all topics)</option>
-              {(allTopics ?? []).map((t: Topic) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div>
+              <label htmlFor="delegation-scope" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Scope</label>
+              <select
+                id="delegation-scope"
+                value={scopeTopicId}
+                onChange={(e) => setScopeTopicId(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              >
+                <option value="__global__">Global (all topics)</option>
+                {(allTopics ?? []).map((t: Topic) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="delegation-expires-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+                Expires <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span>
+              </label>
+              <input
+                id="delegation-expires-at"
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              />
+            </div>
           </div>
 
           {formError && (

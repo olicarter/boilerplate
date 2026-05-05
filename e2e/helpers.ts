@@ -14,7 +14,7 @@ export async function createProposal(
   request: APIRequestContext,
   topicId: string,
   title: string,
-  options: { description?: string; status?: 'open' | 'closed'; closes_at?: string; threshold?: number } = {},
+  options: { description?: string; status?: 'open' | 'closed' | 'draft'; closes_at?: string; threshold?: number } = {},
 ) {
   const res = await request.post(`${API}/api/proposals`, {
     data: {
@@ -24,6 +24,7 @@ export async function createProposal(
       description: options.description ?? '',
       closes_at: options.closes_at,
       threshold: options.threshold,
+      status: options.status === 'draft' ? 'draft' : undefined,
     },
   });
   const body = await res.json();
@@ -53,9 +54,16 @@ export async function createDelegation(
   delegatorId: string,
   delegateId: string,
   topicId: string | null = null,
+  expiresAt?: string | null,
 ) {
   const res = await request.post(`${API}/api/delegations`, {
-    data: { id: crypto.randomUUID(), delegator_id: delegatorId, delegate_id: delegateId, topic_id: topicId },
+    data: {
+      id: crypto.randomUUID(),
+      delegator_id: delegatorId,
+      delegate_id: delegateId,
+      topic_id: topicId,
+      expires_at: expiresAt ?? null,
+    },
   });
   const body = await res.json();
   return body.item as { id: string };

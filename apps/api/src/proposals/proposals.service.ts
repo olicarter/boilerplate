@@ -4,12 +4,18 @@ import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
 import { Proposal, ProposalStatus } from './proposal.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
+import { DelegationsService } from '../delegations/delegations.service';
 
 export interface TallyResult {
   yes: number;
   no: number;
   abstain: number;
   total: number;
+}
+
+export interface DelegationVote {
+  delegate_id: string;
+  choice: string;
 }
 
 @Injectable()
@@ -36,14 +42,15 @@ export class ProposalsService {
     description?: string;
     closes_at?: string | null;
     threshold?: number;
+    status?: 'open' | 'draft';
   }): Promise<{ item: Proposal; txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       const proposal = manager.create(Proposal, {
         description: '',
-        status: 'open',
         closed_at: null,
         threshold: 50,
         ...data,
+        status: data.status ?? 'open',
         closes_at: data.closes_at ? new Date(data.closes_at) : null,
       });
       const saved = await manager.save(proposal);
@@ -83,9 +90,13 @@ export class ProposalsService {
     if (proposal.author_id !== userId) throw new ForbiddenException('Only the author can perform this action');
     const allowed = Array.isArray(from) ? from : [from];
     if (!allowed.includes(proposal.status)) {
-      throw new BadRequestException(`Proposal must be ${allowed.join(' or ')} to ${to}`);
+      throw new BadRequestException(`Proposal must be ${allowed.join(' or ')} to perform this action`);
     }
     return this.update(id, patch);
+  }
+
+  publish(id: string, userId: string) {
+    return this.transition(id, userId, 'draft', 'open', { status: 'open' });
   }
 
   close(id: string, userId: string) {
@@ -115,25 +126,24 @@ export class ProposalsService {
     return expired.length;
   }
 
-  /**
-   * Tally votes for a proposal, walking delegation chains.
-   * For each user who hasn't voted directly, follow their topic-specific
-   * delegation (then global fallback), taking the first direct vote found.
-   * Cycles result in abstain.
-   */
+  private buildDelegationMap(delegations: Delegation[]): Map<string, Map<string | null, string>> {
+    const map = new Map<string, Map<string | null, string>>();
+    for (const d of delegations) {
+      if (!map.has(d.delegator_id)) map.set(d.delegator_id, new Map());
+      map.get(d.delegator_id)!.set(d.topic_id, d.delegate_id);
+    }
+    return map;
+  }
+
   async tally(proposalId: string): Promise<TallyResult> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
 
     const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
-    const delegations = await this.dataSource.getRepository(Delegation).find();
+    const allDelegations = await this.dataSource.getRepository(Delegation).find();
+    const delegations = DelegationsService.activeDelegations(allDelegations);
 
     const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice]));
-
-    const delegationMap = new Map<string, Map<string | null, string>>();
-    for (const d of delegations) {
-      if (!delegationMap.has(d.delegator_id)) delegationMap.set(d.delegator_id, new Map());
-      delegationMap.get(d.delegator_id)!.set(d.topic_id, d.delegate_id);
-    }
+    const delegationMap = this.buildDelegationMap(delegations);
 
     const MAX_DEPTH = 10;
     const resolveChoice = (startUserId: string): string => {
@@ -165,5 +175,36 @@ export class ProposalsService {
       tally.total++;
     }
     return tally;
+  }
+
+  /** Returns the delegate who voted on behalf of userId, or null if user voted directly / no delegation resolves. */
+  async getMyDelegationVote(proposalId: string, userId: string): Promise<DelegationVote | null> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+    const allDelegations = await this.dataSource.getRepository(Delegation).find();
+    const delegations = DelegationsService.activeDelegations(allDelegations);
+
+    // User voted directly — no banner needed
+    if (votes.find((v) => v.user_id === userId)) return null;
+
+    const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice]));
+    const delegationMap = this.buildDelegationMap(delegations);
+
+    const MAX_DEPTH = 10;
+    const visited = new Set<string>([userId]);
+    let current = userId;
+
+    while (true) {
+      const userDelegations = delegationMap.get(current);
+      if (!userDelegations) return null;
+      const next = userDelegations.get(proposal.topic_id) ?? userDelegations.get(null);
+      if (!next || visited.has(next) || visited.size >= MAX_DEPTH) return null;
+      visited.add(next);
+
+      if (directVotes.has(next)) {
+        return { delegate_id: next, choice: directVotes.get(next)! };
+      }
+      current = next;
+    }
   }
 }

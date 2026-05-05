@@ -67,6 +67,7 @@ export const proposalsCollection = createCollection(
         description: p.description,
         closes_at: p.closes_at,
         threshold: p.threshold,
+        status: p.status as 'open' | 'draft',
       });
       return { txid: result.txid };
     },
@@ -90,7 +91,13 @@ export const delegationsCollection = createCollection(
     getKey: (row: unknown) => (row as Delegation).id,
     onInsert: async ({ transaction }) => {
       const d = transaction.mutations[0].modified as Delegation;
-      const result = await delegationsApi.create({ id: d.id, delegator_id: d.delegator_id, delegate_id: d.delegate_id, topic_id: d.topic_id });
+      const result = await delegationsApi.create({
+        id: d.id,
+        delegator_id: d.delegator_id,
+        delegate_id: d.delegate_id,
+        topic_id: d.topic_id,
+        expires_at: d.expires_at ?? null,
+      });
       return { txid: result.txid };
     },
     onDelete: async ({ transaction }) => {

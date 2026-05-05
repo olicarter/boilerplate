@@ -39,7 +39,7 @@ export interface Proposal {
   author_id: string | null;
   title: string;
   description: string;
-  status: 'open' | 'closed' | 'withdrawn';
+  status: 'draft' | 'open' | 'closed' | 'withdrawn';
   threshold: number;
   created_at: string;
   closes_at: string | null;
@@ -52,6 +52,7 @@ export interface Delegation {
   delegator_id: string;
   delegate_id: string;
   topic_id: string | null;
+  expires_at: string | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -70,6 +71,11 @@ export interface TallyResult {
   no: number;
   abstain: number;
   total: number;
+}
+
+export interface DelegationVote {
+  delegate_id: string;
+  choice: string;
 }
 
 export const usersApi = {
@@ -91,10 +97,12 @@ export const topicsApi = {
 };
 
 export const proposalsApi = {
-  create: (data: { id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number }) =>
+  create: (data: { id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number; status?: 'open' | 'draft' }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  publish: (id: string) =>
+    request<MutationResult<Proposal>>(`/proposals/${id}/publish`, { method: 'POST' }),
   close: (id: string) =>
     request<MutationResult<Proposal>>(`/proposals/${id}/close`, { method: 'POST' }),
   reopen: (id: string) =>
@@ -105,10 +113,12 @@ export const proposalsApi = {
     request<{ txid: number }>(`/proposals/${id}`, { method: 'DELETE' }),
   tally: (id: string) =>
     request<TallyResult>(`/proposals/${id}/tally`),
+  myDelegationVote: (id: string) =>
+    request<DelegationVote | null>(`/proposals/${id}/my-delegation-vote`),
 };
 
 export const delegationsApi = {
-  create: (data: { id: string; delegator_id: string; delegate_id: string; topic_id?: string | null }) =>
+  create: (data: { id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null }) =>
     request<MutationResult<Delegation>>('/delegations', { method: 'POST', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/delegations/${id}`, { method: 'DELETE' }),

@@ -21,10 +21,16 @@ export class ProposalsController {
     return this.proposalsService.tally(id);
   }
 
+  @Get(':id/my-delegation-vote')
+  @UseGuards(AuthGuard)
+  myDelegationVote(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.getMyDelegationVote(id, req.user!.id);
+  }
+
   @Post()
   @UseGuards(AuthGuard)
   create(
-    @Body() body: { id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number },
+    @Body() body: { id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number; status?: 'open' | 'draft' },
     @Req() req: AuthenticatedRequest,
   ) {
     return this.proposalsService.create({ ...body, author_id: req.user!.id });
@@ -37,6 +43,12 @@ export class ProposalsController {
     @Body() body: { title?: string; description?: string; status?: 'open' | 'closed'; closed_at?: string | null; closes_at?: string | null; threshold?: number },
   ) {
     return this.proposalsService.update(id, body as any);
+  }
+
+  @Post(':id/publish')
+  @UseGuards(AuthGuard)
+  publish(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.publish(id, req.user!.id);
   }
 
   @Post(':id/close')

@@ -3,7 +3,7 @@ import { useParams, Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { proposalsCollection, topicsCollection, votesCollection, usersCollection } from '../collections';
-import { proposalsApi, type TallyResult, type Proposal, type Topic, type Vote, type User } from '../api';
+import { proposalsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { useCurrentUser } from '../context';
@@ -48,6 +48,7 @@ export function ProposalDetailPage() {
 
   const [tally, setTally] = useState<TallyResult | null>(null);
   const [tallyLoading, setTallyLoading] = useState(true);
+  const [delegationVote, setDelegationVote] = useState<DelegationVote | null>(null);
   const [voting, setVoting] = useState(false);
   const [voteError, setVoteError] = useState('');
   const [changingVote, setChangingVote] = useState(false);
@@ -77,9 +78,27 @@ export function ProposalDetailPage() {
     }
   }
 
+  async function fetchMyDelegationVote() {
+    if (!currentUser) return;
+    try {
+      const result = await proposalsApi.myDelegationVote(id);
+      setDelegationVote(result);
+    } catch {
+      setDelegationVote(null);
+    }
+  }
+
   useEffect(() => {
     fetchTally();
   }, [id]);
+
+  useEffect(() => {
+    if (currentUser && !myVote) {
+      fetchMyDelegationVote();
+    } else {
+      setDelegationVote(null);
+    }
+  }, [id, currentUser?.id, myVote?.id]);
 
   async function castVote(choice: VoteChoice) {
     if (!currentUser) return;
@@ -96,6 +115,7 @@ export function ProposalDetailPage() {
       await tx.isPersisted.promise;
       await fetchTally();
       setChangingVote(false);
+      setDelegationVote(null);
       addToast('Vote cast', 'success');
     } catch (err) {
       setVoteError(err instanceof Error ? err.message : 'Failed to cast vote.');
@@ -143,9 +163,13 @@ export function ProposalDetailPage() {
     return <p style={{ color: '#999', fontSize: 14 }}>Loading…</p>;
   }
 
+  const isDraft = proposal.status === 'draft';
   const isOpen = proposal.status === 'open';
   const isWithdrawn = proposal.status === 'withdrawn';
   const isAuthor = currentUser?.id === proposal.author_id;
+  const delegateUser = delegationVote
+    ? (allUsers ?? []).find((u: User) => u.id === delegationVote.delegate_id)
+    : undefined;
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
   const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold) : null;
@@ -196,9 +220,9 @@ export function ProposalDetailPage() {
             borderRadius: 12,
             fontSize: 12,
             fontWeight: 500,
-            background: isOpen ? '#e6f9ed' : '#f5f5f5',
-            color: isOpen ? '#2d9a4e' : '#888',
-            border: `1px solid ${isOpen ? '#b3e5c2' : '#ddd'}`,
+            background: isDraft ? '#fff8e1' : isOpen ? '#e6f9ed' : '#f5f5f5',
+            color: isDraft ? '#b45309' : isOpen ? '#2d9a4e' : '#888',
+            border: `1px solid ${isDraft ? '#fde68a' : isOpen ? '#b3e5c2' : '#ddd'}`,
           }}
         >
           {proposal.status}
@@ -236,6 +260,32 @@ export function ProposalDetailPage() {
         {new Date(proposal.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
         {proposal.closed_at && ` · Closed ${new Date(proposal.closed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`}
       </p>
+
+      {/* Draft banner */}
+      {isDraft && isAuthor && (
+        <div style={{
+          border: '1px solid #fde68a',
+          borderRadius: 6,
+          padding: '0.75rem 1.25rem',
+          marginBottom: '1.5rem',
+          background: '#fffbeb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+        }}>
+          <span style={{ fontSize: 14, color: '#92400e' }}>
+            This proposal is a draft — not yet visible to other members.
+          </span>
+          <button
+            onClick={() => handleAction('Publish this proposal', 'Proposal published', () => proposalsApi.publish(id))}
+            disabled={actioning}
+            style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: '#b45309', color: '#fff', border: 'none', borderRadius: 4, flexShrink: 0 }}
+          >
+            Publish
+          </button>
+        </div>
+      )}
 
       {/* Deadline countdown */}
       {deadline && (
@@ -317,6 +367,27 @@ export function ProposalDetailPage() {
           <h3 style={{ margin: '0 0 0.75rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Your vote
           </h3>
+
+          {/* Delegation override notice */}
+          {currentUser && !myVote && delegationVote && (
+            <div style={{
+              background: '#f0f7ff',
+              border: '1px solid #c3d6fb',
+              borderRadius: 4,
+              padding: '0.6rem 0.75rem',
+              marginBottom: '0.75rem',
+              fontSize: 13,
+              color: '#444',
+            }}>
+              Your delegate{' '}
+              <strong>{delegateUser?.name ?? 'someone'}</strong>{' '}
+              voted{' '}
+              <strong style={{ color: choiceColors[delegationVote.choice as VoteChoice] }}>
+                {delegationVote.choice}
+              </strong>{' '}
+              on your behalf. Cast your own vote below to override.
+            </div>
+          )}
 
           {!currentUser ? (
             <p style={{ fontSize: 14, color: '#666' }}>

@@ -21,14 +21,19 @@ export class DelegationsService {
     return this.delegationRepo.findBy({ delegator_id: delegatorId });
   }
 
+  static activeDelegations(delegations: Delegation[]): Delegation[] {
+    const now = new Date();
+    return delegations.filter((d) => !d.expires_at || d.expires_at > now);
+  }
+
   private wouldCreateCycle(
     delegatorId: string,
     delegateId: string,
     existing: Delegation[],
   ): boolean {
-    // Build adjacency list across all scopes (conservative: any path counts)
+    // Build adjacency list across active delegations only
     const graph = new Map<string, string[]>();
-    for (const d of existing) {
+    for (const d of DelegationsService.activeDelegations(existing)) {
       if (!graph.has(d.delegator_id)) graph.set(d.delegator_id, []);
       graph.get(d.delegator_id)!.push(d.delegate_id);
     }
@@ -52,6 +57,7 @@ export class DelegationsService {
     delegator_id: string;
     delegate_id: string;
     topic_id?: string | null;
+    expires_at?: string | null;
   }): Promise<{ item: Delegation; txid: number }> {
     if (data.delegator_id === data.delegate_id) {
       throw new BadRequestException('You cannot delegate to yourself');
@@ -63,7 +69,11 @@ export class DelegationsService {
     }
 
     return this.dataSource.transaction(async (manager) => {
-      const delegation = manager.create(Delegation, { topic_id: null, ...data });
+      const delegation = manager.create(Delegation, {
+        topic_id: null,
+        ...data,
+        expires_at: data.expires_at ? new Date(data.expires_at) : null,
+      });
       const saved = await manager.save(delegation);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };

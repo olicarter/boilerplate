@@ -1,6 +1,6 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
 
-export type ProposalStatus = 'open' | 'closed' | 'withdrawn';
+export type ProposalStatus = 'draft' | 'open' | 'closed' | 'withdrawn';
 
 @Entity('proposals')
 export class Proposal {
