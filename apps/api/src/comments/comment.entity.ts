@@ -16,4 +16,7 @@ export class Comment {
 
   @CreateDateColumn({ name: 'created_at' })
   created_at!: Date;
+
+  @Column({ name: 'edited_at', type: 'timestamptz', nullable: true, default: null })
+  edited_at!: Date | null;
 }

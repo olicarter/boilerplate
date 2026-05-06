@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 
@@ -24,6 +24,12 @@ export class CommentsController {
       author_id: req.user!.id,
       body: body.body,
     });
+  }
+
+  @Patch('comments/:id')
+  @UseGuards(AuthGuard)
+  edit(@Param('id') id: string, @Body() body: { body: string }, @Req() req: AuthenticatedRequest) {
+    return this.commentsService.edit(id, req.user!.id, body.body);
   }
 
   @Delete('comments/:id')

@@ -143,12 +143,15 @@ export interface Comment {
   author_id: string | null;
   body: string;
   created_at: string;
+  edited_at: string | null;
   [key: string]: unknown;
 }
 
 export const commentsApi = {
   create: (proposalId: string, data: { id: string; body: string }) =>
     request<MutationResult<Comment>>(`/proposals/${proposalId}/comments`, { method: 'POST', body: JSON.stringify(data) }),
+  edit: (id: string, body: string) =>
+    request<MutationResult<Comment>>(`/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/comments/${id}`, { method: 'DELETE' }),
 };

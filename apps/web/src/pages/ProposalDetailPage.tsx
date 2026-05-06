@@ -65,6 +65,8 @@ export function ProposalDetailPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editError, setEditError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentBody, setEditCommentBody] = useState('');
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -233,6 +235,21 @@ export function ProposalDetailPage() {
     }
   }
 
+  async function saveEditComment(commentId: string, e: React.FormEvent) {
+    e.preventDefault();
+    if (!editCommentBody.trim()) return;
+    try {
+      const tx = commentsCollection.update(commentId, (draft: Comment) => {
+        draft.body = editCommentBody.trim();
+      });
+      await tx.isPersisted.promise;
+      setEditingCommentId(null);
+      addToast('Comment updated', 'success');
+    } catch {
+      addToast('Failed to update comment', 'error');
+    }
+  }
+
   function startEditing() {
     setEditTitle(proposal.title);
     setEditDescription(proposal.description ?? '');
@@ -352,7 +369,7 @@ export function ProposalDetailPage() {
                 onClick={startEditing}
                 style={{ fontSize: 12, padding: '0.2rem 0.6rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4, flexShrink: 0, color: '#666' }}
               >
-                Edit
+                Edit proposal
               </button>
             )}
           </div>
@@ -670,19 +687,51 @@ export function ProposalDetailPage() {
                       <span style={{ fontSize: 12, color: '#aaa' }}>
                         {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
-                      {isOwn && (
-                        <ConfirmButton
-                          label="Delete"
-                          confirmLabel="Yes"
-                          onConfirm={() => deleteComment(c.id)}
-                          style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer', marginLeft: 'auto' }}
-                          confirmStyle={{ background: 'none', border: '1px solid #ddd', borderRadius: 3, color: '#d94040' }}
-                        />
+                      {c.edited_at && (
+                        <span style={{ fontSize: 11, color: '#bbb' }}>(edited)</span>
+                      )}
+                      {isOwn && editingCommentId !== c.id && (
+                        <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: '0.25rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => { setEditingCommentId(c.id); setEditCommentBody(c.body); }}
+                            style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                          >
+                            Edit
+                          </button>
+                          <ConfirmButton
+                            label="Delete"
+                            confirmLabel="Yes"
+                            onConfirm={() => deleteComment(c.id)}
+                            style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                            confirmStyle={{ background: 'none', border: '1px solid #ddd', borderRadius: 3, color: '#d94040' }}
+                          />
+                        </span>
                       )}
                     </div>
-                    <p style={{ margin: 0, fontSize: 14, color: '#333', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      {c.body}
-                    </p>
+                    {editingCommentId === c.id ? (
+                      <form onSubmit={(e) => saveEditComment(c.id, e)}>
+                        <textarea
+                          value={editCommentBody}
+                          onChange={(e) => setEditCommentBody(e.target.value.slice(0, COMMENT_MAX))}
+                          rows={3}
+                          maxLength={COMMENT_MAX}
+                          style={{ width: '100%', padding: '0.4rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical', marginBottom: '0.4rem' }}
+                        />
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <button type="submit" disabled={!editCommentBody.trim()} style={{ fontSize: 12, padding: '0.2rem 0.7rem', cursor: 'pointer' }}>
+                            Save
+                          </button>
+                          <button type="button" onClick={() => setEditingCommentId(null)} style={{ fontSize: 12, padding: '0.2rem 0.7rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div style={{ fontSize: 14, color: '#333', lineHeight: 1.5 }}>
+                        <MarkdownContent content={c.body} />
+                      </div>
+                    )}
                   </div>
                 </div>
               );

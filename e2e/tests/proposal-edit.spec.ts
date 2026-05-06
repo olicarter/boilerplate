@@ -8,15 +8,15 @@ test('author sees Edit button on open proposal', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Editable proposal');
 
   await page.goto(`/proposals/${proposal.id}`);
-  await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit proposal' })).toBeVisible();
 });
 
-test('Edit button not shown on closed proposal', async ({ page, asAlice }) => {
+test('"Edit proposal" button not shown on closed proposal', async ({ page, asAlice }) => {
   const topic = await createTopic(page.request, 'Policy');
   const proposal = await createProposal(page.request, topic.id, 'Closed one', { status: 'closed' });
 
   await page.goto(`/proposals/${proposal.id}`);
-  await expect(page.getByRole('button', { name: 'Edit' })).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit proposal' })).not.toBeVisible();
 });
 
 test('can edit proposal title and description', async ({ page, asAlice }) => {
@@ -24,7 +24,7 @@ test('can edit proposal title and description', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Old title', { description: 'Old description' });
 
   await page.goto(`/proposals/${proposal.id}`);
-  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByRole('button', { name: 'Edit proposal' }).click();
 
   await page.getByLabel('Title').fill('New title');
   await page.getByLabel('Description').fill('New description');
@@ -40,12 +40,12 @@ test('cancel edit restores original content', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Original title');
 
   await page.goto(`/proposals/${proposal.id}`);
-  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByRole('button', { name: 'Edit proposal' }).click();
   await page.getByLabel('Title').fill('Changed title');
   await page.getByRole('button', { name: 'Cancel' }).click();
 
   await expect(page.getByRole('heading', { name: 'Original title' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit proposal' })).toBeVisible();
 });
 
 test('API rejects edit by non-author', async ({ page, asAlice, bob }) => {

@@ -141,6 +141,11 @@ export const commentsCollection = createCollection(
       const result = await commentsApi.create(c.proposal_id, { id: c.id, body: c.body });
       return { txid: result.txid };
     },
+    onUpdate: async ({ transaction }) => {
+      const c = transaction.mutations[0].modified as Comment;
+      const result = await commentsApi.edit(c.id, c.body);
+      return { txid: result.txid };
+    },
     onDelete: async ({ transaction }) => {
       const c = transaction.mutations[0].original as Comment;
       const result = await commentsApi.delete(c.id);
