@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
-import { proposalsCollection, topicsCollection, votesCollection, usersCollection } from '../collections';
+import { proposalsCollection, topicsCollection, votesCollection, usersCollection, commentsCollection } from '../collections';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
-import type { Topic, Proposal, Vote, User } from '../api';
+import type { Topic, Proposal, Vote, User, Comment } from '../api';
 
 const TITLE_MAX = 200;
 const DESC_MAX = 10000;
@@ -62,9 +62,11 @@ export function ProposalsPage() {
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
   const { data: allUsers } = useLiveQuery(usersCollection);
+  const { data: allComments } = useLiveQuery(commentsCollection);
 
   const [topicFilter, setTopicFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [mineFilter, setMineFilter] = useState<'mine' | 'voted' | null>(null);
   const [sort, setSort] = useState<'newest' | 'oldest' | 'most-votes'>('newest');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -78,11 +80,17 @@ export function ProposalsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
+  const myVotedProposalIds = currentUser
+    ? new Set((allVotes ?? []).filter((v: Vote) => v.user_id === currentUser.id).map((v: Vote) => v.proposal_id))
+    : new Set<string>();
+
   const proposals = (allProposals ?? [])
     .filter((p: Proposal) => {
       if (topicFilter !== null && p.topic_id !== topicFilter) return false;
       if (p.status === 'draft' && p.author_id !== currentUser?.id) return false;
       if (statusFilter !== null && p.status !== statusFilter) return false;
+      if (mineFilter === 'mine' && p.author_id !== currentUser?.id) return false;
+      if (mineFilter === 'voted' && !myVotedProposalIds.has(p.id)) return false;
       if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     })
@@ -357,7 +365,7 @@ export function ProposalsPage() {
         ))}
       </div>
 
-      {/* Status filter pills */}
+      {/* Status + personal filters */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {([null, 'open', 'closed', 'withdrawn'] as const).map((s) => {
           const label = s === null ? 'All statuses' : s.charAt(0).toUpperCase() + s.slice(1);
@@ -378,6 +386,34 @@ export function ProposalsPage() {
             </button>
           );
         })}
+        {currentUser && (
+          <>
+            <button
+              onClick={() => setMineFilter(mineFilter === 'mine' ? null : 'mine')}
+              style={{
+                ...badge,
+                cursor: 'pointer',
+                border: mineFilter === 'mine' ? '1px solid #6d28d9' : '1px solid #ddd',
+                background: mineFilter === 'mine' ? '#ede9fe' : '#f0f0f0',
+                color: mineFilter === 'mine' ? '#6d28d9' : '#444',
+              }}
+            >
+              My proposals
+            </button>
+            <button
+              onClick={() => setMineFilter(mineFilter === 'voted' ? null : 'voted')}
+              style={{
+                ...badge,
+                cursor: 'pointer',
+                border: mineFilter === 'voted' ? '1px solid #6d28d9' : '1px solid #ddd',
+                background: mineFilter === 'voted' ? '#ede9fe' : '#f0f0f0',
+                color: mineFilter === 'voted' ? '#6d28d9' : '#444',
+              }}
+            >
+              My votes
+            </button>
+          </>
+        )}
       </div>
 
       {allProposals === null ? (
@@ -399,6 +435,7 @@ export function ProposalsPage() {
             const yes = votes.filter((v: Vote) => v.choice === 'yes').length;
             const no = votes.filter((v: Vote) => v.choice === 'no').length;
             const abstain = votes.filter((v: Vote) => v.choice === 'abstain').length;
+            const commentCount = (allComments ?? []).filter((c: Comment) => c.proposal_id === p.id).length;
             const myVote = currentUser
               ? votes.find((v: Vote) => v.user_id === currentUser.id)
               : undefined;
@@ -499,6 +536,7 @@ export function ProposalsPage() {
                         <div style={{ color: '#2d9a4e' }}>↑ {yes}</div>
                         <div style={{ color: '#d94040' }}>↓ {no}</div>
                         {abstain > 0 && <div style={{ color: '#aaa' }}>— {abstain}</div>}
+                        {commentCount > 0 && <div style={{ color: '#aaa', marginTop: '0.2rem' }}>{commentCount} comment{commentCount !== 1 ? 's' : ''}</div>}
                       </div>
                     )}
                   </div>

@@ -17,6 +17,9 @@ const RP_ID = process.env.RP_ID ?? 'localhost';
 const RP_NAME = 'Ripple';
 const ORIGIN = process.env.ORIGIN ?? 'http://localhost:5173';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_MAX = 100;
+
 // In-memory challenge store: challenge (base64url) → userId (for registration) or true (for auth)
 const challengeStore = new Map<string, string | true>();
 
@@ -31,6 +34,13 @@ export class AuthService {
   ) {}
 
   async registerBegin(data: { name: string; email: string }) {
+    const name = data.name?.trim();
+    if (!name) throw new BadRequestException('Name is required');
+    if (name.length > NAME_MAX) throw new BadRequestException(`Name must be ${NAME_MAX} characters or fewer`);
+    const email = data.email?.trim().toLowerCase();
+    if (!email) throw new BadRequestException('Email is required');
+    if (!EMAIL_RE.test(email)) throw new BadRequestException('Invalid email address');
+
     let user = await this.userRepo.findOneBy({ email: data.email });
     if (!user) {
       user = await this.userRepo.save(
