@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+
+const TOPIC_NAME_MAX = 100;
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Topic } from './topic.entity';
@@ -16,6 +18,10 @@ export class TopicsService {
   }
 
   async create(data: { id: string; name: string; description?: string }): Promise<{ item: Topic; txid: number }> {
+    const name = data.name?.trim();
+    if (!name) throw new BadRequestException('Topic name is required');
+    if (name.length > TOPIC_NAME_MAX) throw new BadRequestException(`Topic name must be ${TOPIC_NAME_MAX} characters or fewer`);
+
     return this.dataSource.transaction(async (manager) => {
       const topic = manager.create(Topic, { description: '', ...data });
       const saved = await manager.save(topic);

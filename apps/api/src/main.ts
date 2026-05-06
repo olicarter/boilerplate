@@ -4,11 +4,13 @@ import { AppModule } from './app.module';
 import { RawBodyMiddleware } from './middleware/raw-body.middleware';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import type { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
+  app.use(helmet());
   app.enableCors({ origin: 'http://localhost:5173', credentials: true });
   
   app.use(cookieParser());

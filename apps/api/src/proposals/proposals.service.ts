@@ -2,6 +2,9 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
 import { Proposal, ProposalStatus } from './proposal.entity';
+
+const TITLE_MAX = 200;
+const DESCRIPTION_MAX = 10_000;
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { DelegationsService } from '../delegations/delegations.service';
@@ -44,6 +47,13 @@ export class ProposalsService {
     threshold?: number;
     status?: 'open' | 'draft';
   }): Promise<{ item: Proposal; txid: number }> {
+    const title = data.title?.trim();
+    if (!title) throw new BadRequestException('Title is required');
+    if (title.length > TITLE_MAX) throw new BadRequestException(`Title must be ${TITLE_MAX} characters or fewer`);
+    if (data.description && data.description.length > DESCRIPTION_MAX) {
+      throw new BadRequestException(`Description must be ${DESCRIPTION_MAX} characters or fewer`);
+    }
+
     return this.dataSource.transaction(async (manager) => {
       const proposal = manager.create(Proposal, {
         description: '',

@@ -12,6 +12,7 @@ import {
 import { request, authApi, type User } from './api';
 import { UserContext } from './context';
 import { ToastProvider } from './components/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProposalsPage } from './pages/ProposalsPage';
 import { ProposalDetailPage } from './pages/ProposalDetailPage';
 import { DelegationsPage } from './pages/DelegationsPage';
@@ -373,8 +374,10 @@ declare module '@tanstack/react-router' {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <RouterProvider router={router} />
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
