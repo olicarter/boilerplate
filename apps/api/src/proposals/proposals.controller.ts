@@ -38,11 +38,12 @@ export class ProposalsController {
 
   @Patch(':id')
   @UseGuards(AuthGuard)
-  update(
+  edit(
     @Param('id') id: string,
-    @Body() body: { title?: string; description?: string; status?: 'open' | 'closed'; closed_at?: string | null; closes_at?: string | null; threshold?: number },
+    @Body() body: { title?: string; description?: string },
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.proposalsService.update(id, body as any);
+    return this.proposalsService.edit(id, req.user!.id, body);
   }
 
   @Post(':id/publish')

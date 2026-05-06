@@ -65,6 +65,7 @@ export function ProposalsPage() {
 
   const [topicFilter, setTopicFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'most-votes'>('newest');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
 
@@ -77,13 +78,23 @@ export function ProposalsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
-  const proposals = (allProposals ?? []).filter((p: Proposal) => {
-    if (topicFilter !== null && p.topic_id !== topicFilter) return false;
-    if (p.status === 'draft' && p.author_id !== currentUser?.id) return false;
-    if (statusFilter !== null && p.status !== statusFilter) return false;
-    if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const proposals = (allProposals ?? [])
+    .filter((p: Proposal) => {
+      if (topicFilter !== null && p.topic_id !== topicFilter) return false;
+      if (p.status === 'draft' && p.author_id !== currentUser?.id) return false;
+      if (statusFilter !== null && p.status !== statusFilter) return false;
+      if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a: Proposal, b: Proposal) => {
+      if (sort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (sort === 'most-votes') {
+        const aVotes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === a.id).length;
+        const bVotes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === b.id).length;
+        return bVotes - aVotes;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
@@ -294,15 +305,25 @@ export function ProposalsPage() {
         </form>
       )}
 
-      {/* Search */}
-      <div style={{ marginBottom: '1rem' }}>
+      {/* Search + sort */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
         <input
           type="search"
           placeholder="Search proposals…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: '100%', padding: '0.45rem 0.75rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
+          style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
         />
+        <select
+          aria-label="Sort proposals"
+          value={sort}
+          onChange={(e) => setSort(e.target.value as typeof sort)}
+          style={{ padding: '0.45rem 0.6rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+        >
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="most-votes">Most votes</option>
+        </select>
       </div>
 
       {/* Topic filter pills */}

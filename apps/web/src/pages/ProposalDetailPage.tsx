@@ -60,6 +60,11 @@ export function ProposalDetailPage() {
   const [actioning, setActioning] = useState(false);
   const [commentBody, setCommentBody] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editError, setEditError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -228,6 +233,28 @@ export function ProposalDetailPage() {
     }
   }
 
+  function startEditing() {
+    setEditTitle(proposal.title);
+    setEditDescription(proposal.description ?? '');
+    setEditError('');
+    setEditing(true);
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setEditError('');
+    try {
+      await proposalsApi.update(id, { title: editTitle.trim(), description: editDescription });
+      addToast('Proposal updated', 'success');
+      setEditing(false);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 680 }}>
       <Link
@@ -280,12 +307,61 @@ export function ProposalDetailPage() {
         )}
       </div>
 
-      <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.4rem' }}>{proposal.title}</h2>
-
-      {proposal.description && (
-        <div style={{ margin: '0 0 1rem' }}>
-          <MarkdownContent content={proposal.description} />
-        </div>
+      {editing ? (
+        <form onSubmit={saveEdit} style={{ marginBottom: '1.5rem' }}>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label htmlFor="edit-title" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Title</label>
+            <input
+              id="edit-title"
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              required
+              maxLength={200}
+              style={{ width: '100%', padding: '0.5rem', fontSize: 15, fontWeight: 600, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+            />
+          </div>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label htmlFor="edit-description" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Description</label>
+            <textarea
+              id="edit-description"
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              rows={5}
+              maxLength={10000}
+              style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
+            />
+          </div>
+          {editError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{editError}</p>}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="submit" disabled={saving} style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer' }}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+            <button type="button" onClick={() => setEditing(false)} style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>{proposal.title}</h2>
+            {isAuthor && (isDraft || isOpen) && (
+              <button
+                type="button"
+                onClick={startEditing}
+                style={{ fontSize: 12, padding: '0.2rem 0.6rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4, flexShrink: 0, color: '#666' }}
+              >
+                Edit
+              </button>
+            )}
+          </div>
+          {proposal.description && (
+            <div style={{ margin: '0 0 1rem' }}>
+              <MarkdownContent content={proposal.description} />
+            </div>
+          )}
+        </>
       )}
 
       <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 1.5rem' }}>

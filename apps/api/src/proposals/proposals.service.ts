@@ -81,6 +81,28 @@ export class ProposalsService {
     });
   }
 
+  async edit(
+    id: string,
+    userId: string,
+    data: { title?: string; description?: string },
+  ): Promise<{ item: Proposal; txid: number }> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id });
+    if (proposal.author_id !== userId) throw new ForbiddenException('Only the author can edit this proposal');
+    if (!['open', 'draft'].includes(proposal.status)) {
+      throw new BadRequestException('Only open or draft proposals can be edited');
+    }
+    if (data.title !== undefined) {
+      const title = data.title.trim();
+      if (!title) throw new BadRequestException('Title is required');
+      if (title.length > TITLE_MAX) throw new BadRequestException(`Title must be ${TITLE_MAX} characters or fewer`);
+      data = { ...data, title };
+    }
+    if (data.description !== undefined && data.description.length > DESCRIPTION_MAX) {
+      throw new BadRequestException(`Description must be ${DESCRIPTION_MAX} characters or fewer`);
+    }
+    return this.update(id, data);
+  }
+
   async delete(id: string): Promise<{ txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       await manager.delete(Proposal, id);
