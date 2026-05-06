@@ -3,7 +3,7 @@ import { createTopic, createProposal } from '../helpers';
 
 test('shows empty state when no proposals', async ({ page }) => {
   await page.goto('/proposals');
-  await expect(page.getByText('No proposals yet.')).toBeVisible();
+  await expect(page.getByText('No proposals yet')).toBeVisible();
 });
 
 test('shows proposals list', async ({ page, asAlice }) => {

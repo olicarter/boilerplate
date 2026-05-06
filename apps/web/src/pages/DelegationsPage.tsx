@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { delegationsCollection, topicsCollection, usersCollection } from '../collections';
 import { UserSearch } from '../components/UserSearch';
 import { ConfirmButton } from '../components/ConfirmButton';
+import { EmptyState } from '../components/EmptyState';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import type { User, Delegation, Topic } from '../api';
@@ -116,7 +117,11 @@ export function DelegationsPage() {
           You are delegating to
         </h3>
         {outgoing.length === 0 ? (
-          <p style={{ fontSize: 14, color: '#999' }}>No delegations set.</p>
+          <EmptyState
+            variant="delegations"
+            title="No delegations set"
+            description="Delegate your vote to someone you trust on all topics or a specific one."
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {outgoing.map((d: Delegation) => {
@@ -280,7 +285,10 @@ export function DelegationsPage() {
           Delegated to you
         </h3>
         {incoming.length === 0 ? (
-          <p style={{ fontSize: 14, color: '#999' }}>Nobody has delegated to you yet.</p>
+          <EmptyState
+            variant="delegations"
+            title="Nobody has delegated to you yet"
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {incoming.map((d: Delegation) => {

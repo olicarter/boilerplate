@@ -8,12 +8,12 @@ test('shows sign-in message when logged out', async ({ page }) => {
 
 test('shows empty outgoing delegations state', async ({ page, asAlice }) => {
   await page.goto('/delegations');
-  await expect(page.getByText('No delegations set.')).toBeVisible();
+  await expect(page.getByText('No delegations set')).toBeVisible();
 });
 
 test('shows empty incoming delegations state', async ({ page, asAlice }) => {
   await page.goto('/delegations');
-  await expect(page.getByText('Nobody has delegated to you yet.')).toBeVisible();
+  await expect(page.getByText('Nobody has delegated to you yet')).toBeVisible();
 });
 
 test('can add a global delegation', async ({ page, asAlice, bob }) => {
@@ -72,7 +72,7 @@ test('can remove a delegation', async ({ page, asAlice, bob }) => {
 
   await page.getByRole('button', { name: 'Remove' }).click();
   await page.getByRole('button', { name: 'Yes, remove' }).click();
-  await expect(page.getByText('No delegations set.')).toBeVisible();
+  await expect(page.getByText('No delegations set')).toBeVisible();
 });
 
 test('shows incoming delegations', async ({ page, asAlice, bob, request }) => {

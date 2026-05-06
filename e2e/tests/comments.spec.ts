@@ -7,7 +7,7 @@ test('discussion section is visible on proposal detail page', async ({ page, asA
 
   await page.goto(`/proposals/${proposal.id}`);
   await expect(page.getByText('Discussion (0)')).toBeVisible();
-  await expect(page.getByText('No comments yet. Be the first to comment.')).toBeVisible();
+  await expect(page.getByText('No comments yet')).toBeVisible();
 });
 
 test('can post a comment', async ({ page, asAlice }) => {

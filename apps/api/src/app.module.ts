@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './users/users.module';
 import { TopicsModule } from './topics/topics.module';
 import { ProposalsModule } from './proposals/proposals.module';
@@ -17,6 +19,7 @@ import { Comment } from './comments/comment.entity';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     TypeOrmModule.forRoot({
       type: 'postgres',
       url:
@@ -35,5 +38,6 @@ import { Comment } from './comments/comment.entity';
     AuthModule,
     CommentsModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

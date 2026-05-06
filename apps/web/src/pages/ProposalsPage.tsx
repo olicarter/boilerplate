@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { proposalsCollection, topicsCollection, votesCollection, usersCollection, commentsCollection } from '../collections';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
+import { EmptyState } from '../components/EmptyState';
 import type { Topic, Proposal, Vote, User, Comment } from '../api';
 
 const TITLE_MAX = 200;
@@ -423,9 +424,19 @@ export function ProposalsPage() {
           <ProposalSkeleton />
         </div>
       ) : proposals.length === 0 ? (
-        <p style={{ color: '#999', fontSize: 14 }}>
-          {topicFilter !== null || statusFilter !== null ? 'No proposals match these filters.' : 'No proposals yet.'}
-        </p>
+        topicFilter !== null || statusFilter !== null || mineFilter !== null || search ? (
+          <EmptyState
+            variant="proposals"
+            title="No proposals match these filters"
+            description="Try adjusting your filters or search term."
+          />
+        ) : (
+          <EmptyState
+            variant="proposals"
+            title="No proposals yet"
+            description={currentUser ? 'Be the first to start a discussion.' : 'Sign in to create the first proposal.'}
+          />
+        )
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {proposals.map((p: Proposal) => {

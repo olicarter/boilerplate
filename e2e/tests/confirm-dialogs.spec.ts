@@ -19,8 +19,8 @@ test('cancel keeps delegation', async ({ page, asAlice, bob }) => {
   await expect(page.getByText('Are you sure?')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
 
-  // Delegation must still be present — "No delegations set." must not appear
-  await expect(page.getByText('No delegations set.')).not.toBeVisible();
+  // Delegation must still be present — "No delegations set" must not appear
+  await expect(page.getByText('No delegations set')).not.toBeVisible();
   await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
 });
 
@@ -32,7 +32,7 @@ test('confirm removes delegation', async ({ page, asAlice, bob }) => {
   await page.getByRole('button', { name: 'Yes, remove' }).click();
 
   await expect(page.getByText('Delegation removed')).toBeVisible();
-  await expect(page.getByText('No delegations set.')).toBeVisible();
+  await expect(page.getByText('No delegations set')).toBeVisible();
 });
 
 // ── Proposal withdraw ────────────────────────────────────────────────────────

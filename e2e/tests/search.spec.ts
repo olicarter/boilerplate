@@ -44,6 +44,6 @@ test('search with no matches shows empty state', async ({ page, asAlice }) => {
   await page.goto('/proposals');
   await page.getByPlaceholder('Search proposals…').fill('zzz-no-match');
 
-  await expect(page.getByText('No proposals yet.')).toBeVisible();
+  await expect(page.getByText('No proposals match these filters')).toBeVisible();
   await expect(page.getByText('Build a library')).not.toBeVisible();
 });

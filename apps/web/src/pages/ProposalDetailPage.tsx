@@ -6,6 +6,7 @@ import { proposalsCollection, topicsCollection, votesCollection, usersCollection
 import { proposalsApi, commentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
+import { EmptyState } from '../components/EmptyState';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
@@ -662,7 +663,11 @@ export function ProposalDetailPage() {
         </h3>
 
         {comments.length === 0 && (
-          <p style={{ fontSize: 14, color: '#aaa', margin: '0 0 1.25rem' }}>No comments yet. Be the first to comment.</p>
+          <EmptyState
+            variant="comments"
+            title="No comments yet"
+            description={currentUser ? 'Be the first to share your thoughts.' : undefined}
+          />
         )}
 
         {comments.length > 0 && (
