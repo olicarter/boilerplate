@@ -64,6 +64,7 @@ export function ProposalsPage() {
   const { data: allUsers } = useLiveQuery(usersCollection);
 
   const [topicFilter, setTopicFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
 
@@ -79,6 +80,7 @@ export function ProposalsPage() {
   const proposals = (allProposals ?? []).filter((p: Proposal) => {
     if (topicFilter !== null && p.topic_id !== topicFilter) return false;
     if (p.status === 'draft' && p.author_id !== currentUser?.id) return false;
+    if (statusFilter !== null && p.status !== statusFilter) return false;
     if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -304,7 +306,7 @@ export function ProposalsPage() {
       </div>
 
       {/* Topic filter pills */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
         <button
           onClick={() => setTopicFilter(null)}
           style={{
@@ -315,7 +317,7 @@ export function ProposalsPage() {
             color: topicFilter === null ? '#fff' : '#444',
           }}
         >
-          All
+          All topics
         </button>
         {(allTopics ?? []).map((t: Topic) => (
           <button
@@ -334,6 +336,29 @@ export function ProposalsPage() {
         ))}
       </div>
 
+      {/* Status filter pills */}
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+        {([null, 'open', 'closed', 'withdrawn'] as const).map((s) => {
+          const label = s === null ? 'All statuses' : s.charAt(0).toUpperCase() + s.slice(1);
+          const active = statusFilter === s;
+          return (
+            <button
+              key={String(s)}
+              onClick={() => setStatusFilter(s)}
+              style={{
+                ...badge,
+                cursor: 'pointer',
+                border: active ? '1px solid #1a56d6' : '1px solid #ddd',
+                background: active ? '#e8f0fe' : '#f0f0f0',
+                color: active ? '#1a56d6' : '#444',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {allProposals === null ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <ProposalSkeleton />
@@ -342,7 +367,7 @@ export function ProposalsPage() {
         </div>
       ) : proposals.length === 0 ? (
         <p style={{ color: '#999', fontSize: 14 }}>
-          {topicFilter !== null ? 'No proposals in this topic yet.' : 'No proposals yet.'}
+          {topicFilter !== null || statusFilter !== null ? 'No proposals match these filters.' : 'No proposals yet.'}
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

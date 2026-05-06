@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+
+const NAME_MAX = 100;
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -29,6 +31,12 @@ export class UsersService {
   }
 
   async update(id: string, data: Partial<Pick<User, 'name' | 'email'>>): Promise<{ item: User; txid: number }> {
+    if (data.name !== undefined) {
+      const name = data.name.trim();
+      if (!name) throw new BadRequestException('Name is required');
+      if (name.length > NAME_MAX) throw new BadRequestException(`Name must be ${NAME_MAX} characters or fewer`);
+    }
+
     return this.dataSource.transaction(async (manager) => {
       await manager.update(User, id, data);
       const item = await manager.findOneByOrFail(User, { id });

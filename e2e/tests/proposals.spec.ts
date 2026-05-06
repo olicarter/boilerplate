@@ -23,7 +23,7 @@ test('shows topic filter pills', async ({ page, asAlice }) => {
   await createProposal(page.request, eco.id, 'Tax reform');
 
   await page.goto('/proposals');
-  await expect(page.getByRole('button', { name: 'All' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'All topics' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Environment' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Economy' })).toBeVisible();
 });
@@ -40,7 +40,7 @@ test('topic filter shows only matching proposals', async ({ page, asAlice }) => 
   await expect(page.getByText('Tax reform')).not.toBeVisible();
 });
 
-test('"All" filter restores full list', async ({ page, asAlice }) => {
+test('"All topics" filter restores full list', async ({ page, asAlice }) => {
   const env = await createTopic(page.request, 'Environment');
   const eco = await createTopic(page.request, 'Economy');
   await createProposal(page.request, env.id, 'Green proposal');
@@ -48,7 +48,7 @@ test('"All" filter restores full list', async ({ page, asAlice }) => {
 
   await page.goto('/proposals');
   await page.getByRole('button', { name: 'Environment' }).click();
-  await page.getByRole('button', { name: 'All' }).click();
+  await page.getByRole('button', { name: 'All topics' }).click();
   await expect(page.getByText('Green proposal')).toBeVisible();
   await expect(page.getByText('Tax reform')).toBeVisible();
 });
@@ -96,7 +96,8 @@ test('proposal card shows topic badge and status', async ({ page, asAlice }) => 
 
   await page.goto('/proposals');
   await expect(page.getByText('Economy').first()).toBeVisible();
-  await expect(page.getByText('open')).toBeVisible();
+  // "Open" badge inside the proposal card (not the filter button)
+  await expect(page.getByRole('link', { name: /Tax reform/ }).getByText('Open')).toBeVisible();
 });
 
 test('proposal card shows vote counts', async ({ page, asAlice }) => {

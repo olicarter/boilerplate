@@ -13,6 +13,7 @@ import { request, authApi, type User } from './api';
 import { UserContext } from './context';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { OfflineBanner } from './components/OfflineBanner';
 import { ProposalsPage } from './pages/ProposalsPage';
 import { ProposalDetailPage } from './pages/ProposalDetailPage';
 import { DelegationsPage } from './pages/DelegationsPage';
@@ -377,6 +378,7 @@ export default function App() {
     <ErrorBoundary>
       <ToastProvider>
         <RouterProvider router={router} />
+        <OfflineBanner />
       </ToastProvider>
     </ErrorBoundary>
   );
