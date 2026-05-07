@@ -1,14 +1,18 @@
 import { test as base } from '@playwright/test';
 
-const API = 'http://localhost:5173';
+export const API = 'https://localhost:5174';
 const STORAGE_KEY = 'ripple_user';
 
+export const ORG_SLUG = 'ripple-test';
+
 export type TestUser = { id: string; name: string; email: string; created_at: string };
+export type TestOrg = { id: string; slug: string; name: string };
 
 export const test = base.extend<{
   resetDb: void;
   asAlice: TestUser;
   bob: TestUser;
+  org: TestOrg;
 }>({
   // Truncates all tables before each test for a clean slate.
   resetDb: [async ({ request }, use) => {
@@ -22,10 +26,9 @@ export const test = base.extend<{
     const res = await page.request.post(`${API}/api/auth/test-setup`, {
       data: { name: 'Alice', email: 'alice@test.ripple' },
     });
-    const user = (await res.json()) as TestUser;
+    const data = (await res.json()) as TestUser & { org: TestOrg };
+    const user: TestUser = { id: data.id, name: data.name, email: data.email, created_at: data.created_at };
 
-    // Inject localStorage before every page navigation so the frontend reads
-    // the logged-in user on mount (it reads from localStorage, not session).
     await page.addInitScript(
       ({ key, value }) => localStorage.setItem(key, value),
       { key: STORAGE_KEY, value: JSON.stringify(user) },
@@ -34,13 +37,22 @@ export const test = base.extend<{
     await use(user);
   },
 
-  // Creates Bob using the standalone request context (page is NOT logged in as Bob).
-  // Subsequent calls via the `request` fixture in the same test use Bob's session.
+  // Creates Bob using the standalone request context.
   bob: async ({ request }, use) => {
     const res = await request.post(`${API}/api/auth/test-setup`, {
       data: { name: 'Bob', email: 'bob@test.ripple' },
     });
-    await use((await res.json()) as TestUser);
+    const data = (await res.json()) as TestUser & { org: TestOrg };
+    await use({ id: data.id, name: data.name, email: data.email, created_at: data.created_at });
+  },
+
+  // Provides the shared test org created by testSetup.
+  org: async ({ request }, use) => {
+    const res = await request.post(`${API}/api/auth/test-setup`, {
+      data: { name: '_OrgFixture', email: 'org-fixture@test.ripple' },
+    });
+    const data = (await res.json()) as TestUser & { org: TestOrg };
+    await use(data.org);
   },
 });
 

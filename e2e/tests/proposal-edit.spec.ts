@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { test, expect, API } from '../fixtures';
 import { createTopic, createProposal } from '../helpers';
 
 // ── Edit proposal ─────────────────────────────────────────────────────────────
@@ -7,7 +7,7 @@ test('author sees Edit button on open proposal', async ({ page, asAlice }) => {
   const topic = await createTopic(page.request, 'Policy');
   const proposal = await createProposal(page.request, topic.id, 'Editable proposal');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await expect(page.getByRole('button', { name: 'Edit proposal' })).toBeVisible();
 });
 
@@ -15,7 +15,7 @@ test('"Edit proposal" button not shown on closed proposal', async ({ page, asAli
   const topic = await createTopic(page.request, 'Policy');
   const proposal = await createProposal(page.request, topic.id, 'Closed one', { status: 'closed' });
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await expect(page.getByRole('button', { name: 'Edit proposal' })).not.toBeVisible();
 });
 
@@ -23,7 +23,7 @@ test('can edit proposal title and description', async ({ page, asAlice }) => {
   const topic = await createTopic(page.request, 'Policy');
   const proposal = await createProposal(page.request, topic.id, 'Old title', { description: 'Old description' });
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await page.getByRole('button', { name: 'Edit proposal' }).click();
 
   await page.getByLabel('Title').fill('New title');
@@ -39,7 +39,7 @@ test('cancel edit restores original content', async ({ page, asAlice }) => {
   const topic = await createTopic(page.request, 'Policy');
   const proposal = await createProposal(page.request, topic.id, 'Original title');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await page.getByRole('button', { name: 'Edit proposal' }).click();
   await page.getByLabel('Title').fill('Changed title');
   await page.getByRole('button', { name: 'Cancel' }).click();
@@ -57,7 +57,7 @@ test('API rejects edit by non-author', async ({ page, asAlice, bob }) => {
   // The `request` fixture is Bob's session (from the `bob` fixture dependency)
   // but we can test via the page.request (Alice) that the API enforces ownership.
   // Better: just test that closed proposals can't be edited via API.
-  const res = await page.request.patch(`http://localhost:5173/api/proposals/${proposal.id}`, {
+  const res = await page.request.patch(`${API}/api/proposals/${proposal.id}`, {
     data: { title: 'Hacked title' },
   });
   // Alice IS the author, so this succeeds
@@ -68,7 +68,7 @@ test('API rejects edit on closed proposal', async ({ page, asAlice }) => {
   const topic = await createTopic(page.request, 'Policy');
   const proposal = await createProposal(page.request, topic.id, 'Locked', { status: 'closed' });
 
-  const res = await page.request.patch(`http://localhost:5173/api/proposals/${proposal.id}`, {
+  const res = await page.request.patch(`${API}/api/proposals/${proposal.id}`, {
     data: { title: 'Attempted change' },
   });
   expect(res.status()).toBe(400);
@@ -77,7 +77,7 @@ test('API rejects edit on closed proposal', async ({ page, asAlice }) => {
 // ── Sort proposals ────────────────────────────────────────────────────────────
 
 test('sort selector is visible on proposals page', async ({ page, asAlice }) => {
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await expect(page.getByLabel('Sort proposals')).toBeVisible();
 });
 
@@ -86,7 +86,7 @@ test('sort by oldest shows earliest proposal first', async ({ page, asAlice }) =
   await createProposal(page.request, topic.id, 'First created');
   await createProposal(page.request, topic.id, 'Second created');
 
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await page.getByLabel('Sort proposals').selectOption('oldest');
 
   const items = page.locator('a[href*="/proposals/"] p').first();

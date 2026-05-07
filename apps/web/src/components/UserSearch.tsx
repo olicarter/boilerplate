@@ -7,17 +7,20 @@ interface Props {
   onSelect: (user: User) => void;
   placeholder?: string;
   excludeId?: string;
+  users?: User[];
 }
 
 export function UserSearch({
   onSelect,
   placeholder = 'Search by name or email…',
   excludeId,
+  users: usersProp,
 }: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
 
-  const { data: allUsers } = useLiveQuery(usersCollection);
+  const { data: fetchedUsers } = useLiveQuery(usersCollection);
+  const allUsers = usersProp ?? fetchedUsers;
 
   const q = query.toLowerCase().trim();
   const matches =

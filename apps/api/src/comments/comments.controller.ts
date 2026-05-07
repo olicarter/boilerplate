@@ -37,4 +37,14 @@ export class CommentsController {
   remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.commentsService.delete(id, req.user!.id);
   }
+
+  @Post('comments/:id/reactions')
+  @UseGuards(AuthGuard)
+  toggleReaction(
+    @Param('id') id: string,
+    @Body() body: { emoji: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.commentsService.toggleReaction(id, req.user!.id, body.emoji);
+  }
 }

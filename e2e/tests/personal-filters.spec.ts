@@ -4,7 +4,7 @@ import { createTopic, createProposal, createVote, createComment } from '../helpe
 // ── "My proposals" filter ─────────────────────────────────────────────────────
 
 test('"My proposals" filter is visible when logged in', async ({ page, asAlice }) => {
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await expect(page.getByRole('button', { name: 'My proposals' })).toBeVisible();
 });
 
@@ -13,7 +13,7 @@ test('"My proposals" shows only proposals authored by current user', async ({ pa
   await createProposal(page.request, topic.id, "Alice's proposal");
   await createProposal(request, topic.id, "Bob's proposal");
 
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await page.getByRole('button', { name: 'My proposals' }).click();
 
   await expect(page.getByText("Alice's proposal")).toBeVisible();
@@ -21,7 +21,7 @@ test('"My proposals" shows only proposals authored by current user', async ({ pa
 });
 
 test('"My votes" filter is visible when logged in', async ({ page, asAlice }) => {
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await expect(page.getByRole('button', { name: 'My votes' })).toBeVisible();
 });
 
@@ -32,7 +32,7 @@ test('"My votes" shows only proposals Alice voted on', async ({ page, asAlice, b
 
   await createVote(page.request, voted.id, asAlice.id, 'yes');
 
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await page.getByRole('button', { name: 'My votes' }).click();
 
   await expect(page.getByText('Voted proposal')).toBeVisible();
@@ -47,7 +47,7 @@ test('comment count is shown on proposal card', async ({ page, asAlice }) => {
   await createComment(page.request, proposal.id, 'First comment');
   await createComment(page.request, proposal.id, 'Second comment');
 
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await expect(page.getByText('2 comments')).toBeVisible();
 });
 
@@ -56,7 +56,7 @@ test('singular "comment" for one comment', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'One comment proposal');
   await createComment(page.request, proposal.id, 'Only comment');
 
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await expect(page.getByText('1 comment')).toBeVisible();
 });
 
@@ -64,6 +64,6 @@ test('no comment count shown when proposal has no comments', async ({ page, asAl
   const topic = await createTopic(page.request, 'Policy');
   await createProposal(page.request, topic.id, 'Silent proposal');
 
-  await page.goto('/proposals');
+  await page.goto('/orgs/ripple-test/proposals');
   await expect(page.getByText(/\d+ comment/)).not.toBeVisible();
 });

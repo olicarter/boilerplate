@@ -17,6 +17,10 @@ export class DelegationsService {
     return this.delegationRepo.find({ order: { created_at: 'ASC' } });
   }
 
+  findByOrg(organisationId: string): Promise<Delegation[]> {
+    return this.delegationRepo.find({ where: { organisation_id: organisationId }, order: { created_at: 'ASC' } });
+  }
+
   findByDelegator(delegatorId: string): Promise<Delegation[]> {
     return this.delegationRepo.findBy({ delegator_id: delegatorId });
   }
@@ -54,6 +58,7 @@ export class DelegationsService {
 
   async create(data: {
     id: string;
+    organisation_id: string;
     delegator_id: string;
     delegate_id: string;
     topic_id?: string | null;
@@ -63,7 +68,7 @@ export class DelegationsService {
       throw new BadRequestException('You cannot delegate to yourself');
     }
 
-    const existing = await this.delegationRepo.find();
+    const existing = await this.delegationRepo.find({ where: { organisation_id: data.organisation_id } });
     if (this.wouldCreateCycle(data.delegator_id, data.delegate_id, existing)) {
       throw new BadRequestException('This delegation would create a circular chain');
     }

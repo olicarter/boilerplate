@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { test, expect, API } from '../fixtures';
 import { createTopic, createProposal, createComment } from '../helpers';
 
 test('own comment shows Edit button', async ({ page, asAlice }) => {
@@ -6,7 +6,7 @@ test('own comment shows Edit button', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Editable comments');
   await createComment(page.request, proposal.id, 'My original comment');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await expect(page.getByRole('button', { name: 'Edit', exact: true }).first()).toBeVisible();
 });
 
@@ -15,7 +15,7 @@ test('can edit own comment', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Edit comment test');
   await createComment(page.request, proposal.id, 'Original comment text');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
 
   const textarea = page.locator('textarea').first();
@@ -33,7 +33,7 @@ test('edited comment shows "(edited)" label', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Edited label test');
   await createComment(page.request, proposal.id, 'First version');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
   const textarea = page.locator('textarea').first();
   await textarea.clear();
@@ -48,7 +48,7 @@ test('cancel edit restores original comment', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Cancel edit test');
   await createComment(page.request, proposal.id, 'Keep this comment');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
   const textarea = page.locator('textarea').first();
   await textarea.clear();
@@ -66,7 +66,7 @@ test('API rejects editing another user comment', async ({ page, asAlice, bob, re
   const comment = await createComment(request, proposal.id, "Bob's comment");
 
   // Alice tries to edit Bob's comment
-  const res = await page.request.patch(`http://localhost:5173/api/comments/${comment.id}`, {
+  const res = await page.request.patch(`${API}/api/comments/${comment.id}`, {
     data: { body: 'Hacked body' },
   });
   expect(res.status()).toBe(403);
@@ -77,6 +77,6 @@ test('comments render markdown', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Markdown comments');
   await createComment(page.request, proposal.id, '**Bold text**');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await expect(page.locator('strong').filter({ hasText: 'Bold text' })).toBeVisible();
 });

@@ -5,6 +5,9 @@ export class Delegation {
   @PrimaryColumn('uuid')
   id!: string;
 
+  @Column({ name: 'organisation_id', type: 'uuid' })
+  organisation_id!: string;
+
   @Column({ name: 'delegator_id', type: 'uuid' })
   delegator_id!: string;
 

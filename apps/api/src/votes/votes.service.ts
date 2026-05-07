@@ -34,7 +34,7 @@ export class VotesService {
     }
 
     return this.dataSource.transaction(async (manager) => {
-      const vote = manager.create(Vote, data);
+      const vote = manager.create(Vote, { ...data, organisation_id: proposal.organisation_id });
       const saved = await manager.save(vote);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };

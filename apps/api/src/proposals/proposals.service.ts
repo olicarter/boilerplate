@@ -1,13 +1,17 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Proposal, ProposalStatus } from './proposal.entity';
+import { ProposalVersion } from './proposal-version.entity';
+import { Vote } from '../votes/vote.entity';
+import { Delegation } from '../delegations/delegation.entity';
+import { Organisation } from '../organisations/organisation.entity';
+import { Membership } from '../organisations/membership.entity';
+import { DelegationsService } from '../delegations/delegations.service';
 
 const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 10_000;
-import { Vote } from '../votes/vote.entity';
-import { Delegation } from '../delegations/delegation.entity';
-import { DelegationsService } from '../delegations/delegations.service';
 
 export interface TallyResult {
   yes: number;
@@ -21,16 +25,28 @@ export interface DelegationVote {
   choice: string;
 }
 
+const ROLE_RANK: Record<string, number> = { member: 1, moderator: 2, admin: 3 };
+
 @Injectable()
 export class ProposalsService {
   constructor(
     @InjectRepository(Proposal)
     private readonly proposalRepo: Repository<Proposal>,
+    @InjectRepository(ProposalVersion)
+    private readonly versionRepo: Repository<ProposalVersion>,
+    @InjectRepository(Organisation)
+    private readonly orgRepo: Repository<Organisation>,
+    @InjectRepository(Membership)
+    private readonly memberRepo: Repository<Membership>,
     private readonly dataSource: DataSource,
   ) {}
 
   findAll(): Promise<Proposal[]> {
     return this.proposalRepo.find({ order: { created_at: 'DESC' } });
+  }
+
+  findByOrg(organisationId: string): Promise<Proposal[]> {
+    return this.proposalRepo.find({ where: { organisation_id: organisationId }, order: { created_at: 'DESC' } });
   }
 
   findOne(id: string): Promise<Proposal | null> {
@@ -39,6 +55,7 @@ export class ProposalsService {
 
   async create(data: {
     id: string;
+    organisation_id: string;
     topic_id: string;
     author_id: string;
     title: string;
@@ -52,6 +69,16 @@ export class ProposalsService {
     if (title.length > TITLE_MAX) throw new BadRequestException(`Title must be ${TITLE_MAX} characters or fewer`);
     if (data.description && data.description.length > DESCRIPTION_MAX) {
       throw new BadRequestException(`Description must be ${DESCRIPTION_MAX} characters or fewer`);
+    }
+
+    const org = await this.orgRepo.findOneBy({ id: data.organisation_id });
+    if (!org) throw new NotFoundException('Organisation not found');
+    const membership = await this.memberRepo.findOneBy({ organisation_id: data.organisation_id, user_id: data.author_id });
+    if (!membership) throw new ForbiddenException('Not a member of this organisation');
+    const required = ROLE_RANK[org.proposal_creation_role] ?? 1;
+    const actual = ROLE_RANK[membership.role] ?? 0;
+    if (actual < required) {
+      throw new ForbiddenException(`Only ${org.proposal_creation_role}s and above can create proposals`);
     }
 
     return this.dataSource.transaction(async (manager) => {
@@ -100,7 +127,26 @@ export class ProposalsService {
     if (data.description !== undefined && data.description.length > DESCRIPTION_MAX) {
       throw new BadRequestException(`Description must be ${DESCRIPTION_MAX} characters or fewer`);
     }
+
+    // Save a version snapshot of the current state before overwriting
+    await this.versionRepo.save(
+      this.versionRepo.create({
+        id: randomUUID(),
+        proposal_id: id,
+        changed_by: userId,
+        title: proposal.title,
+        description: proposal.description ?? '',
+      }),
+    );
+
     return this.update(id, data);
+  }
+
+  async listVersions(proposalId: string): Promise<ProposalVersion[]> {
+    return this.versionRepo.find({
+      where: { proposal_id: proposalId },
+      order: { created_at: 'DESC' },
+    });
   }
 
   async delete(id: string): Promise<{ txid: number }> {
@@ -171,7 +217,7 @@ export class ProposalsService {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
 
     const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
-    const allDelegations = await this.dataSource.getRepository(Delegation).find();
+    const allDelegations = await this.dataSource.getRepository(Delegation).find({ where: { organisation_id: proposal.organisation_id } });
     const delegations = DelegationsService.activeDelegations(allDelegations);
 
     const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice]));
@@ -213,7 +259,7 @@ export class ProposalsService {
   async getMyDelegationVote(proposalId: string, userId: string): Promise<DelegationVote | null> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
     const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
-    const allDelegations = await this.dataSource.getRepository(Delegation).find();
+    const allDelegations = await this.dataSource.getRepository(Delegation).find({ where: { organisation_id: proposal.organisation_id } });
     const delegations = DelegationsService.activeDelegations(allDelegations);
 
     // User voted directly — no banner needed

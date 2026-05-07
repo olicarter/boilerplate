@@ -6,7 +6,8 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "experimentalDecorators": false,
-    "emitDecoratorMetadata": false
+    "emitDecoratorMetadata": false,
+    "types": ["vite/client"]
   },
   "include": ["src", "vite.config.ts"]
 }

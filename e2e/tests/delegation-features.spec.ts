@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { test, expect, API } from '../fixtures';
 import { createTopic, createProposal, createVote, createDelegation } from '../helpers';
 
 // ── Delegation override ──────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ test('shows delegation override banner when delegate has voted', async ({ page, 
   await createVote(page.request, proposal.id, bob.id, 'yes');
 
   // Alice views the proposal — should see the delegation banner
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await expect(page.getByText(/Bob.*voted.*yes.*on your behalf/)).toBeVisible();
 });
 
@@ -28,7 +28,7 @@ test('delegation banner not shown when user voted directly', async ({ page, asAl
   // Alice also votes directly
   await createVote(page.request, proposal.id, asAlice.id, 'no');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await expect(page.getByText(/on your behalf/)).not.toBeVisible();
 });
 
@@ -39,7 +39,7 @@ test('delegation banner disappears after casting own vote', async ({ page, asAli
   await createDelegation(page.request, asAlice.id, bob.id);
   await createVote(page.request, proposal.id, bob.id, 'yes');
 
-  await page.goto(`/proposals/${proposal.id}`);
+  await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await expect(page.getByText(/on your behalf/)).toBeVisible();
 
   // Alice votes directly (castVote, since she hasn't voted before)
@@ -63,7 +63,7 @@ test('expired delegation is not counted in tally', async ({ page, asAlice, bob }
 
   // Tally: only Bob's direct vote counts, Alice's expired delegation is ignored
   // total should be 1 (Bob only), not 2 (Bob + delegated Alice)
-  const res = await page.request.get(`http://localhost:5173/api/proposals/${proposal.id}/tally`);
+  const res = await page.request.get(`${API}/api/proposals/${proposal.id}/tally`);
   const tally = await res.json();
   expect(tally.total).toBe(1);
   expect(tally.yes).toBe(1);
@@ -81,7 +81,7 @@ test('active delegation (with future expiry) is counted in tally', async ({ page
   await createVote(page.request, proposal.id, bob.id, 'yes');
 
   // Tally: Bob's vote + Alice's delegated vote = 2 total
-  const res = await page.request.get(`http://localhost:5173/api/proposals/${proposal.id}/tally`);
+  const res = await page.request.get(`${API}/api/proposals/${proposal.id}/tally`);
   const tally = await res.json();
   expect(tally.total).toBe(2);
   expect(tally.yes).toBe(2);
@@ -92,7 +92,7 @@ test('expired delegation shows Expired badge in delegations list', async ({ page
   const pastDate = new Date(Date.now() - 60_000).toISOString();
   await createDelegation(page.request, asAlice.id, bob.id, null, pastDate);
 
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
   await expect(page.getByText('Expired')).toBeVisible();
 });
 
@@ -100,6 +100,6 @@ test('delegation with future expiry shows expiry date in list', async ({ page, a
   const futureDate = new Date(Date.now() + 7 * 86_400_000).toISOString();
   await createDelegation(page.request, asAlice.id, bob.id, null, futureDate);
 
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
   await expect(page.getByText(/expires/)).toBeVisible();
 });

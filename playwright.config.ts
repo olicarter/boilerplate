@@ -9,8 +9,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
+  expect: {
+    timeout: 15000,
+  },
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'https://localhost:5174',
+    ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
   },
   projects: [
@@ -28,6 +32,13 @@ export default defineConfig({
       url: 'http://localhost:5173',
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
+    },
+    {
+      command: 'caddy run --config Caddyfile --adapter caddyfile',
+      url: 'https://localhost:5174',
+      reuseExistingServer: !process.env.CI,
+      timeout: 10_000,
+      ignoreHTTPSErrors: true,
     },
   ],
 });

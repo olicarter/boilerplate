@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { TopicsService } from './topics.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 
 @Controller('topics')
 export class TopicsController {
@@ -13,8 +13,11 @@ export class TopicsController {
 
   @Post()
   @UseGuards(AuthGuard)
-  create(@Body() body: { id: string; name: string; description?: string }) {
-    return this.topicsService.create(body);
+  create(
+    @Body() body: { id: string; organisation_id: string; name: string; description?: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.topicsService.create(body, req.user!.id);
   }
 
   @Patch(':id')

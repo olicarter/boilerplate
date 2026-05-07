@@ -1,10 +1,11 @@
 import type { APIRequestContext } from '@playwright/test';
-
-const API = 'http://localhost:5173';
+import { API } from './fixtures';
+// This matches the fixed TEST_ORG_ID in auth.service.ts testSetup
+export const TEST_ORG_ID = '00000000-0000-0000-0000-000000000002';
 
 export async function createTopic(request: APIRequestContext, name: string) {
   const res = await request.post(`${API}/api/topics`, {
-    data: { id: crypto.randomUUID(), name, description: '' },
+    data: { id: crypto.randomUUID(), organisation_id: TEST_ORG_ID, name, description: '' },
   });
   const body = await res.json();
   return body.item as { id: string; name: string };
@@ -19,6 +20,7 @@ export async function createProposal(
   const res = await request.post(`${API}/api/proposals`, {
     data: {
       id: crypto.randomUUID(),
+      organisation_id: TEST_ORG_ID,
       topic_id: topicId,
       title,
       description: options.description ?? '',
@@ -71,6 +73,7 @@ export async function createDelegation(
   const res = await request.post(`${API}/api/delegations`, {
     data: {
       id: crypto.randomUUID(),
+      organisation_id: TEST_ORG_ID,
       delegator_id: delegatorId,
       delegate_id: delegateId,
       topic_id: topicId,

@@ -38,8 +38,34 @@ export interface User {
   [key: string]: unknown;
 }
 
+export interface Organisation {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  invite_token: string | null;
+  proposal_creation_role: 'member' | 'moderator' | 'admin';
+  topic_creation_role: 'member' | 'moderator' | 'admin';
+  default_voting_duration_days: number | null;
+  default_threshold: number;
+  voting_visibility: 'public' | 'hidden';
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface Membership {
+  id: string;
+  organisation_id: string;
+  user_id: string;
+  role: 'admin' | 'moderator' | 'member' | 'observer';
+  joined_at: string;
+  invited_by: string | null;
+  [key: string]: unknown;
+}
+
 export interface Topic {
   id: string;
+  organisation_id: string;
   name: string;
   description: string;
   created_at: string;
@@ -48,6 +74,7 @@ export interface Topic {
 
 export interface Proposal {
   id: string;
+  organisation_id: string;
   topic_id: string;
   author_id: string | null;
   title: string;
@@ -62,6 +89,7 @@ export interface Proposal {
 
 export interface Delegation {
   id: string;
+  organisation_id: string;
   delegator_id: string;
   delegate_id: string;
   topic_id: string | null;
@@ -73,6 +101,7 @@ export interface Delegation {
 export interface Vote {
   id: string;
   proposal_id: string;
+  organisation_id: string;
   user_id: string;
   choice: 'yes' | 'no' | 'abstain';
   created_at: string;
@@ -100,8 +129,34 @@ export const usersApi = {
     request<{ txid: number }>(`/users/${id}`, { method: 'DELETE' }),
 };
 
+export const orgsApi = {
+  list: () => request<Organisation[]>('/orgs'),
+  get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
+  create: (data: { name: string; slug?: string; description?: string }) =>
+    request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility'>>) =>
+    request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  transferOwnership: (slug: string, toUserId: string) =>
+    request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
+  delete: (slug: string) =>
+    request<{ txid: number }>(`/orgs/${slug}`, { method: 'DELETE' }),
+  listMembers: (slug: string) => request<Membership[]>(`/orgs/${slug}/members`),
+  addMember: (slug: string, data: { user_id: string; role?: Membership['role'] }) =>
+    request<MutationResult<Membership>>(`/orgs/${slug}/members`, { method: 'POST', body: JSON.stringify(data) }),
+  updateMemberRole: (slug: string, userId: string, role: Membership['role']) =>
+    request<MutationResult<Membership>>(`/orgs/${slug}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  removeMember: (slug: string, userId: string) =>
+    request<{ txid: number }>(`/orgs/${slug}/members/${userId}`, { method: 'DELETE' }),
+  joinViaToken: (slug: string, token: string) =>
+    request<MutationResult<Membership>>(`/orgs/${slug}/join`, { method: 'POST', body: JSON.stringify({ token }) }),
+  generateInviteToken: (slug: string) =>
+    request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'POST' }),
+  revokeInviteToken: (slug: string) =>
+    request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'DELETE' }),
+};
+
 export const topicsApi = {
-  create: (data: { id: string; name: string; description?: string }) =>
+  create: (data: { id: string; organisation_id: string; name: string; description?: string }) =>
     request<MutationResult<Topic>>('/topics', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Topic, 'name' | 'description'>>) =>
     request<MutationResult<Topic>>(`/topics/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
@@ -110,7 +165,7 @@ export const topicsApi = {
 };
 
 export const proposalsApi = {
-  create: (data: { id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number; status?: 'open' | 'draft' }) =>
+  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number; status?: 'open' | 'draft' }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
@@ -128,10 +183,12 @@ export const proposalsApi = {
     request<TallyResult>(`/proposals/${id}/tally`),
   myDelegationVote: (id: string) =>
     request<DelegationVote | null>(`/proposals/${id}/my-delegation-vote`),
+  versions: (id: string) =>
+    request<ProposalVersion[]>(`/proposals/${id}/versions`),
 };
 
 export const delegationsApi = {
-  create: (data: { id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null }) =>
+  create: (data: { id: string; organisation_id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null }) =>
     request<MutationResult<Delegation>>('/delegations', { method: 'POST', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/delegations/${id}`, { method: 'DELETE' }),
@@ -140,11 +197,31 @@ export const delegationsApi = {
 export interface Comment {
   id: string;
   proposal_id: string;
+  organisation_id: string;
   author_id: string | null;
   body: string;
   created_at: string;
   edited_at: string | null;
   [key: string]: unknown;
+}
+
+export interface CommentReaction {
+  id: string;
+  comment_id: string;
+  organisation_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface ProposalVersion {
+  id: string;
+  proposal_id: string;
+  changed_by: string | null;
+  title: string;
+  description: string;
+  created_at: string;
 }
 
 export const commentsApi = {
@@ -154,6 +231,11 @@ export const commentsApi = {
     request<MutationResult<Comment>>(`/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/comments/${id}`, { method: 'DELETE' }),
+  react: (commentId: string, emoji: string) =>
+    request<{ item?: CommentReaction; deleted?: boolean; txid: number }>(`/comments/${commentId}/reactions`, {
+      method: 'POST',
+      body: JSON.stringify({ emoji }),
+    }),
 };
 
 export const votesApi = {

@@ -243,17 +243,34 @@ export class AuthService {
 
   async testReset(): Promise<{ success: boolean }> {
     await this.dataSource.query(
-      `TRUNCATE users, topics, proposals, delegations, votes, credentials CASCADE`,
+      `TRUNCATE organisations, users, topics, proposals, delegations, votes, credentials CASCADE`,
     );
     return { success: true };
   }
 
-  async testSetup(data: { name: string; email: string }, req: Request): Promise<User> {
+  async testSetup(data: { name: string; email: string }, req: Request): Promise<User & { org: { id: string; slug: string; name: string } }> {
     let user = await this.userRepo.findOneBy({ email: data.email });
     if (!user) {
       user = await this.userRepo.save(this.userRepo.create({ id: randomUUID(), ...data }));
     }
     req.session!.userId = user.id;
-    return user;
+
+    // Find or create the shared test org
+    const TEST_ORG_ID = '00000000-0000-0000-0000-000000000002';
+    const TEST_ORG_SLUG = 'ripple-test';
+    await this.dataSource.query(
+      `INSERT INTO organisations (id, name, slug, description)
+       VALUES ($1, $2, $3, '')
+       ON CONFLICT (id) DO NOTHING`,
+      [TEST_ORG_ID, 'Ripple Test', TEST_ORG_SLUG],
+    );
+    await this.dataSource.query(
+      `INSERT INTO memberships (id, organisation_id, user_id, role)
+       VALUES ($1, $2, $3, 'admin')
+       ON CONFLICT (organisation_id, user_id) DO NOTHING`,
+      [randomUUID(), TEST_ORG_ID, user.id],
+    );
+
+    return { ...user, org: { id: TEST_ORG_ID, slug: TEST_ORG_SLUG, name: 'Ripple Test' } };
   }
 }

@@ -8,6 +8,9 @@ export class Comment {
   @Column({ name: 'proposal_id' })
   proposal_id!: string;
 
+  @Column({ name: 'organisation_id', type: 'uuid' })
+  organisation_id!: string;
+
   @Column({ name: 'author_id', type: 'uuid', nullable: true })
   author_id!: string | null;
 

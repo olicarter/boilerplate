@@ -1,23 +1,23 @@
 import { test, expect } from '../fixtures';
 import { createTopic, createDelegation } from '../helpers';
 
-test('shows sign-in message when logged out', async ({ page }) => {
-  await page.goto('/delegations');
-  await expect(page.getByText('Please sign in to manage your delegations.')).toBeVisible();
+test('shows sign-in panel when logged out', async ({ page }) => {
+  await page.goto('/orgs/ripple-test/delegations');
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });
 
 test('shows empty outgoing delegations state', async ({ page, asAlice }) => {
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
   await expect(page.getByText('No delegations set')).toBeVisible();
 });
 
 test('shows empty incoming delegations state', async ({ page, asAlice }) => {
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
   await expect(page.getByText('Nobody has delegated to you yet')).toBeVisible();
 });
 
 test('can add a global delegation', async ({ page, asAlice, bob }) => {
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
 
   await page.getByPlaceholder('Search by name or email…').fill('Bob');
   await page.getByText('Bob', { exact: true }).click();
@@ -31,7 +31,7 @@ test('can add a global delegation', async ({ page, asAlice, bob }) => {
 test('can add a topic-scoped delegation', async ({ page, asAlice, bob }) => {
   const topic = await createTopic(page.request, 'Environment');
 
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
 
   await page.getByPlaceholder('Search by name or email…').fill('Bob');
   await page.getByText('Bob', { exact: true }).click();
@@ -44,7 +44,7 @@ test('can add a topic-scoped delegation', async ({ page, asAlice, bob }) => {
 });
 
 test('add delegation button is disabled when no delegate selected', async ({ page, asAlice }) => {
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
   await expect(page.getByRole('button', { name: 'Add delegation' })).toBeDisabled();
 });
 
@@ -52,7 +52,7 @@ test('shows error on duplicate scope', async ({ page, asAlice, bob }) => {
   // Add first global delegation via API
   await createDelegation(page.request, asAlice.id, bob.id, null);
 
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
   await expect(page.getByText('Global', { exact: true })).toBeVisible();
 
   // Try to add another global delegation
@@ -67,7 +67,7 @@ test('shows error on duplicate scope', async ({ page, asAlice, bob }) => {
 test('can remove a delegation', async ({ page, asAlice, bob }) => {
   await createDelegation(page.request, asAlice.id, bob.id, null);
 
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
   await expect(page.getByText('Global', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Remove' }).click();
@@ -79,12 +79,12 @@ test('shows incoming delegations', async ({ page, asAlice, bob, request }) => {
   // Bob delegates to Alice — using Bob's session (standalone `request` fixture)
   await createDelegation(request, bob.id, asAlice.id, null);
 
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
   await expect(page.getByText('Bob').first()).toBeVisible();
 });
 
 test('user search filters by name', async ({ page, asAlice, bob }) => {
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
 
   await page.getByPlaceholder('Search by name or email…').fill('Bo');
   await expect(page.getByText('Bob', { exact: true })).toBeVisible();
@@ -93,14 +93,14 @@ test('user search filters by name', async ({ page, asAlice, bob }) => {
 });
 
 test('user search filters by email', async ({ page, asAlice, bob }) => {
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
 
   await page.getByPlaceholder('Search by name or email…').fill('bob@test');
   await expect(page.getByText('Bob', { exact: true })).toBeVisible();
 });
 
 test('user search excludes self', async ({ page, asAlice, bob }) => {
-  await page.goto('/delegations');
+  await page.goto('/orgs/ripple-test/delegations');
 
   await page.getByPlaceholder('Search by name or email…').fill('alice@test');
   // Alice's email won't appear in search results since she's excluded

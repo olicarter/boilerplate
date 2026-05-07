@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
-import { delegationsCollection, topicsCollection, usersCollection } from '../collections';
+import { usersCollection } from '../collections';
+import { useOrg } from '../OrgContext';
 import { UserSearch } from '../components/UserSearch';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { EmptyState } from '../components/EmptyState';
@@ -11,6 +12,7 @@ import type { User, Delegation, Topic } from '../api';
 
 export function DelegationsPage() {
   const currentUser = useCurrentUser();
+  const { org, collections: { delegationsCollection, topicsCollection } } = useOrg();
 
   const { data: allDelegations } = useLiveQuery(delegationsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
@@ -79,6 +81,7 @@ export function DelegationsPage() {
     try {
       const tx = delegationsCollection.insert({
         id: uuid(),
+        organisation_id: org.id,
         delegator_id: currentUser!.id,
         delegate_id: selectedDelegate.id,
         topic_id: resolvedTopicId,

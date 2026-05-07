@@ -5,6 +5,9 @@ export class Topic {
   @PrimaryColumn('uuid')
   id!: string;
 
+  @Column({ name: 'organisation_id', type: 'uuid' })
+  organisation_id!: string;
+
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 

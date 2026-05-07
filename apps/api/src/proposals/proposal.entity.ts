@@ -7,6 +7,9 @@ export class Proposal {
   @PrimaryColumn('uuid')
   id!: string;
 
+  @Column({ name: 'organisation_id', type: 'uuid' })
+  organisation_id!: string;
+
   @Column({ name: 'topic_id', type: 'uuid' })
   topic_id!: string;
 
