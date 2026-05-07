@@ -526,24 +526,36 @@ export function ProposalDetailPage() {
       )}
 
       {/* Result banner */}
-      {result && (
+      {result && tally && (
         <div
           style={{
-            border: `1px solid ${result === 'passed' ? '#b3e5c2' : result === 'failed' ? '#f5c0c0' : '#ddd'}`,
+            border: `1px solid ${tally.quorum_met === false ? '#fde68a' : result === 'passed' ? '#b3e5c2' : result === 'failed' ? '#f5c0c0' : '#ddd'}`,
             borderRadius: 6,
             padding: '0.75rem 1.25rem',
             marginBottom: '1.5rem',
-            background: result === 'passed' ? '#e6f9ed' : result === 'failed' ? '#fdecea' : '#f5f5f5',
+            background: tally.quorum_met === false ? '#fffbeb' : result === 'passed' ? '#e6f9ed' : result === 'failed' ? '#fdecea' : '#f5f5f5',
           }}
         >
-          <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: result === 'passed' ? '#2d9a4e' : result === 'failed' ? '#d94040' : '#888' }}>
-            {result === 'passed' ? 'Proposal passed' : result === 'failed' ? 'Proposal failed' : 'No decisive votes cast'}
-          </p>
-          {result !== 'no-votes' && tally && (
-            <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
-              {Math.round((tally.yes / (tally.yes + tally.no)) * 100)}% yes
-              {' '}({threshold}% required to pass)
-            </p>
+          {tally.quorum_met === false ? (
+            <>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: '#b45309' }}>Not quorate</p>
+              <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
+                Only {tally.eligible_count && tally.eligible_count > 0 ? Math.round((tally.total / tally.eligible_count) * 100) : 0}% of members participated
+                {' '}({proposal.quorum}% required) — result is non-binding
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: result === 'passed' ? '#2d9a4e' : result === 'failed' ? '#d94040' : '#888' }}>
+                {result === 'passed' ? 'Proposal passed' : result === 'failed' ? 'Proposal failed' : 'No decisive votes cast'}
+              </p>
+              {result !== 'no-votes' && (
+                <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
+                  {Math.round((tally.yes / (tally.yes + tally.no)) * 100)}% yes
+                  {' '}({threshold}% required to pass)
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -566,7 +578,16 @@ export function ProposalDetailPage() {
         ) : tallyLoading ? (
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Loading tally…</p>
         ) : tally ? (
-          <VoteTally tally={tally} />
+          <>
+            <VoteTally tally={tally} />
+            {tally.quorum_met !== null && tally.eligible_count != null && (
+              <p style={{ margin: '0.75rem 0 0', fontSize: 12, color: tally.quorum_met ? '#2d9a4e' : '#b45309' }}>
+                {tally.total} of {tally.eligible_count} member{tally.eligible_count !== 1 ? 's' : ''} participated
+                {' '}({tally.eligible_count > 0 ? Math.round((tally.total / tally.eligible_count) * 100) : 0}% — {proposal.quorum}% quorum required)
+                {tally.quorum_met ? ' — quorate' : ' — not quorate'}
+              </p>
+            )}
+          </>
         ) : (
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Could not load tally.</p>
         )}

@@ -32,6 +32,9 @@ export class Organisation {
   @Column({ type: 'varchar', length: 20, default: 'public' })
   voting_visibility!: 'public' | 'hidden';
 
+  @Column({ type: 'int', nullable: true, default: null })
+  default_quorum!: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

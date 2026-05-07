@@ -49,6 +49,7 @@ export interface Organisation {
   default_voting_duration_days: number | null;
   default_threshold: number;
   voting_visibility: 'public' | 'hidden';
+  default_quorum: number | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -81,6 +82,7 @@ export interface Proposal {
   description: string;
   status: 'draft' | 'open' | 'closed' | 'withdrawn';
   threshold: number;
+  quorum: number | null;
   created_at: string;
   closes_at: string | null;
   closed_at: string | null;
@@ -113,6 +115,8 @@ export interface TallyResult {
   no: number;
   abstain: number;
   total: number;
+  eligible_count: number | null;
+  quorum_met: boolean | null;
 }
 
 export interface DelegationVote {
@@ -134,7 +138,7 @@ export const orgsApi = {
   get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
   create: (data: { name: string; slug?: string; description?: string }) =>
     request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
-  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility'>>) =>
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum'>>) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
   transferOwnership: (slug: string, toUserId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
@@ -165,7 +169,7 @@ export const topicsApi = {
 };
 
 export const proposalsApi = {
-  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number; status?: 'open' | 'draft' }) =>
+  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number; quorum?: number | null; status?: 'open' | 'draft' }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),

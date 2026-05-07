@@ -99,6 +99,7 @@ export function ProposalsPage() {
     return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 16);
   });
   const [threshold, setThreshold] = useState(org.default_threshold ?? 50);
+  const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -143,6 +144,7 @@ export function ProposalsPage() {
       setClosesAt('');
     }
     setThreshold(org.default_threshold ?? 50);
+    setQuorum(org.default_quorum ?? null);
     setShowForm(false);
     setFormError('');
   }
@@ -187,6 +189,7 @@ export function ProposalsPage() {
         description: description.trim(),
         status: asDraft ? 'draft' : 'open',
         threshold,
+        quorum,
         created_at: new Date().toISOString(),
         closes_at: closesAt ? new Date(closesAt).toISOString() : null,
         closed_at: null,

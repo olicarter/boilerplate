@@ -18,6 +18,8 @@ export interface TallyResult {
   no: number;
   abstain: number;
   total: number;
+  eligible_count: number | null;
+  quorum_met: boolean | null;
 }
 
 export interface DelegationVote {
@@ -62,6 +64,7 @@ export class ProposalsService {
     description?: string;
     closes_at?: string | null;
     threshold?: number;
+    quorum?: number | null;
     status?: 'open' | 'draft';
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
@@ -255,7 +258,7 @@ export class ProposalsService {
       ...delegations.map((d) => d.delegator_id),
     ]);
 
-    const tally: TallyResult = { yes: 0, no: 0, abstain: 0, total: 0 };
+    const tally: TallyResult = { yes: 0, no: 0, abstain: 0, total: 0, eligible_count: null, quorum_met: null };
     for (const userId of allUsers) {
       const choice = resolveChoice(userId);
       if (choice === 'yes') tally.yes++;
@@ -263,6 +266,17 @@ export class ProposalsService {
       else tally.abstain++;
       tally.total++;
     }
+
+    if (proposal.quorum != null) {
+      const eligibleCount = await this.memberRepo.count({
+        where: { organisation_id: proposal.organisation_id },
+      });
+      tally.eligible_count = eligibleCount;
+      tally.quorum_met = eligibleCount > 0
+        ? (tally.total / eligibleCount) * 100 >= proposal.quorum
+        : false;
+    }
+
     return tally;
   }
 

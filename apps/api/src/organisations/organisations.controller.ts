@@ -31,7 +31,7 @@ export class OrganisationsController {
   @UseGuards(AuthGuard)
   update(
     @Param('slug') slug: string,
-    @Body() body: { name?: string; description?: string; proposal_creation_role?: 'member' | 'moderator' | 'admin'; topic_creation_role?: 'member' | 'moderator' | 'admin'; default_voting_duration_days?: number | null; default_threshold?: number; voting_visibility?: 'public' | 'hidden' },
+    @Body() body: { name?: string; description?: string; proposal_creation_role?: 'member' | 'moderator' | 'admin'; topic_creation_role?: 'member' | 'moderator' | 'admin'; default_voting_duration_days?: number | null; default_threshold?: number; voting_visibility?: 'public' | 'hidden'; default_quorum?: number | null },
     @Req() req: AuthenticatedRequest,
   ) {
     return this.orgsService.update(slug, body, req.user!.id);

@@ -47,6 +47,9 @@ export function AdminPage() {
     org.default_voting_duration_days != null ? String(org.default_voting_duration_days) : '',
   );
   const [defaultThreshold, setDefaultThreshold] = useState<string>(String(org.default_threshold ?? 50));
+  const [defaultQuorum, setDefaultQuorum] = useState<string>(
+    org.default_quorum != null ? String(org.default_quorum) : '',
+  );
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsError, setDefaultsError] = useState('');
 
@@ -115,10 +118,15 @@ export function AdminPage() {
       setDefaultsError('Duration must be a positive number of days.');
       return;
     }
+    const quorum = defaultQuorum === '' ? null : parseInt(defaultQuorum, 10);
+    if (quorum !== null && (isNaN(quorum) || quorum < 1 || quorum > 100)) {
+      setDefaultsError('Quorum must be between 1 and 100.');
+      return;
+    }
     setSavingDefaults(true);
     setDefaultsError('');
     try {
-      await orgsApi.update(org.slug, { default_voting_duration_days: duration, default_threshold: threshold });
+      await orgsApi.update(org.slug, { default_voting_duration_days: duration, default_threshold: threshold, default_quorum: quorum });
       addToast('Defaults saved', 'success');
     } catch (err) {
       setDefaultsError(err instanceof Error ? err.message : 'Failed to save');
@@ -234,6 +242,22 @@ export function AdminPage() {
               max={100}
               value={defaultThreshold}
               onChange={(e) => setDefaultThreshold(e.target.value)}
+              style={{ width: 120, padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+            />
+          </div>
+          <div>
+            <label htmlFor="admin-quorum" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+              Default quorum (% of members who must participate)
+            </label>
+            <p style={{ margin: '0 0 6px', fontSize: 12, color: '#aaa' }}>Leave blank for no quorum requirement by default.</p>
+            <input
+              id="admin-quorum"
+              type="number"
+              min={1}
+              max={100}
+              value={defaultQuorum}
+              onChange={(e) => setDefaultQuorum(e.target.value)}
+              placeholder="e.g. 50"
               style={{ width: 120, padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
             />
           </div>

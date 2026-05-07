@@ -28,6 +28,9 @@ export class Proposal {
   @Column({ type: 'integer', default: 50 })
   threshold!: number;
 
+  @Column({ type: 'integer', nullable: true, default: null })
+  quorum!: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 
