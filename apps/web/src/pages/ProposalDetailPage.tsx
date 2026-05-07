@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
-import { proposalsCollection, topicsCollection, votesCollection, usersCollection, commentsCollection } from '../collections';
-import { proposalsApi, commentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment } from '../api';
+import { usersCollection } from '../collections';
+import { useOrg } from '../OrgContext';
+import { proposalsApi, commentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -11,6 +12,8 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 
+const TITLE_MAX = 200;
+const DESC_MAX = 10000;
 const COMMENT_MAX = 5000;
 
 type VoteChoice = 'yes' | 'no' | 'abstain';
@@ -42,12 +45,14 @@ function computeResult(tally: TallyResult, threshold: number): 'passed' | 'faile
 export function ProposalDetailPage() {
   const { id } = useParams({ strict: false }) as { id: string };
   const currentUser = useCurrentUser();
+  const { org, collections: { proposalsCollection, topicsCollection, votesCollection, commentsCollection, commentReactionsCollection } } = useOrg();
 
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
   const { data: allUsers } = useLiveQuery(usersCollection);
   const { data: allComments } = useLiveQuery(commentsCollection);
+  const { data: allReactions } = useLiveQuery(commentReactionsCollection);
 
   const addToast = useToast();
 
@@ -68,6 +73,8 @@ export function ProposalDetailPage() {
   const [saving, setSaving] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentBody, setEditCommentBody] = useState('');
+  const [versions, setVersions] = useState<ProposalVersion[] | null>(null);
+  const [showVersions, setShowVersions] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -104,6 +111,7 @@ export function ProposalDetailPage() {
 
   useEffect(() => {
     fetchTally();
+    proposalsApi.versions(id).then(setVersions).catch(() => setVersions([]));
   }, [id]);
 
   useEffect(() => {
@@ -122,6 +130,7 @@ export function ProposalDetailPage() {
       const tx = votesCollection.insert({
         id: uuid(),
         proposal_id: id,
+        organisation_id: org.id,
         user_id: currentUser.id,
         choice,
         created_at: new Date().toISOString(),
@@ -212,6 +221,7 @@ export function ProposalDetailPage() {
       const tx = commentsCollection.insert({
         id: uuid(),
         proposal_id: id,
+        organisation_id: org.id,
         author_id: currentUser.id,
         body: commentBody.trim(),
         created_at: new Date().toISOString(),
@@ -251,6 +261,28 @@ export function ProposalDetailPage() {
     }
   }
 
+  async function reactToComment(commentId: string, emoji: string) {
+    try {
+      await commentsApi.react(commentId, emoji);
+    } catch {
+      addToast('Failed to react', 'error');
+    }
+  }
+
+  async function loadVersions() {
+    if (versions !== null) {
+      setShowVersions((v) => !v);
+      return;
+    }
+    try {
+      const data = await proposalsApi.versions(id);
+      setVersions(data);
+      setShowVersions(true);
+    } catch {
+      addToast('Failed to load version history', 'error');
+    }
+  }
+
   function startEditing() {
     setEditTitle(proposal.title);
     setEditDescription(proposal.description ?? '');
@@ -266,6 +298,7 @@ export function ProposalDetailPage() {
       await proposalsApi.update(id, { title: editTitle.trim(), description: editDescription });
       addToast('Proposal updated', 'success');
       setEditing(false);
+      proposalsApi.versions(id).then(setVersions).catch(() => {});
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -276,7 +309,8 @@ export function ProposalDetailPage() {
   return (
     <div style={{ maxWidth: 680 }}>
       <Link
-        to="/proposals"
+        to="/orgs/$slug/proposals"
+        params={{ slug: org.slug }}
         style={{ fontSize: 13, color: '#888', textDecoration: 'none', display: 'inline-block', marginBottom: '1rem' }}
       >
         ← Proposals
@@ -328,25 +362,39 @@ export function ProposalDetailPage() {
       {editing ? (
         <form onSubmit={saveEdit} style={{ marginBottom: '1.5rem' }}>
           <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="edit-title" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Title</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <label htmlFor="edit-title" style={{ fontSize: 13 }}>Title</label>
+              {editTitle.length > TITLE_MAX - 40 && (
+                <span style={{ fontSize: 11, color: editTitle.length >= TITLE_MAX ? '#d94040' : '#aaa' }}>
+                  {TITLE_MAX - editTitle.length} left
+                </span>
+              )}
+            </div>
             <input
               id="edit-title"
               type="text"
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
+              onChange={(e) => setEditTitle(e.target.value.slice(0, TITLE_MAX))}
               required
-              maxLength={200}
+              maxLength={TITLE_MAX}
               style={{ width: '100%', padding: '0.5rem', fontSize: 15, fontWeight: 600, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
             />
           </div>
           <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="edit-description" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Description</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <label htmlFor="edit-description" style={{ fontSize: 13 }}>Description</label>
+              {editDescription.length > DESC_MAX - 500 && (
+                <span style={{ fontSize: 11, color: editDescription.length >= DESC_MAX ? '#d94040' : '#aaa' }}>
+                  {DESC_MAX - editDescription.length} left
+                </span>
+              )}
+            </div>
             <textarea
               id="edit-description"
               value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
+              onChange={(e) => setEditDescription(e.target.value.slice(0, DESC_MAX))}
               rows={5}
-              maxLength={10000}
+              maxLength={DESC_MAX}
               style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
             />
           </div>
@@ -375,8 +423,33 @@ export function ProposalDetailPage() {
             )}
           </div>
           {proposal.description && (
-            <div style={{ margin: '0 0 1rem' }}>
+            <div style={{ margin: '0 0 0.75rem' }}>
               <MarkdownContent content={proposal.description} />
+            </div>
+          )}
+          {versions !== null && versions.length > 0 && (
+            <button
+              type="button"
+              onClick={loadVersions}
+              style={{ fontSize: 11, color: '#bbb', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: '0.5rem' }}
+            >
+              {showVersions ? 'Hide' : `Edited ${versions.length} time${versions.length !== 1 ? 's' : ''} — show history`}
+            </button>
+          )}
+          {showVersions && versions && (
+            <div style={{ border: '1px solid #eee', borderRadius: 6, padding: '0.75rem 1rem', marginBottom: '1rem', background: '#fafafa' }}>
+              <p style={{ margin: '0 0 0.5rem', fontSize: 12, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Edit history</p>
+              {versions.map((v, i) => (
+                <div key={v.id} style={{ fontSize: 12, color: '#888', marginBottom: i < versions.length - 1 ? '0.5rem' : 0 }}>
+                  <span style={{ color: '#555' }}>{v.title}</span>
+                  <span style={{ marginLeft: '0.5rem' }}>
+                    · {new Date(v.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  {userMap[v.changed_by ?? ''] && (
+                    <span style={{ marginLeft: '0.5rem' }}>by {userMap[v.changed_by!].name}</span>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </>
@@ -386,7 +459,7 @@ export function ProposalDetailPage() {
         {author ? (
           <>
             by{' '}
-            <Link to="/users/$id" params={{ id: author.id }} style={{ color: '#888', textDecoration: 'none' }}>
+            <Link to="/orgs/$slug/users/$id" params={{ slug: org.slug, id: author.id }} style={{ color: '#888', textDecoration: 'none' }}>
               {author.name}
             </Link>
             {' · '}
@@ -481,7 +554,9 @@ export function ProposalDetailPage() {
         <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Results
         </h3>
-        {tallyLoading ? (
+        {org.voting_visibility === 'hidden' && isOpen ? (
+          <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Vote counts are hidden until this proposal closes.</p>
+        ) : tallyLoading ? (
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Loading tally…</p>
         ) : tally ? (
           <VoteTally tally={tally} />
@@ -733,9 +808,46 @@ export function ProposalDetailPage() {
                         </div>
                       </form>
                     ) : (
-                      <div style={{ fontSize: 14, color: '#333', lineHeight: 1.5 }}>
-                        <MarkdownContent content={c.body} />
-                      </div>
+                      <>
+                        <div style={{ fontSize: 14, color: '#333', lineHeight: 1.5 }}>
+                          <MarkdownContent content={c.body} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                          {['👍', '👎', '❤️', '🤔'].map((emoji) => {
+                            const reactionsForEmoji = (allReactions ?? []).filter(
+                              (r: CommentReaction) => r.comment_id === c.id && r.emoji === emoji,
+                            );
+                            const count = reactionsForEmoji.length;
+                            const hasReacted = currentUser
+                              ? reactionsForEmoji.some((r: CommentReaction) => r.user_id === currentUser.id)
+                              : false;
+                            if (count === 0 && !currentUser) return null;
+                            return (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={() => currentUser && reactToComment(c.id, emoji)}
+                                title={currentUser ? (hasReacted ? 'Remove reaction' : `React with ${emoji}`) : 'Sign in to react'}
+                                style={{
+                                  fontSize: 13,
+                                  padding: '1px 6px',
+                                  border: `1px solid ${hasReacted ? '#c3d6fb' : '#e0e0e0'}`,
+                                  borderRadius: 10,
+                                  background: hasReacted ? '#e8f0fe' : 'transparent',
+                                  cursor: currentUser ? 'pointer' : 'default',
+                                  opacity: count === 0 ? 0.35 : 1,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem',
+                                  color: '#555',
+                                }}
+                              >
+                                {emoji}{count > 0 && <span style={{ fontSize: 11 }}>{count}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>

@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
-import { proposalsCollection, topicsCollection, votesCollection, usersCollection, commentsCollection } from '../collections';
+import { usersCollection, membershipsCollection } from '../collections';
+import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { EmptyState } from '../components/EmptyState';
-import type { Topic, Proposal, Vote, User, Comment } from '../api';
+import type { Topic, Proposal, Vote, User, Comment, Membership } from '../api';
 
 const TITLE_MAX = 200;
 const DESC_MAX = 10000;
@@ -56,14 +57,28 @@ function ProposalSkeleton() {
   );
 }
 
+const ROLE_RANK: Record<string, number> = { member: 1, moderator: 2, admin: 3 };
+
 export function ProposalsPage() {
   const currentUser = useCurrentUser();
   const addToast = useToast();
+  const { org, collections: { proposalsCollection, topicsCollection, votesCollection, commentsCollection } } = useOrg();
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
   const { data: allUsers } = useLiveQuery(usersCollection);
   const { data: allComments } = useLiveQuery(commentsCollection);
+  const { data: allMemberships } = useLiveQuery(membershipsCollection);
+
+  const myMembership = currentUser
+    ? (allMemberships ?? []).find((m: Membership) => m.organisation_id === org.id && m.user_id === currentUser.id)
+    : undefined;
+  const canCreateProposal = myMembership
+    ? (ROLE_RANK[myMembership.role] ?? 0) >= (ROLE_RANK[org.proposal_creation_role ?? 'member'] ?? 1)
+    : false;
+  const canCreateTopic = myMembership
+    ? (ROLE_RANK[myMembership.role] ?? 0) >= (ROLE_RANK[org.topic_creation_role ?? 'member'] ?? 1)
+    : false;
 
   const [topicFilter, setTopicFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -76,8 +91,14 @@ export function ProposalsPage() {
   const [description, setDescription] = useState('');
   const [topicId, setTopicId] = useState('');
   const [newTopicName, setNewTopicName] = useState('');
-  const [closesAt, setClosesAt] = useState('');
-  const [threshold, setThreshold] = useState(50);
+  const [closesAt, setClosesAt] = useState(() => {
+    const days = org.default_voting_duration_days;
+    if (!days) return '';
+    const d = new Date(Date.now() + days * 86400000);
+    const offset = d.getTimezoneOffset();
+    return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 16);
+  });
+  const [threshold, setThreshold] = useState(org.default_threshold ?? 50);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -113,8 +134,15 @@ export function ProposalsPage() {
     setDescription('');
     setTopicId('');
     setNewTopicName('');
-    setClosesAt('');
-    setThreshold(50);
+    const days = org.default_voting_duration_days;
+    if (days) {
+      const d = new Date(Date.now() + days * 86400000);
+      const offset = d.getTimezoneOffset();
+      setClosesAt(new Date(d.getTime() - offset * 60000).toISOString().slice(0, 16));
+    } else {
+      setClosesAt('');
+    }
+    setThreshold(org.default_threshold ?? 50);
     setShowForm(false);
     setFormError('');
   }
@@ -136,6 +164,7 @@ export function ProposalsPage() {
         resolvedTopicId = uuid();
         const topicTx = topicsCollection.insert({
           id: resolvedTopicId,
+          organisation_id: org.id,
           name,
           description: '',
           created_at: new Date().toISOString(),
@@ -151,6 +180,7 @@ export function ProposalsPage() {
 
       const proposalTx = proposalsCollection.insert({
         id: uuid(),
+        organisation_id: org.id,
         topic_id: resolvedTopicId,
         author_id: currentUser.id,
         title: title.trim(),
@@ -176,7 +206,7 @@ export function ProposalsPage() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
         <h2 style={{ margin: 0 }}>Proposals</h2>
-        {currentUser && (
+        {canCreateProposal && (
           <button
             onClick={() => setShowForm((v) => !v)}
             style={{ fontSize: 13, padding: '0.4rem 1rem', cursor: 'pointer' }}
@@ -186,7 +216,7 @@ export function ProposalsPage() {
         )}
       </div>
 
-      {showForm && (
+      {showForm && canCreateProposal && (
         <form
           onSubmit={(e) => { e.preventDefault(); handleCreate(false); }}
           style={{
@@ -250,7 +280,7 @@ export function ProposalsPage() {
               {(allTopics ?? []).map((t: Topic) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
-              <option value="__new__">＋ New topic…</option>
+              {canCreateTopic && <option value="__new__">＋ New topic…</option>}
             </select>
           </div>
           {topicId === '__new__' && (
@@ -460,8 +490,8 @@ export function ProposalsPage() {
             return (
               <Link
                 key={p.id}
-                to="/proposals/$id"
-                params={{ id: p.id }}
+                to="/orgs/$slug/proposals/$id"
+                params={{ slug: org.slug, id: p.id }}
                 style={{ textDecoration: 'none', color: 'inherit' }}
               >
                 <div
@@ -544,9 +574,15 @@ export function ProposalsPage() {
                     </div>
                     {!isDraft && (
                       <div style={{ textAlign: 'right', flexShrink: 0, fontSize: 13, color: '#666' }}>
-                        <div style={{ color: '#2d9a4e' }}>↑ {yes}</div>
-                        <div style={{ color: '#d94040' }}>↓ {no}</div>
-                        {abstain > 0 && <div style={{ color: '#aaa' }}>— {abstain}</div>}
+                        {(org.voting_visibility !== 'hidden' || !isOpen) ? (
+                          <>
+                            <div style={{ color: '#2d9a4e' }}>↑ {yes}</div>
+                            <div style={{ color: '#d94040' }}>↓ {no}</div>
+                            {abstain > 0 && <div style={{ color: '#aaa' }}>— {abstain}</div>}
+                          </>
+                        ) : (
+                          <div style={{ color: '#bbb', fontSize: 11 }}>hidden</div>
+                        )}
                         {commentCount > 0 && <div style={{ color: '#aaa', marginTop: '0.2rem' }}>{commentCount} comment{commentCount !== 1 ? 's' : ''}</div>}
                       </div>
                     )}

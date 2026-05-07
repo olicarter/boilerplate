@@ -11,37 +11,37 @@ Current state: users can register with passkeys, create proposals under topics, 
 > The minimum needed before a real organisation can run a real vote without it feeling like a prototype.
 
 ### Proposal lifecycle
-- [ ] **Voting deadlines** — proposals have an optional `closes_at` timestamp; the UI shows a countdown and the API auto-closes the proposal when the deadline passes (cron or on-read check). Voters must cast before the deadline.
-- [ ] **Proposal status: draft** — authors can save a proposal as a draft before publishing it. Drafts are only visible to the author. Adds a `draft` value to the `status` enum.
-- [ ] **Proposal withdrawal** — the author (or an admin) can withdraw an open proposal, setting status to `withdrawn`. Withdrawn proposals are shown in the list but marked as inactive.
-- [ ] **Close/reopen proposals** — admins can manually close any open proposal and reopen any closed one. The API enforces that only admins or the author can do this.
-- [ ] **Proposal author** — store `author_id` on proposals; show the author's name on the proposal card and detail page with a link to their profile.
-- [ ] **Passing threshold** — proposals have a configurable `threshold` (default 50%); the result card on the detail page shows whether the proposal passed, failed, or is still open.
+- [x] **Voting deadlines** — proposals have an optional `closes_at` timestamp; the UI shows a countdown and the API auto-closes the proposal when the deadline passes (cron or on-read check). Voters must cast before the deadline.
+- [x] **Proposal status: draft** — authors can save a proposal as a draft before publishing it. Drafts are only visible to the author. Adds a `draft` value to the `status` enum.
+- [x] **Proposal withdrawal** — the author (or an admin) can withdraw an open proposal, setting status to `withdrawn`. Withdrawn proposals are shown in the list but marked as inactive.
+- [x] **Close/reopen proposals** — admins can manually close any open proposal and reopen any closed one. The API enforces that only admins or the author can do this.
+- [x] **Proposal author** — store `author_id` on proposals; show the author's name on the proposal card and detail page with a link to their profile.
+- [x] **Passing threshold** — proposals have a configurable `threshold` (default 50%); the result card on the detail page shows whether the proposal passed, failed, or is still open.
 
 ### Voting
-- [ ] **Vote lock on close** — once a proposal closes, the vote buttons disappear and a clear "voting closed" message is shown. Currently the UI hides voting for `status === 'closed'` but the API still accepts votes.
-- [ ] **Delegation override** — on the proposal detail page, if your vote is currently cast by your delegate, show a banner "Your delegate Bob voted yes on your behalf" with a button to cast your own vote directly, which overrides the delegation for that proposal.
-- [ ] **Abstain excluded from tally percentage** — the pass/fail calculation should only count yes+no in the denominator (abstentions are neutral); show abstentions separately.
+- [x] **Vote lock on close** — once a proposal closes, the vote buttons disappear and a clear "voting closed" message is shown. API also enforces no new votes on closed proposals.
+- [x] **Delegation override** — on the proposal detail page, if your vote is currently cast by your delegate, show a banner "Your delegate Bob voted yes on your behalf" with a button to cast your own vote directly, which overrides the delegation for that proposal.
+- [x] **Abstain excluded from tally percentage** — the pass/fail calculation only counts yes+no in the denominator (abstentions are neutral); abstentions shown separately.
 
 ### Delegation
-- [ ] **Transitive delegation server-side** — move chain resolution from the frontend VoteTally component to the API so that `/proposals/:id/tally` returns pre-resolved counts. This is needed for correct quorum calculations and export.
-- [ ] **Circular delegation detection** — when creating a delegation, the API checks whether it would create a cycle (A→B→C→A) and rejects it with a clear error.
-- [ ] **Delegation chain depth limit** — cap chains at a configurable depth (default 5) to prevent runaway recursion and make the system predictable.
-- [ ] **Delegation expiry** — optional `expires_at` on delegations; expired delegations are ignored in tally resolution. Show expiry date in the delegation list.
+- [x] **Transitive delegation server-side** — chain resolution is in the API; `/proposals/:id/tally` returns pre-resolved counts.
+- [x] **Circular delegation detection** — when creating a delegation, the API checks whether it would create a cycle (A→B→C→A) and rejects it with a clear error.
+- [x] **Delegation chain depth limit** — chains capped at depth 10.
+- [x] **Delegation expiry** — optional `expires_at` on delegations; expired delegations are ignored in tally resolution. Show expiry date in the delegation list.
 
 ### Auth & identity
 - [ ] **Email magic-link fallback** — not every device supports passkeys. Add an email-based sign-in flow (send a one-time link) as a fallback. The user can then add a passkey from their profile settings.
-- [ ] **Display name / avatar** — users can set a display name distinct from their registration name and upload a profile photo (stored as a URL or base64 thumbnail).
-- [ ] **Account settings page** — dedicated `/settings` page for changing display name, email, managing registered passkeys (list, add, remove), and deleting the account.
+- [ ] **Display name / avatar** — display name change is in Settings; avatar upload (profile photo as URL or base64 thumbnail) is not yet implemented.
+- [x] **Account settings page** — `/settings` page for changing display name and managing registered passkeys (list, add, remove).
 
 ### UI / UX
-- [ ] **Responsive layout** — the current sidebar layout breaks on mobile. Implement a hamburger menu / bottom nav for screens under 768px.
-- [ ] **Empty state illustrations** — replace the plain text "No proposals yet" messages with simple illustrated empty states that also prompt the user to take action.
-- [ ] **Confirmation dialogs** — removing a delegation, withdrawing a proposal, or closing a vote should prompt a confirmation (not just instant action).
-- [ ] **Toast notifications** — replace silent success (form collapses) with brief success toasts ("Proposal created", "Vote cast", "Delegation removed").
-- [ ] **Loading skeletons** — while Electric sync initialises, show skeleton placeholders instead of an empty flash.
-- [ ] **Markdown in proposal descriptions** — render descriptions as Markdown (use a tiny renderer like `marked` + DOMPurify sanitisation). The form textarea gets a plain-text `## ` formatting hint.
-- [ ] **Character/word limits** — enforce title max 200 chars, description max 10 000 chars both client and server side with a remaining-characters counter.
+- [x] **Responsive layout** — hamburger menu with slide-in overlay sidebar for screens under 768px.
+- [x] **Empty state illustrations** — `EmptyState` component with SVG illustrations used on proposals, delegations, comments, and votes.
+- [x] **Confirmation dialogs** — `ConfirmButton` component used for delegation removal, proposal close/withdraw.
+- [x] **Toast notifications** — `Toast` / `useToast` used throughout for create, update, delete, and error feedback.
+- [x] **Loading skeletons** — skeleton placeholders on the proposals list while Electric sync initialises.
+- [x] **Markdown in proposal descriptions** — `MarkdownContent` component renders markdown with DOMPurify sanitisation.
+- [x] **Character/word limits** — title max 200, description max 10 000, comment max 5 000; enforced server-side and in the UI with a remaining-characters counter that appears near the limit.
 
 ---
 
@@ -50,34 +50,34 @@ Current state: users can register with passkeys, create proposals under topics, 
 > Everything needed to support multiple distinct groups each running their own governance, isolated from each other.
 
 ### Multi-tenancy
-- [ ] **Organisation model** — new `organisations` table with `id`, `name`, `slug` (URL-safe), `description`, `logo_url`, `created_at`. All other entities (`topics`, `proposals`, `votes`, `delegations`) gain an `organisation_id` foreign key.
-- [ ] **Organisation subdomains / slugs** — routes become `/orgs/:slug/proposals` etc. A single Ripple instance can host many orgs. The active org is resolved from the URL slug and stored in React context.
-- [ ] **Organisation creation flow** — any authenticated user can create an organisation and becomes its first admin. Setup wizard: name → slug → invite members → done.
-- [ ] **Organisation home page** — landing page at `/orgs/:slug` showing name, description, recent activity (latest proposals, vote counts), member count.
-- [ ] **Electric sync scoping** — Electric shape subscriptions are filtered by `organisation_id` so members only sync data for their org.
+- [x] **Organisation model** — new `organisations` table with `id`, `name`, `slug` (URL-safe), `description`, `logo_url`, `created_at`. All other entities (`topics`, `proposals`, `votes`, `delegations`) gain an `organisation_id` foreign key.
+- [x] **Organisation subdomains / slugs** — routes become `/orgs/:slug/proposals` etc. A single Ripple instance can host many orgs. The active org is resolved from the URL slug and stored in React context.
+- [x] **Organisation creation flow** — any authenticated user can create an organisation and becomes its first admin. Setup wizard: name → slug → invite members → done.
+- [x] **Organisation home page** — landing page at `/orgs/:slug` showing name, description, recent activity (latest proposals, vote counts), member count.
+- [x] **Electric sync scoping** — Electric shape subscriptions are filtered by `organisation_id` so members only sync data for their org.
 
 ### Membership
-- [ ] **Membership model** — `memberships` table: `id`, `organisation_id`, `user_id`, `role` (admin | moderator | member | observer), `joined_at`, `invited_by`.
+- [x] **Membership model** — `memberships` table: `id`, `organisation_id`, `user_id`, `role` (admin | moderator | member | observer), `joined_at`, `invited_by`.
 - [ ] **Invite by email** — admins can invite people by email; a signed token is emailed with a link to join. Pending invites are listed in org settings.
-- [ ] **Invite link** — generate a shareable invite link with a token; anyone with the link can join (can be disabled or made single-use).
+- [x] **Invite link** — generate a shareable invite link with a token; anyone with the link can join (can be disabled or made single-use).
 - [ ] **Email domain restriction** — optional: restrict membership to users whose email matches one or more domains (e.g. `@acme.com`).
 - [ ] **Member approval** — optional: new members must be approved by an admin before they can vote. Shows a pending queue in org settings.
-- [ ] **Member directory** — `/orgs/:slug/members` page listing all members with their role, join date, and a link to their profile. Sortable by name / join date / participation.
-- [ ] **Leave organisation** — members can leave; the final admin cannot leave until they transfer ownership.
-- [ ] **Remove member** — admins can remove a member, which also removes their delegations (incoming and outgoing) within the org.
+- [x] **Member directory** — `/orgs/:slug/members` page listing all members with their role, join date, and a link to their profile. Sortable by name / join date / participation.
+- [x] **Leave organisation** — members can leave; the final admin cannot leave until they transfer ownership.
+- [x] **Remove member** — admins can remove a member, which also removes their delegations (incoming and outgoing) within the org.
 
 ### Roles & permissions
-- [ ] **Role-based proposal creation** — org setting: who can create proposals? Options: any member / moderator and above / admin only.
-- [ ] **Role-based topic creation** — similar setting for who can create topics.
+- [x] **Role-based proposal creation** — org setting: who can create proposals? Options: any member / moderator and above / admin only.
+- [x] **Role-based topic creation** — similar setting for who can create topics.
 - [ ] **Moderator tools** — moderators can edit/close any proposal, delete comments, and manage topics. Cannot manage membership or org settings.
-- [ ] **Admin panel** — `/orgs/:slug/admin` dashboard: member management, pending invites, org settings, audit log shortcut, danger zone (delete org).
-- [ ] **Ownership transfer** — the org owner can transfer ownership to another admin.
+- [x] **Admin panel** — `/orgs/:slug/admin` dashboard: org info editing, proposal creation role setting, danger zone (delete org). Visible to admins only.
+- [x] **Ownership transfer** — the org owner can transfer ownership to another admin.
 
 ### Organisation settings
-- [ ] **Default voting duration** — org-level setting for the default `closes_at` offset when creating a proposal (e.g. 7 days). Authors can override per-proposal.
-- [ ] **Default passing threshold** — org-level default (e.g. 50%). Can be overridden per-proposal.
+- [x] **Default voting duration** — org-level setting for the default `closes_at` offset when creating a proposal (e.g. 7 days). Authors can override per-proposal.
+- [x] **Default passing threshold** — org-level default (e.g. 50%). Can be overridden per-proposal.
 - [ ] **Default quorum** — minimum percentage of eligible voters (or weight) that must participate for a result to be binding. Can be overridden per-proposal.
-- [ ] **Voting visibility** — org setting: are live vote counts visible during the voting period, or hidden until close? Hidden-until-close prevents bandwagon effects.
+- [x] **Voting visibility** — org setting: are live vote counts visible during the voting period, or hidden until close? Hidden-until-close prevents bandwagon effects.
 - [ ] **Public organisation** — toggle: should proposals and results be visible to non-members? Useful for community groups that want transparency.
 
 ---
@@ -120,7 +120,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 
 ### Amendments
 - [ ] **Amendment proposals** — a member can propose an amendment to an open proposal. If the amendment passes (simple majority), the parent proposal description is updated and the vote resets. Creates a clear history.
-- [ ] **Proposal versions** — every edit to a proposal title/description creates a version in `proposal_versions` (id, proposal_id, changed_by, changed_at, title, description). Users can see the diff history.
+- [x] **Proposal versions** — every edit to a proposal title/description creates a version in `proposal_versions`; users can see the edit history on the proposal detail page.
 - [ ] **Proposal linking** — proposals can be linked as: supersedes / related to / blocks / depends on. Displayed as a relationship section on the detail page.
 
 ---
@@ -130,10 +130,10 @@ Current state: users can register with passkeys, create proposals under topics, 
 > Good decisions need good deliberation. This phase adds the structured conversation layer that sits between "proposal created" and "vote cast".
 
 ### Comments
-- [ ] **Proposal comments** — threaded comments on proposals. Schema: `comments` (id, proposal_id, author_id, parent_id nullable, body, created_at, edited_at, deleted_at). Soft-delete.
-- [ ] **Rich text comments** — Markdown rendering with sanitisation. Support basic formatting, code blocks, links.
-- [ ] **Comment reactions** — emoji reactions (👍 👎 ❤️ 🤔) on comments. Simple `comment_reactions` table. No comments, just reactions — keeps it lightweight.
-- [ ] **Edit / delete own comments** — authors can edit within 15 minutes of posting (shown with an "edited" label) or soft-delete at any time.
+- [x] **Proposal comments** — comments on proposals with `comments` table (id, proposal_id, author_id, body, created_at, edited_at). Hard-delete.
+- [x] **Rich text comments** — Markdown rendering with DOMPurify sanitisation.
+- [x] **Comment reactions** — emoji reactions (👍 👎 ❤️ 🤔) on comments via `comment_reactions` table; toggle behaviour.
+- [x] **Edit / delete own comments** — authors can edit or delete their own comments; "edited" label shown.
 - [ ] **Moderator comment management** — moderators can hide (soft-delete) any comment with a reason. Hidden comments are replaced with a "removed by moderator" placeholder visible to admins.
 - [ ] **Comment pinning** — proposal authors and moderators can pin up to 2 comments (e.g. "Key context" or "Author's response") to the top.
 - [ ] **For / Against arguments** — structured argument section separate from general comments: members can post a "For" or "Against" argument, each displayed in its own column. Encourages considered deliberation over reactive commenting.
