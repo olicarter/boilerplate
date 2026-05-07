@@ -108,13 +108,20 @@ export class ProposalsService {
     });
   }
 
+  private async canModerate(orgId: string, userId: string): Promise<boolean> {
+    const m = await this.memberRepo.findOneBy({ organisation_id: orgId, user_id: userId });
+    return !!m && (ROLE_RANK[m.role] ?? 0) >= ROLE_RANK['moderator'];
+  }
+
   async edit(
     id: string,
     userId: string,
     data: { title?: string; description?: string },
   ): Promise<{ item: Proposal; txid: number }> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id });
-    if (proposal.author_id !== userId) throw new ForbiddenException('Only the author can edit this proposal');
+    if (proposal.author_id !== userId && !(await this.canModerate(proposal.organisation_id, userId))) {
+      throw new ForbiddenException('Only the author or a moderator can edit this proposal');
+    }
     if (!['open', 'draft'].includes(proposal.status)) {
       throw new BadRequestException('Only open or draft proposals can be edited');
     }
@@ -163,9 +170,13 @@ export class ProposalsService {
     from: ProposalStatus | ProposalStatus[],
     to: ProposalStatus,
     patch: Partial<Pick<Proposal, 'status' | 'closed_at'>>,
+    allowModerator = false,
   ): Promise<{ item: Proposal; txid: number }> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id });
-    if (proposal.author_id !== userId) throw new ForbiddenException('Only the author can perform this action');
+    if (proposal.author_id !== userId) {
+      const permitted = allowModerator && await this.canModerate(proposal.organisation_id, userId);
+      if (!permitted) throw new ForbiddenException('Only the author or a moderator can perform this action');
+    }
     const allowed = Array.isArray(from) ? from : [from];
     if (!allowed.includes(proposal.status)) {
       throw new BadRequestException(`Proposal must be ${allowed.join(' or ')} to perform this action`);
@@ -178,15 +189,15 @@ export class ProposalsService {
   }
 
   close(id: string, userId: string) {
-    return this.transition(id, userId, 'open', 'closed', { status: 'closed', closed_at: new Date() });
+    return this.transition(id, userId, 'open', 'closed', { status: 'closed', closed_at: new Date() }, true);
   }
 
   reopen(id: string, userId: string) {
-    return this.transition(id, userId, 'closed', 'open', { status: 'open', closed_at: null });
+    return this.transition(id, userId, 'closed', 'open', { status: 'open', closed_at: null }, true);
   }
 
   withdraw(id: string, userId: string) {
-    return this.transition(id, userId, ['open', 'closed'], 'withdrawn', { status: 'withdrawn', closed_at: new Date() });
+    return this.transition(id, userId, ['open', 'closed'], 'withdrawn', { status: 'withdrawn', closed_at: new Date() }, true);
   }
 
   async autoCloseExpired(): Promise<number> {

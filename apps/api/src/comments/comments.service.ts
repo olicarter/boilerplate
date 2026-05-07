@@ -5,9 +5,11 @@ import { DataSource, Repository } from 'typeorm';
 import { Comment } from './comment.entity';
 import { CommentReaction } from './comment-reaction.entity';
 import { Proposal } from '../proposals/proposal.entity';
+import { Membership } from '../organisations/membership.entity';
 
 const BODY_MAX = 5000;
 const ALLOWED_EMOJIS = ['👍', '👎', '❤️', '🤔'];
+const ROLE_RANK: Record<string, number> = { member: 1, moderator: 2, admin: 3 };
 
 @Injectable()
 export class CommentsService {
@@ -18,6 +20,8 @@ export class CommentsService {
     private readonly reactionRepo: Repository<CommentReaction>,
     @InjectRepository(Proposal)
     private readonly proposalRepo: Repository<Proposal>,
+    @InjectRepository(Membership)
+    private readonly memberRepo: Repository<Membership>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -66,7 +70,12 @@ export class CommentsService {
   async delete(id: string, userId: string): Promise<{ txid: number }> {
     const comment = await this.commentRepo.findOneBy({ id });
     if (!comment) throw new NotFoundException('Comment not found');
-    if (comment.author_id !== userId) throw new ForbiddenException('Cannot delete another user\'s comment');
+    if (comment.author_id !== userId) {
+      const m = await this.memberRepo.findOneBy({ organisation_id: comment.organisation_id, user_id: userId });
+      if (!m || (ROLE_RANK[m.role] ?? 0) < ROLE_RANK['moderator']) {
+        throw new ForbiddenException('Cannot delete another user\'s comment');
+      }
+    }
 
     return this.dataSource.transaction(async (manager) => {
       await manager.delete(Comment, id);

@@ -22,13 +22,13 @@ export class TopicsController {
 
   @Patch(':id')
   @UseGuards(AuthGuard)
-  update(@Param('id') id: string, @Body() body: { name?: string; description?: string }) {
-    return this.topicsService.update(id, body);
+  update(@Param('id') id: string, @Body() body: { name?: string; description?: string }, @Req() req: AuthenticatedRequest) {
+    return this.topicsService.update(id, body, req.user!.id);
   }
 
   @Delete(':id')
   @UseGuards(AuthGuard)
-  remove(@Param('id') id: string) {
-    return this.topicsService.delete(id);
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.topicsService.delete(id, req.user!.id);
   }
 }

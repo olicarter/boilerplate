@@ -54,7 +54,12 @@ export class TopicsService {
     });
   }
 
-  async update(id: string, data: Partial<Pick<Topic, 'name' | 'description'>>): Promise<{ item: Topic; txid: number }> {
+  async update(id: string, data: Partial<Pick<Topic, 'name' | 'description'>>, actorId: string): Promise<{ item: Topic; txid: number }> {
+    const topic = await this.topicRepo.findOneByOrFail({ id });
+    const m = await this.memberRepo.findOneBy({ organisation_id: topic.organisation_id, user_id: actorId });
+    if (!m || (ROLE_RANK[m.role] ?? 0) < ROLE_RANK['moderator']) {
+      throw new ForbiddenException('Only moderators and above can edit topics');
+    }
     return this.dataSource.transaction(async (manager) => {
       await manager.update(Topic, id, data);
       const item = await manager.findOneByOrFail(Topic, { id });
@@ -63,7 +68,12 @@ export class TopicsService {
     });
   }
 
-  async delete(id: string): Promise<{ txid: number }> {
+  async delete(id: string, actorId: string): Promise<{ txid: number }> {
+    const topic = await this.topicRepo.findOneByOrFail({ id });
+    const m = await this.memberRepo.findOneBy({ organisation_id: topic.organisation_id, user_id: actorId });
+    if (!m || (ROLE_RANK[m.role] ?? 0) < ROLE_RANK['moderator']) {
+      throw new ForbiddenException('Only moderators and above can delete topics');
+    }
     return this.dataSource.transaction(async (manager) => {
       await manager.delete(Topic, id);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);

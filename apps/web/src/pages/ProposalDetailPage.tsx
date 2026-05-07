@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
-import { usersCollection } from '../collections';
+import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion } from '../api';
+import { proposalsApi, commentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -53,6 +53,7 @@ export function ProposalDetailPage() {
   const { data: allUsers } = useLiveQuery(usersCollection);
   const { data: allComments } = useLiveQuery(commentsCollection);
   const { data: allReactions } = useLiveQuery(commentReactionsCollection);
+  const { data: allMemberships } = useLiveQuery(membershipsCollection);
 
   const addToast = useToast();
 
@@ -86,6 +87,12 @@ export function ProposalDetailPage() {
   const myVote = currentUser
     ? (allVotes ?? []).find((v: Vote) => v.proposal_id === id && v.user_id === currentUser.id)
     : undefined;
+
+  const myMembership = currentUser
+    ? (allMemberships ?? []).find((m: Membership) => m.organisation_id === org.id && m.user_id === currentUser.id)
+    : undefined;
+  const ROLE_RANK: Record<string, number> = { member: 1, moderator: 2, admin: 3 };
+  const isModerator = (ROLE_RANK[myMembership?.role ?? ''] ?? 0) >= ROLE_RANK['moderator'];
 
   async function fetchTally() {
     setTallyLoading(true);
@@ -412,7 +419,7 @@ export function ProposalDetailPage() {
         <>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.4rem' }}>{proposal.title}</h2>
-            {isAuthor && (isDraft || isOpen) && (
+            {(isAuthor || isModerator) && (isDraft || isOpen) && (
               <button
                 type="button"
                 onClick={startEditing}
@@ -685,8 +692,8 @@ export function ProposalDetailPage() {
         <p style={{ fontSize: 13, color: '#aaa' }}>This proposal is closed — voting is no longer available.</p>
       )}
 
-      {/* Author management actions */}
-      {isAuthor && !isWithdrawn && (
+      {/* Author/moderator management actions */}
+      {(isAuthor || isModerator) && !isWithdrawn && (
         <div
           style={{
             marginTop: '2rem',
@@ -770,15 +777,17 @@ export function ProposalDetailPage() {
                       {c.edited_at && (
                         <span style={{ fontSize: 11, color: '#bbb' }}>(edited)</span>
                       )}
-                      {isOwn && editingCommentId !== c.id && (
+                      {(isOwn || isModerator) && editingCommentId !== c.id && (
                         <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: '0.25rem' }}>
-                          <button
-                            type="button"
-                            onClick={() => { setEditingCommentId(c.id); setEditCommentBody(c.body); }}
-                            style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
-                          >
-                            Edit
-                          </button>
+                          {isOwn && (
+                            <button
+                              type="button"
+                              onClick={() => { setEditingCommentId(c.id); setEditCommentBody(c.body); }}
+                              style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                            >
+                              Edit
+                            </button>
+                          )}
                           <ConfirmButton
                             label="Delete"
                             confirmLabel="Yes"

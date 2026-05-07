@@ -69,7 +69,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 ### Roles & permissions
 - [x] **Role-based proposal creation** — org setting: who can create proposals? Options: any member / moderator and above / admin only.
 - [x] **Role-based topic creation** — similar setting for who can create topics.
-- [ ] **Moderator tools** — moderators can edit/close any proposal, delete comments, and manage topics. Cannot manage membership or org settings.
+- [x] **Moderator tools** — moderators can edit/close any proposal, delete comments, and manage topics. Cannot manage membership or org settings.
 - [x] **Admin panel** — `/orgs/:slug/admin` dashboard: org info editing, proposal creation role setting, danger zone (delete org). Visible to admins only.
 - [x] **Ownership transfer** — the org owner can transfer ownership to another admin.
 

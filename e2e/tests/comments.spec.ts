@@ -48,19 +48,36 @@ test('can delete own comment', async ({ page, asAlice }) => {
   await expect(page.getByText('Comment deleted')).toBeVisible();
 });
 
-test('delete button not shown for other users comments', async ({ page, asAlice, bob, request }) => {
+test('delete button not shown for plain member on another user\'s comment', async ({ page, asAlice, bob, request }) => {
   const topic = await createTopic(page.request, 'Policy');
   const proposal = await createProposal(page.request, topic.id, 'Build a library');
 
-  // Bob posts a comment using his session (the standalone `request` fixture has Bob's session)
+  // Alice posts a comment
+  await page.request.post(`${API}/api/proposals/${proposal.id}/comments`, {
+    data: { id: crypto.randomUUID(), body: "Alice's opinion" },
+  });
+
+  // Downgrade Alice to member (admins/moderators can delete any comment)
+  await page.request.patch(`${API}/api/orgs/ripple-test/members/${asAlice.id}`, { data: { role: 'member' } });
+
+  // Bob (another member) posts a comment via standalone request context
   await request.post(`${API}/api/proposals/${proposal.id}/comments`, {
     data: { id: crypto.randomUUID(), body: "Bob's opinion" },
   });
 
+  // Switch to Bob's session via page.request (now a member)
+  await page.request.post(`${API}/api/auth/test-setup`, { data: { name: bob.name, email: bob.email } });
+  await page.request.patch(`${API}/api/orgs/ripple-test/members/${bob.id}`, { data: { role: 'member' } });
+  await page.addInitScript(
+    ({ key, value }: { key: string; value: string }) => localStorage.setItem(key, value),
+    { key: 'ripple_user', value: JSON.stringify(bob) },
+  );
+
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
-  await expect(page.getByText("Bob's opinion")).toBeVisible();
-  // Alice sees no Delete button for Bob's comment
-  await expect(page.getByRole('button', { name: 'Delete' })).not.toBeVisible();
+  await expect(page.getByText("Alice's opinion")).toBeVisible();
+  // Bob (member) sees Delete only on his own comment, not Alice's
+  // Only 1 Delete button visible (for Bob's own comment), not 2
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(1);
 });
 
 test('sign in prompt shown when not authenticated', async ({ page }) => {
