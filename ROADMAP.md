@@ -98,7 +98,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **Hard quorum** — if participation (direct votes + delegated weight) does not reach the quorum threshold by deadline, the proposal fails automatically regardless of the yes/no split.
 - [x] **Soft quorum** — proposal result is advisory only if quorum isn't met; clearly labelled as "not binding".
 - [ ] **Dynamic quorum** — quorum requirement scales with the proposal's estimated impact level (low / medium / high / constitutional), set by the author or a moderator.
-- [ ] **Supermajority threshold** — set a threshold above 50% (e.g. 66%, 75%) for high-impact decisions like constitutional changes or large expenditures.
+- [x] **Supermajority threshold** — set a threshold above 50% (e.g. 66%, 75%) for high-impact decisions like constitutional changes or large expenditures.
 - [ ] **Veto rights** — certain roles (e.g. a board member or founder) can cast a veto vote that blocks a proposal regardless of the vote count. Vetoes must include a written reason.
 
 ### Weighted voting

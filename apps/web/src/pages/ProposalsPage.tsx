@@ -99,6 +99,13 @@ export function ProposalsPage() {
     return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 16);
   });
   const [threshold, setThreshold] = useState(org.default_threshold ?? 50);
+  const THRESHOLD_PRESETS = [
+    { label: 'Simple majority', value: 50 },
+    { label: 'Two-thirds', value: 67 },
+    { label: 'Three-quarters', value: 75 },
+  ];
+  const isPreset = THRESHOLD_PRESETS.some((p) => p.value === threshold);
+  const [customThreshold, setCustomThreshold] = useState(!isPreset);
   const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
   const [quorumType, setQuorumType] = useState<'soft' | 'hard'>('soft');
   const [submitting, setSubmitting] = useState(false);
@@ -145,6 +152,7 @@ export function ProposalsPage() {
       setClosesAt('');
     }
     setThreshold(org.default_threshold ?? 50);
+    setCustomThreshold(false);
     setQuorum(org.default_quorum ?? null);
     setQuorumType('soft');
     setShowForm(false);
@@ -316,21 +324,56 @@ export function ProposalsPage() {
               />
             </div>
             <div>
-              <label htmlFor="new-proposal-threshold" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-                Passing threshold
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <input
-                  id="new-proposal-threshold"
-                  type="number"
-                  value={threshold}
-                  onChange={(e) => setThreshold(Math.min(100, Math.max(1, parseInt(e.target.value) || 50)))}
-                  min={1}
-                  max={100}
-                  style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
-                />
-                <span style={{ fontSize: 14, color: '#555', flexShrink: 0 }}>% yes</span>
+              <label style={{ display: 'block', fontSize: 13, marginBottom: 6 }}>Passing threshold</label>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {THRESHOLD_PRESETS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => { setThreshold(p.value); setCustomThreshold(false); }}
+                    style={{
+                      fontSize: 13,
+                      padding: '0.3rem 0.75rem',
+                      borderRadius: 4,
+                      border: '1px solid #ddd',
+                      background: !customThreshold && threshold === p.value ? '#222' : 'none',
+                      color: !customThreshold && threshold === p.value ? '#fff' : '#333',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {p.label} ({p.value}%)
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCustomThreshold(true)}
+                  style={{
+                    fontSize: 13,
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: 4,
+                    border: '1px solid #ddd',
+                    background: customThreshold ? '#222' : 'none',
+                    color: customThreshold ? '#fff' : '#333',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Custom
+                </button>
               </div>
+              {customThreshold && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem' }}>
+                  <input
+                    id="new-proposal-threshold"
+                    type="number"
+                    value={threshold}
+                    onChange={(e) => setThreshold(Math.min(100, Math.max(1, parseInt(e.target.value) || 50)))}
+                    min={1}
+                    max={100}
+                    style={{ width: 80, padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+                  />
+                  <span style={{ fontSize: 14, color: '#555' }}>% yes</span>
+                </div>
+              )}
             </div>
           </div>
           <div style={{ marginBottom: '1rem' }}>
