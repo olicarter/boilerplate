@@ -38,6 +38,9 @@ export class Organisation {
   @Column({ type: 'boolean', default: false })
   is_public!: boolean;
 
+  @Column({ name: 'veto_role', type: 'varchar', length: 20, default: 'admin' })
+  veto_role!: 'moderator' | 'admin';
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

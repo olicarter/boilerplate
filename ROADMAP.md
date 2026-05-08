@@ -99,7 +99,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **Soft quorum** — proposal result is advisory only if quorum isn't met; clearly labelled as "not binding".
 - [ ] **Dynamic quorum** — quorum requirement scales with the proposal's estimated impact level (low / medium / high / constitutional), set by the author or a moderator.
 - [x] **Supermajority threshold** — set a threshold above 50% (e.g. 66%, 75%) for high-impact decisions like constitutional changes or large expenditures.
-- [ ] **Veto rights** — certain roles (e.g. a board member or founder) can cast a veto vote that blocks a proposal regardless of the vote count. Vetoes must include a written reason.
+- [x] **Veto rights** — certain roles (e.g. a board member or founder) can cast a veto vote that blocks a proposal regardless of the vote count. Vetoes must include a written reason. Veto role is configurable per org (admin-only by default, can be lowered to moderator).
 
 ### Weighted voting
 - [ ] **Share-based weight** — admins can assign a numeric `weight` to each member (e.g. representing equity shares, stake, or seniority). Votes and delegations carry this weight. The tally shows weighted counts alongside raw counts.

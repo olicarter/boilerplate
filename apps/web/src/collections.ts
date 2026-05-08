@@ -3,7 +3,7 @@ import { createCollection } from '@tanstack/react-db';
 import {
   usersApi, topicsApi, proposalsApi, delegationsApi, votesApi, commentsApi, orgsApi, argumentsApi,
   type User, type Organisation, type Membership, type Topic, type Proposal,
-  type Delegation, type Vote, type Comment, type CommentReaction, type Argument,
+  type Delegation, type Vote, type Comment, type CommentReaction, type Argument, type Veto,
 } from './api';
 
 const shapeUrl = `${window.location.origin}/electric/v1/shape`;

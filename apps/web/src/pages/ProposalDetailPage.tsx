@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -36,7 +36,8 @@ function formatDeadline(closesAt: string): { label: string; subtext: string; urg
   return { label: `${days} day${days !== 1 ? 's' : ''} left`, subtext: `Closes ${date}`, urgent: false };
 }
 
-function computeResult(tally: TallyResult, threshold: number, quorumType?: 'soft' | 'hard'): 'passed' | 'failed' | 'no-votes' {
+function computeResult(tally: TallyResult, threshold: number, quorumType?: 'soft' | 'hard', vetoed?: boolean): 'passed' | 'failed' | 'no-votes' {
+  if (vetoed) return 'failed';
   if (tally.quorum_met === false && quorumType === 'hard') return 'failed';
   const decisive = tally.yes + tally.no;
   if (decisive === 0) return 'no-votes';
@@ -82,6 +83,10 @@ export function ProposalDetailPage() {
   const [argSide, setArgSide] = useState<'for' | 'against'>('for');
   const [postingArg, setPostingArg] = useState(false);
   const [savingOutcome, setSavingOutcome] = useState(false);
+  const [vetoes, setVetoes] = useState<Veto[]>([]);
+  const [vetoReason, setVetoReason] = useState('');
+  const [castingVeto, setCastingVeto] = useState(false);
+  const [showVetoForm, setShowVetoForm] = useState(false);
   const [versions, setVersions] = useState<ProposalVersion[] | null>(null);
   const [showVersions, setShowVersions] = useState(false);
 
@@ -101,6 +106,9 @@ export function ProposalDetailPage() {
     : undefined;
   const ROLE_RANK: Record<string, number> = { member: 1, moderator: 2, admin: 3 };
   const isModerator = (ROLE_RANK[myMembership?.role ?? ''] ?? 0) >= ROLE_RANK['moderator'];
+  const vetoRole = (org as { veto_role?: string }).veto_role ?? 'admin';
+  const canVeto = currentUser && (ROLE_RANK[myMembership?.role ?? ''] ?? 0) >= (ROLE_RANK[vetoRole] ?? ROLE_RANK['admin']);
+  const myVeto = currentUser ? vetoes.find((v) => v.author_id === currentUser.id) : undefined;
 
   async function fetchTally() {
     setTallyLoading(true);
@@ -124,8 +132,18 @@ export function ProposalDetailPage() {
     }
   }
 
+  async function fetchVetoes() {
+    try {
+      const result = await fetch(`/api/proposals/${id}/vetoes`, { credentials: 'include' });
+      if (result.ok) setVetoes(await result.json());
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     fetchTally();
+    fetchVetoes();
     proposalsApi.versions(id).then(setVersions).catch(() => setVersions([]));
   }, [id]);
 
@@ -210,7 +228,7 @@ export function ProposalDetailPage() {
     : undefined;
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
-  const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard') : null;
+  const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard', vetoes.length > 0) : null;
   const comments = (allComments ?? [])
     .filter((c: Comment) => c.proposal_id === id)
     .sort((a: Comment, b: Comment) => {
@@ -325,6 +343,34 @@ export function ProposalDetailPage() {
       addToast('Comment unpinned', 'info');
     } catch {
       addToast('Failed to unpin comment', 'error');
+    }
+  }
+
+  async function castVeto(e: React.FormEvent) {
+    e.preventDefault();
+    const reason = vetoReason.trim();
+    if (!reason) return;
+    setCastingVeto(true);
+    try {
+      await vetoesApi.cast(id, reason);
+      setVetoReason('');
+      setShowVetoForm(false);
+      await fetchVetoes();
+      addToast('Veto cast', 'info');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to cast veto', 'error');
+    } finally {
+      setCastingVeto(false);
+    }
+  }
+
+  async function retractVeto(vetoId: string) {
+    try {
+      await vetoesApi.retract(vetoId);
+      await fetchVetoes();
+      addToast('Veto retracted', 'info');
+    } catch {
+      addToast('Failed to retract veto', 'error');
     }
   }
 
@@ -685,6 +731,71 @@ export function ProposalDetailPage() {
               <option value="in_progress">In progress</option>
               <option value="not_implemented">Not implemented</option>
             </select>
+          )}
+        </div>
+      )}
+
+      {/* Vetoes */}
+      {(vetoes.length > 0 || (canVeto && isOpen)) && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          {vetoes.length > 0 && (
+            <div style={{ border: '1px solid #f5c0c0', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#fdecea', marginBottom: '0.75rem' }}>
+              <p style={{ margin: '0 0 0.5rem', fontWeight: 600, fontSize: 14, color: '#d94040' }}>
+                {vetoes.length === 1 ? '1 veto in effect' : `${vetoes.length} vetoes in effect`} — this proposal cannot pass while vetoed
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {vetoes.map((v) => {
+                  const vetoAuthor = userMap[v.author_id];
+                  const isMyVeto = v.id === myVeto?.id;
+                  const canRetract = isMyVeto || isModerator;
+                  return (
+                    <div key={v.id} data-testid="veto-item" style={{ fontSize: 13, color: '#555', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                      <span>
+                        <strong>{vetoAuthor?.name ?? 'Unknown'}</strong>: {v.reason}
+                      </span>
+                      {canRetract && (
+                        <ConfirmButton
+                          label="Retract"
+                          confirmLabel="Yes"
+                          onConfirm={() => retractVeto(v.id)}
+                          style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer', flexShrink: 0 }}
+                          confirmStyle={{ background: 'none', border: '1px solid #ddd', borderRadius: 3, color: '#d94040' }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {canVeto && isOpen && !myVeto && (
+            showVetoForm ? (
+              <form onSubmit={castVeto} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <input
+                  type="text"
+                  placeholder="Reason for veto (required)"
+                  value={vetoReason}
+                  onChange={(e) => setVetoReason(e.target.value)}
+                  autoFocus
+                  style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+                />
+                <button type="submit" disabled={castingVeto || !vetoReason.trim()} style={{ fontSize: 12, padding: '0.35rem 0.75rem', color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4, cursor: 'pointer' }}>
+                  {castingVeto ? 'Casting…' : 'Cast veto'}
+                </button>
+                <button type="button" onClick={() => setShowVetoForm(false)} style={{ fontSize: 12, padding: '0.35rem 0.75rem', background: 'none', border: '1px solid #ddd', borderRadius: 4, cursor: 'pointer' }}>
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowVetoForm(true)}
+                data-testid="cast-veto-btn"
+                style={{ fontSize: 12, padding: '0.35rem 0.75rem', color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4, cursor: 'pointer' }}
+              >
+                Cast veto
+              </button>
+            )
           )}
         </div>
       )}

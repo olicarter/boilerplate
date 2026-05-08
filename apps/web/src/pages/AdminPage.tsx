@@ -52,6 +52,8 @@ export function AdminPage() {
   );
   const [isPublic, setIsPublic] = useState<boolean>(org.is_public ?? false);
   const [savingPublic, setSavingPublic] = useState(false);
+  const [vetoRole, setVetoRole] = useState<'moderator' | 'admin'>((org as { veto_role?: 'moderator' | 'admin' }).veto_role ?? 'admin');
+  const [savingVetoRole, setSavingVetoRole] = useState(false);
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsError, setDefaultsError] = useState('');
 
@@ -112,6 +114,20 @@ export function AdminPage() {
       setIsPublic(org.is_public ?? false);
     } finally {
       setSavingPublic(false);
+    }
+  }
+
+  async function saveVetoRole(value: 'moderator' | 'admin') {
+    setVetoRole(value);
+    setSavingVetoRole(true);
+    try {
+      await orgsApi.update(org.slug, { veto_role: value });
+      addToast('Setting saved', 'success');
+    } catch {
+      addToast('Failed to save setting', 'error');
+      setVetoRole((org as { veto_role?: 'moderator' | 'admin' }).veto_role ?? 'admin');
+    } finally {
+      setSavingVetoRole(false);
     }
   }
 
@@ -357,6 +373,37 @@ export function AdminPage() {
                   disabled={savingVisibility}
                 />
                 Hide vote counts until proposal closes
+              </label>
+            </div>
+          </div>
+          <div>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Who can cast a veto?</p>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+              A veto blocks a proposal from passing regardless of vote counts.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingVetoRole ? 'not-allowed' : 'pointer' }}>
+                <input
+                  type="radio"
+                  name="veto_role"
+                  value="moderator"
+                  checked={vetoRole === 'moderator'}
+                  onChange={() => saveVetoRole('moderator')}
+                  disabled={savingVetoRole}
+                />
+                Moderator and above
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingVetoRole ? 'not-allowed' : 'pointer' }}>
+                <input
+                  type="radio"
+                  name="veto_role"
+                  value="admin"
+                  checked={vetoRole === 'admin'}
+                  onChange={() => saveVetoRole('admin')}
+                  disabled={savingVetoRole}
+                  data-testid="veto-role-admin"
+                />
+                Admin only
               </label>
             </div>
           </div>

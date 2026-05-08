@@ -86,7 +86,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -103,6 +103,7 @@ export class OrganisationsService {
       if (data.voting_visibility !== undefined) updates.voting_visibility = data.voting_visibility;
       if (data.default_quorum !== undefined) updates.default_quorum = data.default_quorum;
       if (data.is_public !== undefined) updates.is_public = data.is_public;
+      if (data.veto_role !== undefined) updates.veto_role = data.veto_role;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
