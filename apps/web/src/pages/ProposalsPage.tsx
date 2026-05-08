@@ -106,6 +106,7 @@ export function ProposalsPage() {
   ];
   const isPreset = THRESHOLD_PRESETS.some((p) => p.value === threshold);
   const [customThreshold, setCustomThreshold] = useState(!isPreset);
+  const [deliberationEndsAt, setDeliberationEndsAt] = useState('');
   const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
   const [quorumType, setQuorumType] = useState<'soft' | 'hard'>('soft');
   const [submitting, setSubmitting] = useState(false);
@@ -151,6 +152,7 @@ export function ProposalsPage() {
     } else {
       setClosesAt('');
     }
+    setDeliberationEndsAt('');
     setThreshold(org.default_threshold ?? 50);
     setCustomThreshold(false);
     setQuorum(org.default_quorum ?? null);
@@ -203,6 +205,7 @@ export function ProposalsPage() {
         quorum_type: quorumType,
         created_at: new Date().toISOString(),
         closes_at: closesAt ? new Date(closesAt).toISOString() : null,
+        deliberation_ends_at: deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null,
         closed_at: null,
       } as Proposal);
       await proposalTx.isPersisted.promise;
@@ -309,7 +312,21 @@ export function ProposalsPage() {
               />
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div>
+              <label htmlFor="new-proposal-deliberation-ends-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+                Deliberation ends <span style={{ color: '#aaa' }}>(optional)</span>
+              </label>
+              <input
+                id="new-proposal-deliberation-ends-at"
+                type="datetime-local"
+                value={deliberationEndsAt}
+                onChange={(e) => setDeliberationEndsAt(e.target.value)}
+                min={toLocalDatetimeString(new Date())}
+                style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+              />
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#aaa' }}>Discussion only until this time; voting opens after.</p>
+            </div>
             <div>
               <label htmlFor="new-proposal-closes-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
                 Voting deadline <span style={{ color: '#aaa' }}>(optional)</span>
@@ -319,7 +336,7 @@ export function ProposalsPage() {
                 type="datetime-local"
                 value={closesAt}
                 onChange={(e) => setClosesAt(e.target.value)}
-                min={toLocalDatetimeString(new Date())}
+                min={deliberationEndsAt || toLocalDatetimeString(new Date())}
                 style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
               />
             </div>
@@ -563,6 +580,7 @@ export function ProposalsPage() {
             const isDraft = p.status === 'draft';
             const isOpen = p.status === 'open';
             const isWithdrawn = p.status === 'withdrawn';
+            const isDeliberating = isOpen && !!p.deliberation_ends_at && new Date(p.deliberation_ends_at as string) > new Date();
             const deadline = isOpen && p.closes_at ? formatDeadline(p.closes_at) : null;
             const result = p.status === 'closed' ? computeResult(yes, no, p.threshold ?? 50) : null;
 
@@ -624,7 +642,12 @@ export function ProposalsPage() {
                             Withdrawn
                           </span>
                         )}
-                        {isOpen && !deadline && (
+                        {isDeliberating && (
+                          <span style={{ ...badge, background: '#ede9fe', color: '#6d28d9', border: '1px solid #ddd6fe' }}>
+                            Deliberating
+                          </span>
+                        )}
+                        {isOpen && !deadline && !isDeliberating && (
                           <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
                             Open
                           </span>

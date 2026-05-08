@@ -65,6 +65,7 @@ export class ProposalsService {
     title: string;
     description?: string;
     closes_at?: string | null;
+    deliberation_ends_at?: string | null;
     threshold?: number;
     quorum?: number | null;
     quorum_type?: 'soft' | 'hard';
@@ -95,6 +96,7 @@ export class ProposalsService {
         ...data,
         status: data.status ?? 'open',
         closes_at: data.closes_at ? new Date(data.closes_at) : null,
+        deliberation_ends_at: data.deliberation_ends_at ? new Date(data.deliberation_ends_at) : null,
       });
       const saved = await manager.save(proposal);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -106,7 +108,7 @@ export class ProposalsService {
 
   async update(
     id: string,
-    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold' | 'outcome'>>,
+    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'deliberation_ends_at' | 'threshold' | 'outcome'>>,
   ): Promise<{ item: Proposal; txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       await manager.update(Proposal, id, data);

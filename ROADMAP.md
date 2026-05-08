@@ -139,7 +139,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **For / Against arguments** — structured argument section separate from general comments: members can post a "For" or "Against" argument, each displayed in its own column. Encourages considered deliberation over reactive commenting.
 
 ### Deliberation periods
-- [ ] **Deliberation window** — a proposal can have a `deliberation_ends_at` before `closes_at`. Voting is disabled during this window; only discussion is permitted. Visual timeline on the proposal page: Deliberation → Voting → Closed.
+- [x] **Deliberation window** — a proposal can have a `deliberation_ends_at` before `closes_at`. Voting is disabled during this window; only discussion is permitted. Visual timeline on the proposal page: Deliberation → Voting → Closed.
 - [ ] **Discussion-only proposals** — a proposal type with no formal vote. Used for announcements or open-ended discussions that may lead to future formal proposals.
 
 ### Mentions & notifications (within discussions)

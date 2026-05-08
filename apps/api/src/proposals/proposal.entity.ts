@@ -37,6 +37,9 @@ export class Proposal {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 
+  @Column({ name: 'deliberation_ends_at', type: 'timestamptz', nullable: true, default: null })
+  deliberation_ends_at!: Date | null;
+
   @Column({ name: 'closes_at', type: 'timestamptz', nullable: true })
   closes_at!: Date | null;
 

@@ -32,6 +32,9 @@ export class VotesService {
     if (!proposal || proposal.status !== 'open') {
       throw new BadRequestException('Voting is closed for this proposal');
     }
+    if (proposal.deliberation_ends_at && new Date(proposal.deliberation_ends_at) > new Date()) {
+      throw new BadRequestException('This proposal is in the deliberation phase — voting opens after deliberation ends');
+    }
 
     return this.dataSource.transaction(async (manager) => {
       const vote = manager.create(Vote, { ...data, organisation_id: proposal.organisation_id });
@@ -47,6 +50,9 @@ export class VotesService {
       const proposal = await this.proposalRepo.findOneBy({ id: vote.proposal_id });
       if (!proposal || proposal.status !== 'open') {
         throw new BadRequestException('Voting is closed for this proposal');
+      }
+      if (proposal.deliberation_ends_at && new Date(proposal.deliberation_ends_at) > new Date()) {
+        throw new BadRequestException('This proposal is in the deliberation phase — voting opens after deliberation ends');
       }
     }
 

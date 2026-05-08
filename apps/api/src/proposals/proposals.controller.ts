@@ -35,7 +35,7 @@ export class ProposalsController {
   @Post()
   @UseGuards(AuthGuard)
   create(
-    @Body() body: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft' },
+    @Body() body: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft' },
     @Req() req: AuthenticatedRequest,
   ) {
     return this.proposalsService.create({ ...body, author_id: req.user!.id });

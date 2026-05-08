@@ -222,6 +222,7 @@ export function ProposalDetailPage() {
   const isDraft = proposal.status === 'draft';
   const isOpen = proposal.status === 'open';
   const isWithdrawn = proposal.status === 'withdrawn';
+  const isDeliberating = isOpen && !!proposal.deliberation_ends_at && new Date(proposal.deliberation_ends_at as string) > new Date();
   const isAuthor = currentUser?.id === proposal.author_id;
   const delegateUser = delegationVote
     ? (allUsers ?? []).find((u: User) => u.id === delegationVote.delegate_id)
@@ -643,6 +644,41 @@ export function ProposalDetailPage() {
         </div>
       )}
 
+      {/* Deliberation / Voting timeline */}
+      {isOpen && proposal.deliberation_ends_at && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, fontSize: 13 }}>
+            {[
+              { key: 'deliberation', label: 'Deliberation', active: isDeliberating, done: !isDeliberating },
+              { key: 'voting', label: 'Voting', active: !isDeliberating, done: false },
+              { key: 'closed', label: 'Closed', active: false, done: false },
+            ].map((phase, i, arr) => (
+              <div key={phase.key} style={{ display: 'flex', alignItems: 'center', flex: i < arr.length - 1 ? 1 : 'none' }}>
+                <div style={{
+                  padding: '0.3rem 0.9rem',
+                  borderRadius: 20,
+                  fontWeight: phase.active ? 600 : 400,
+                  background: phase.active ? '#6d28d9' : phase.done ? '#e6f9ed' : '#f0f0f0',
+                  color: phase.active ? '#fff' : phase.done ? '#2d9a4e' : '#888',
+                  border: `1px solid ${phase.active ? '#6d28d9' : phase.done ? '#b3e5c2' : '#e0e0e0'}`,
+                  whiteSpace: 'nowrap',
+                }}>
+                  {phase.done ? '✓ ' : ''}{phase.label}
+                </div>
+                {i < arr.length - 1 && (
+                  <div style={{ flex: 1, height: 1, background: '#e0e0e0', minWidth: 20 }} />
+                )}
+              </div>
+            ))}
+          </div>
+          {isDeliberating && (
+            <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#6d28d9' }}>
+              Deliberation ends {new Date(proposal.deliberation_ends_at as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} — voting opens after.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Deadline countdown */}
       {deadline && (
         <div
@@ -813,7 +849,7 @@ export function ProposalDetailPage() {
         <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Results
         </h3>
-        {org.voting_visibility === 'hidden' && isOpen ? (
+        {org.voting_visibility === 'hidden' && isOpen && !isDeliberating ? (
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Vote counts are hidden until this proposal closes.</p>
         ) : tallyLoading ? (
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Loading tally…</p>
@@ -834,7 +870,15 @@ export function ProposalDetailPage() {
       </div>
 
       {/* Vote action */}
-      {isOpen && (
+      {isDeliberating && (
+        <div style={{ border: '1px solid #ddd6fe', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#faf5ff', marginBottom: '1.5rem' }}>
+          <p style={{ margin: 0, fontSize: 14, color: '#6d28d9', fontWeight: 500 }}>Deliberation phase — voting is not yet open.</p>
+          <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#888' }}>
+            Use this time to read the arguments and discussion below. Voting opens {new Date(proposal.deliberation_ends_at as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+          </p>
+        </div>
+      )}
+      {isOpen && !isDeliberating && (
         <div
           style={{
             border: '1px solid #ddd',
