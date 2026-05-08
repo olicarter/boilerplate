@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useLiveQuery } from '@tanstack/react-db';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, type User, type Membership } from '../api';
+import { orgsApi, type User, type Membership, type Proposal, type Vote } from '../api';
 import { useCurrentUser } from '../context';
 import { useOrg } from '../OrgContext';
 import { useToast } from '../components/Toast';
@@ -12,13 +12,24 @@ import { UserSearch } from '../components/UserSearch';
 const ROLE_ORDER: Membership['role'][] = ['admin', 'moderator', 'member', 'observer'];
 
 export function MembersPage() {
-  const { org } = useOrg();
+  const { org, collections: { proposalsCollection, votesCollection } } = useOrg();
   const currentUser = useCurrentUser();
   const addToast = useToast();
   const navigate = useNavigate();
 
   const { data: allUsers } = useLiveQuery(usersCollection);
   const { data: allMemberships } = useLiveQuery(membershipsCollection);
+  const { data: allProposals } = useLiveQuery(proposalsCollection);
+  const { data: allVotes } = useLiveQuery(votesCollection);
+
+  const eligibleProposalCount = (allProposals ?? []).filter(
+    (p: Proposal) => p.status !== 'draft',
+  ).length;
+  const votesByUser = new Map<string, Set<string>>();
+  for (const v of (allVotes ?? []) as Vote[]) {
+    if (!votesByUser.has(v.user_id)) votesByUser.set(v.user_id, new Set());
+    votesByUser.get(v.user_id)!.add(v.proposal_id);
+  }
 
   const orgMembers = (allMemberships ?? []).filter((m: Membership) => m.organisation_id === org.id);
   const myMembership = orgMembers.find((m: Membership) => m.user_id === currentUser?.id);
@@ -198,6 +209,11 @@ export function MembersPage() {
                   {isMe && <span style={{ marginLeft: '0.5rem', fontSize: 11, color: '#aaa' }}>(you)</span>}
                   <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>
                     {user?.email} · joined {new Date(m.joined_at).toLocaleDateString()}
+                    {eligibleProposalCount > 0 && (() => {
+                      const voted = votesByUser.get(m.user_id)?.size ?? 0;
+                      const pct = Math.round((voted / eligibleProposalCount) * 100);
+                      return <span style={{ marginLeft: '0.5rem', color: pct >= 70 ? '#2d9a4e' : pct >= 30 ? '#888' : '#b45309' }}>· {pct}% participation</span>;
+                    })()}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
