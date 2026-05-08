@@ -25,4 +25,7 @@ export class Membership {
 
   @Column({ type: 'varchar', length: 20, default: 'approved' })
   status!: MemberStatus;
+
+  @Column({ type: 'int', default: 1 })
+  weight!: number;
 }

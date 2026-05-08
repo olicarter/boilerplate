@@ -188,6 +188,29 @@ export class OrganisationsService {
     return result;
   }
 
+  async updateMemberWeight(
+    orgId: string,
+    targetUserId: string,
+    weight: number,
+    actorId: string,
+  ): Promise<{ item: Membership; txid: number }> {
+    await this.requireRole(orgId, actorId, ['admin']);
+    if (weight < 1 || weight > 100 || !Number.isInteger(weight)) {
+      throw new BadRequestException('Weight must be an integer between 1 and 100');
+    }
+    const membership = await this.memberRepo.findOneBy({ organisation_id: orgId, user_id: targetUserId });
+    if (!membership) throw new NotFoundException('Member not found');
+
+    const result = await this.dataSource.transaction(async (manager) => {
+      await manager.update(Membership, membership.id, { weight });
+      const item = await manager.findOneByOrFail(Membership, { id: membership.id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+    this.auditLog.log(orgId, actorId, 'member.weight_changed', 'user', targetUserId, { weight });
+    return result;
+  }
+
   async removeMember(
     orgId: string,
     targetUserId: string,

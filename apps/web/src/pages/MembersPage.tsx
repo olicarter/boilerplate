@@ -62,6 +62,16 @@ export function MembersPage() {
     }
   }
 
+  async function handleWeightChange(userId: string, weight: number) {
+    if (isNaN(weight) || weight < 1 || weight > 100) return;
+    try {
+      await orgsApi.updateMemberWeight(org.slug, userId, weight);
+      addToast('Vote weight updated', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to update weight', 'error');
+    }
+  }
+
   async function handleRemove(userId: string) {
     try {
       await orgsApi.removeMember(org.slug, userId);
@@ -226,6 +236,17 @@ export function MembersPage() {
                       >
                         {ROLE_ORDER.map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        defaultValue={m.weight ?? 1}
+                        title="Vote weight"
+                        aria-label="Vote weight"
+                        onBlur={(e) => handleWeightChange(m.user_id, parseInt(e.target.value, 10))}
+                        style={{ width: 52, fontSize: 12, padding: '0.2rem 0.4rem', border: '1px solid #ddd', borderRadius: 4, textAlign: 'center' }}
+                        data-testid="member-weight-input"
+                      />
                       <ConfirmButton
                         label="Remove"
                         confirmLabel="Yes, remove"
@@ -243,6 +264,11 @@ export function MembersPage() {
                       }}>
                         {m.role}
                       </span>
+                      {(m.weight ?? 1) > 1 && (
+                        <span title={`Vote weight: ${m.weight}`} style={{ fontSize: 11, padding: '0.2rem 0.5rem', borderRadius: 12, background: '#fff8e1', color: '#8a6d00', border: '1px solid #ffe082' }}>
+                          ×{m.weight}
+                        </span>
+                      )}
                       {isMe && (
                         <ConfirmButton
                           label="Leave"

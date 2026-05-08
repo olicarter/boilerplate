@@ -300,22 +300,26 @@ export class ProposalsService {
       ...delegations.map((d) => d.delegator_id),
     ]);
 
+    const memberships = await this.memberRepo.find({
+      where: { organisation_id: proposal.organisation_id, status: 'approved' as any },
+    });
+    const weightMap = new Map<string, number>(memberships.map((m) => [m.user_id, (m as any).weight ?? 1]));
+
     const tally: TallyResult = { yes: 0, no: 0, abstain: 0, total: 0, eligible_count: null, quorum_met: null };
     for (const userId of allUsers) {
       const choice = resolveChoice(userId);
-      if (choice === 'yes') tally.yes++;
-      else if (choice === 'no') tally.no++;
-      else tally.abstain++;
-      tally.total++;
+      const weight = weightMap.get(userId) ?? 1;
+      if (choice === 'yes') tally.yes += weight;
+      else if (choice === 'no') tally.no += weight;
+      else tally.abstain += weight;
+      tally.total += weight;
     }
 
     if (proposal.quorum != null) {
-      const eligibleCount = await this.memberRepo.count({
-        where: { organisation_id: proposal.organisation_id, status: 'approved' as any },
-      });
-      tally.eligible_count = eligibleCount;
-      tally.quorum_met = eligibleCount > 0
-        ? (tally.total / eligibleCount) * 100 >= proposal.quorum
+      const totalWeight = memberships.reduce((sum, m) => sum + ((m as any).weight ?? 1), 0);
+      tally.eligible_count = totalWeight;
+      tally.quorum_met = totalWeight > 0
+        ? (tally.total / totalWeight) * 100 >= proposal.quorum
         : false;
     }
 

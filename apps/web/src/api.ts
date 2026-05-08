@@ -65,6 +65,7 @@ export interface Membership {
   user_id: string;
   role: 'admin' | 'moderator' | 'member' | 'observer';
   status: 'pending' | 'approved';
+  weight: number;
   joined_at: string;
   invited_by: string | null;
   [key: string]: unknown;
@@ -190,6 +191,8 @@ export const orgsApi = {
     request<MutationResult<Membership>>(`/orgs/${slug}/members`, { method: 'POST', body: JSON.stringify(data) }),
   updateMemberRole: (slug: string, userId: string, role: Membership['role']) =>
     request<MutationResult<Membership>>(`/orgs/${slug}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  updateMemberWeight: (slug: string, userId: string, weight: number) =>
+    request<MutationResult<Membership>>(`/orgs/${slug}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ weight }) }),
   removeMember: (slug: string, userId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/members/${userId}`, { method: 'DELETE' }),
   joinViaToken: (slug: string, token: string) =>

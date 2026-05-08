@@ -71,11 +71,17 @@ export class OrganisationsController {
   async updateMemberRole(
     @Param('slug') slug: string,
     @Param('userId') userId: string,
-    @Body() body: { role: MemberRole },
+    @Body() body: { role?: MemberRole; weight?: number },
     @Req() req: AuthenticatedRequest,
   ) {
     const org = await this.orgsService.findBySlug(slug);
-    return this.orgsService.updateMemberRole(org.id, userId, body.role, req.user!.id);
+    if (body.role !== undefined) {
+      return this.orgsService.updateMemberRole(org.id, userId, body.role, req.user!.id);
+    }
+    if (body.weight !== undefined) {
+      return this.orgsService.updateMemberWeight(org.id, userId, body.weight, req.user!.id);
+    }
+    return {};
   }
 
   @Delete(':slug/members/:userId')
