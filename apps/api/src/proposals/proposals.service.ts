@@ -11,6 +11,7 @@ import { Organisation } from '../organisations/organisation.entity';
 import { Membership } from '../organisations/membership.entity';
 import { DelegationsService } from '../delegations/delegations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { User } from '../users/user.entity';
 
 const TITLE_MAX = 200;
@@ -45,6 +46,7 @@ export class ProposalsService {
     private readonly memberRepo: Repository<Membership>,
     private readonly dataSource: DataSource,
     private readonly auditLog: AuditLogService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   findAll(): Promise<Proposal[]> {
@@ -211,12 +213,20 @@ export class ProposalsService {
 
     const result = await this.transition(id, userId, 'draft', 'open', { status: 'open' });
     this.auditLog.log(result.item.organisation_id, userId, 'proposal.published', 'proposal', id, { title: result.item.title });
+    await this.notifyOrgMembers(result.item.organisation_id, userId, {
+      type: 'proposal.opened',
+      actorId: userId,
+      targetType: 'proposal',
+      targetId: id,
+      metadata: { title: result.item.title },
+    });
     return result;
   }
 
   async close(id: string, userId: string) {
     const result = await this.transition(id, userId, 'open', 'closed', { status: 'closed', closed_at: new Date() }, true);
     this.auditLog.log(result.item.organisation_id, userId, 'proposal.closed', 'proposal', id, { title: result.item.title });
+    await this.notifyVoters(id, result.item.organisation_id, userId, result.item.title);
     return result;
   }
 
@@ -253,11 +263,42 @@ export class ProposalsService {
 
     const now = new Date();
     await Promise.all(
-      expired.map((p) =>
-        this.proposalRepo.update(p.id, { status: 'closed', closed_at: now }),
-      ),
+      expired.map(async (p) => {
+        await this.proposalRepo.update(p.id, { status: 'closed', closed_at: now });
+        await this.notifyVoters(p.id, p.organisation_id, null, p.title);
+      }),
     );
     return expired.length;
+  }
+
+  private async notifyOrgMembers(
+    orgId: string,
+    excludeUserId: string | null,
+    data: { type: Parameters<NotificationsService['create']>[0]['type']; actorId?: string | null; targetType?: string; targetId?: string; metadata?: Record<string, unknown> },
+  ): Promise<void> {
+    try {
+      const members = await this.memberRepo.find({ where: { organisation_id: orgId, status: 'approved' as any } });
+      const recipients = members
+        .filter((m) => m.user_id !== excludeUserId)
+        .map((m) => ({ userId: m.user_id, orgId, ...data }));
+      await this.notifications.createMany(recipients);
+    } catch { /* non-critical */ }
+  }
+
+  private async notifyVoters(proposalId: string, orgId: string, actorId: string | null, title: string): Promise<void> {
+    try {
+      const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+      const recipients = votes.map((v) => ({
+        userId: v.user_id,
+        orgId,
+        type: 'proposal.closed' as const,
+        actorId,
+        targetType: 'proposal',
+        targetId: proposalId,
+        metadata: { title },
+      }));
+      await this.notifications.createMany(recipients);
+    } catch { /* non-critical */ }
   }
 
   private buildDelegationMap(delegations: Delegation[]): Map<string, Map<string | null, string>> {

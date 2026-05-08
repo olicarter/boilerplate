@@ -13,9 +13,10 @@ import { ProposalsController } from './proposals.controller';
 import { ProposalsService } from './proposals.service';
 import { ProposalsScheduler } from './proposals.scheduler';
 import { AuditLogModule } from '../audit-log/audit-log.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalVersion, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule],
+  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalVersion, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule],
   controllers: [ProposalsController],
   providers: [ProposalsService, ProposalsScheduler],
 })

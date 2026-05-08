@@ -16,6 +16,7 @@ import { UserContext } from './context';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { OfflineBanner } from './components/OfflineBanner';
+import { NotificationBell } from './components/NotificationBell';
 import { ProposalsPage } from './pages/ProposalsPage';
 import { ProposalDetailPage } from './pages/ProposalDetailPage';
 import { DelegationsPage } from './pages/DelegationsPage';
@@ -242,11 +243,12 @@ function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlu
   );
 }
 
-function Shell({ user, onLogout, orgSlug, orgId, children }: {
+function Shell({ user, onLogout, orgSlug, orgId, children, notificationOrgSlug }: {
   user: User | null;
   onLogout: () => void;
   orgSlug?: string;
   orgId?: string;
+  notificationOrgSlug?: string;
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -256,17 +258,20 @@ function Shell({ user, onLogout, orgSlug, orgId, children }: {
     <div style={{ padding: '0 1.25rem', borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
       {user ? (
         <>
-          {orgSlug ? (
-            <Link
-              to="/orgs/$slug/users/$id"
-              params={{ slug: orgSlug, id: user.id }}
-              style={{ display: 'block', fontSize: 13, color: '#555', marginBottom: '0.5rem', textDecoration: 'none' }}
-            >
-              {user.name}
-            </Link>
-          ) : (
-            <span style={{ display: 'block', fontSize: 13, color: '#555', marginBottom: '0.5rem' }}>{user.name}</span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            {orgSlug ? (
+              <Link
+                to="/orgs/$slug/users/$id"
+                params={{ slug: orgSlug, id: user.id }}
+                style={{ fontSize: 13, color: '#555', textDecoration: 'none' }}
+              >
+                {user.name}
+              </Link>
+            ) : (
+              <span style={{ fontSize: 13, color: '#555' }}>{user.name}</span>
+            )}
+            <NotificationBell orgSlug={notificationOrgSlug ?? orgSlug} />
+          </div>
           <button onClick={onLogout} style={{ fontSize: 13 }}>Sign out</button>
         </>
       ) : (

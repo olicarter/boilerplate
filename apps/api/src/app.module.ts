@@ -29,16 +29,18 @@ import { Argument } from './arguments/argument.entity';
 import { AuditLogEntry } from './audit-log/audit-log.entity';
 import { Veto } from './vetoes/veto.entity';
 import { Endorsement } from './endorsements/endorsement.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+import { Notification } from './notifications/notification.entity';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: process.env.NODE_ENV === 'test' ? 10_000 : 300 }]),
     TypeOrmModule.forRoot({
       type: 'postgres',
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
-      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, Argument, AuditLogEntry, Veto, Endorsement],
+      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, Argument, AuditLogEntry, Veto, Endorsement, Notification],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,
@@ -55,6 +57,7 @@ import { Endorsement } from './endorsements/endorsement.entity';
     AuditLogModule,
     VetoesModule,
     EndorsementsModule,
+    NotificationsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

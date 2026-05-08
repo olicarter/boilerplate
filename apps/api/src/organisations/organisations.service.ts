@@ -12,6 +12,7 @@ import { Organisation } from './organisation.entity';
 import { Membership, MemberRole, MemberStatus } from './membership.entity';
 import { Proposal } from '../proposals/proposal.entity';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 function toSlug(value: string): string {
   return value
@@ -30,6 +31,7 @@ export class OrganisationsService {
     private readonly memberRepo: Repository<Membership>,
     private readonly dataSource: DataSource,
     private readonly auditLog: AuditLogService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(): Promise<Organisation[]> {
@@ -164,6 +166,7 @@ export class OrganisationsService {
       return { item, txid: parseInt(row.txid, 10) };
     });
     this.auditLog.log(orgId, actorId, 'member.added', 'user', targetUserId, { role });
+    await this.notifyAdminsAndModerators(orgId, targetUserId, 'member.joined', targetUserId, orgId);
     return result;
   }
 
@@ -316,6 +319,7 @@ export class OrganisationsService {
       return { item, txid: parseInt(row.txid, 10) };
     });
     this.auditLog.log(org.id, actorId, 'member.approved', 'user', targetUserId, {});
+    await this.notifyAdminsAndModerators(org.id, targetUserId, 'member.joined', targetUserId, org.id);
     return result;
   }
 
@@ -351,6 +355,22 @@ export class OrganisationsService {
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { txid: parseInt(row.txid, 10) };
     });
+  }
+
+  private async notifyAdminsAndModerators(
+    orgId: string,
+    excludeUserId: string,
+    type: Parameters<NotificationsService['create']>[0]['type'],
+    actorId: string,
+    targetId: string,
+  ): Promise<void> {
+    try {
+      const members = await this.memberRepo.find({ where: { organisation_id: orgId, status: 'approved' as MemberStatus } });
+      const recipients = members
+        .filter((m) => (m.role === 'admin' || m.role === 'moderator') && m.user_id !== excludeUserId)
+        .map((m) => ({ userId: m.user_id, orgId, type, actorId, targetType: 'user', targetId }));
+      await this.notifications.createMany(recipients);
+    } catch { /* non-critical */ }
   }
 
   async requireMember(orgId: string, userId: string): Promise<Membership> {

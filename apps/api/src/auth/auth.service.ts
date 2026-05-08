@@ -243,7 +243,7 @@ export class AuthService {
 
   async testReset(): Promise<{ success: boolean }> {
     await this.dataSource.query(
-      `TRUNCATE organisations, users, topics, proposals, delegations, votes, credentials, audit_log CASCADE`,
+      `TRUNCATE organisations, users, topics, proposals, delegations, votes, credentials, audit_log, notifications CASCADE`,
     );
     return { success: true };
   }

@@ -45,7 +45,7 @@ test('delegation banner disappears after casting own vote', async ({ page, asAli
   await expect(page.getByText('Your vote flows', { exact: false })).toBeVisible({ timeout: 10000 });
 
   // Alice votes directly
-  await page.getByRole('button', { name: 'no' }).click();
+  await page.getByRole('button', { name: 'no', exact: true }).click();
   await expect(page.getByText('Your vote flows', { exact: false })).not.toBeVisible({ timeout: 10000 });
   await expect(page.getByText('Vote cast')).toBeVisible();
 });

@@ -351,6 +351,30 @@ export const argumentsApi = {
     request<{ txid: number }>(`/arguments/${id}`, { method: 'DELETE' }),
 };
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  type: 'proposal.opened' | 'proposal.closed' | 'delegate.voted' | 'member.joined';
+  actor_id: string | null;
+  target_type: string | null;
+  target_id: string | null;
+  metadata: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
+
+export const notificationsApi = {
+  list: (limit?: number) =>
+    request<Notification[]>(`/notifications${limit ? `?limit=${limit}` : ''}`),
+  unreadCount: () =>
+    request<{ count: number }>('/notifications/unread-count'),
+  markRead: (id: string) =>
+    request<void>(`/notifications/${id}/read`, { method: 'POST' }),
+  markAllRead: () =>
+    request<void>('/notifications/read-all', { method: 'POST' }),
+};
+
 export const votesApi = {
   create: (data: { id: string; proposal_id: string; user_id: string; choice: Vote['choice'] }) =>
     request<MutationResult<Vote>>('/votes', { method: 'POST', body: JSON.stringify(data) }),

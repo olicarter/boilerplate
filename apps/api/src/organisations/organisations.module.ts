@@ -6,9 +6,10 @@ import { Proposal } from '../proposals/proposal.entity';
 import { OrganisationsService } from './organisations.service';
 import { OrganisationsController } from './organisations.controller';
 import { AuditLogModule } from '../audit-log/audit-log.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organisation, Membership, Proposal]), AuditLogModule],
+  imports: [TypeOrmModule.forFeature([Organisation, Membership, Proposal]), AuditLogModule, NotificationsModule],
   providers: [OrganisationsService],
   controllers: [OrganisationsController],
   exports: [OrganisationsService],

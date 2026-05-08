@@ -19,7 +19,7 @@ test('vote buttons not shown on closed proposal detail', async ({ page, asAlice 
 
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await expect(page.getByRole('button', { name: 'yes' })).not.toBeVisible();
-  await expect(page.getByRole('button', { name: 'no' })).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'no', exact: true })).not.toBeVisible();
 });
 
 // ── Close / reopen ───────────────────────────────────────────────────────────

@@ -56,7 +56,7 @@ test('can cast a no vote', async ({ page, asAlice }) => {
   const proposal = await createProposal(page.request, topic.id, 'Ban plastics');
 
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
-  await page.getByRole('button', { name: 'no' }).click();
+  await page.getByRole('button', { name: 'no', exact: true }).click();
 
   await expect(page.getByText('You voted')).toBeVisible();
 });
@@ -80,7 +80,7 @@ test('can change a vote', async ({ page, asAlice }) => {
   await expect(page.getByText('You voted')).toBeVisible();
 
   await page.getByRole('button', { name: 'Change vote' }).click();
-  await page.getByRole('button', { name: 'no' }).click();
+  await page.getByRole('button', { name: 'no', exact: true }).click();
 
   await expect(page.getByText('no').last()).toBeVisible();
 });

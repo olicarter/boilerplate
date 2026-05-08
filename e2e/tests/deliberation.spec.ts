@@ -42,7 +42,7 @@ test.describe('Deliberation window', () => {
 
     // Vote buttons should NOT be visible
     await expect(page.getByRole('button', { name: 'yes' })).not.toBeVisible();
-    await expect(page.getByRole('button', { name: 'no' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'no', exact: true })).not.toBeVisible();
   });
 
   test('proposal past deliberation shows voting phase', async ({ page, asAlice }) => {
