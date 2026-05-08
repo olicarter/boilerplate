@@ -134,7 +134,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **Rich text comments** — Markdown rendering with DOMPurify sanitisation.
 - [x] **Comment reactions** — emoji reactions (👍 👎 ❤️ 🤔) on comments via `comment_reactions` table; toggle behaviour.
 - [x] **Edit / delete own comments** — authors can edit or delete their own comments; "edited" label shown.
-- [ ] **Moderator comment management** — moderators can hide (soft-delete) any comment with a reason. Hidden comments are replaced with a "removed by moderator" placeholder visible to admins.
+- [x] **Moderator comment management** — moderators can hide (soft-delete) any comment with a reason. Hidden comments are replaced with a "removed by moderator" placeholder visible to admins.
 - [ ] **Comment pinning** — proposal authors and moderators can pin up to 2 comments (e.g. "Key context" or "Author's response") to the top.
 - [ ] **For / Against arguments** — structured argument section separate from general comments: members can post a "For" or "Against" argument, each displayed in its own column. Encourages considered deliberation over reactive commenting.
 

@@ -75,6 +75,8 @@ export function ProposalDetailPage() {
   const [saving, setSaving] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentBody, setEditCommentBody] = useState('');
+  const [hidingCommentId, setHidingCommentId] = useState<string | null>(null);
+  const [hideReason, setHideReason] = useState('');
   const [versions, setVersions] = useState<ProposalVersion[] | null>(null);
   const [showVersions, setShowVersions] = useState(false);
 
@@ -266,6 +268,29 @@ export function ProposalDetailPage() {
       addToast('Comment updated', 'success');
     } catch {
       addToast('Failed to update comment', 'error');
+    }
+  }
+
+  async function hideComment(commentId: string, e: React.FormEvent) {
+    e.preventDefault();
+    const reason = hideReason.trim();
+    if (!reason) return;
+    try {
+      await commentsApi.hide(commentId, reason);
+      setHidingCommentId(null);
+      setHideReason('');
+      addToast('Comment hidden', 'info');
+    } catch {
+      addToast('Failed to hide comment', 'error');
+    }
+  }
+
+  async function unhideComment(commentId: string) {
+    try {
+      await commentsApi.unhide(commentId);
+      addToast('Comment restored', 'success');
+    } catch {
+      addToast('Failed to unhide comment', 'error');
     }
   }
 
@@ -780,105 +805,140 @@ export function ProposalDetailPage() {
             {comments.map((c: Comment) => {
               const commentAuthor = c.author_id ? userMap[c.author_id] : undefined;
               const isOwn = currentUser?.id === c.author_id;
+              const isHidden = !!c.hidden_by;
               return (
                 <div key={c.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                   <div style={{
-                    width: 32, height: 32, borderRadius: '50%', background: '#e8e8e8',
+                    width: 32, height: 32, borderRadius: '50%', background: isHidden ? '#f0f0f0' : '#e8e8e8',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, fontWeight: 600, color: '#666', flexShrink: 0,
+                    fontSize: 13, fontWeight: 600, color: '#999', flexShrink: 0,
                   }}>
-                    {commentAuthor ? commentAuthor.name.charAt(0).toUpperCase() : '?'}
+                    {isHidden ? '–' : (commentAuthor ? commentAuthor.name.charAt(0).toUpperCase() : '?')}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>
-                        {commentAuthor?.name ?? 'Unknown'}
-                      </span>
-                      <span style={{ fontSize: 12, color: '#aaa' }}>
-                        {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </span>
-                      {c.edited_at && (
-                        <span style={{ fontSize: 11, color: '#bbb' }}>(edited)</span>
-                      )}
-                      {(isOwn || isModerator) && editingCommentId !== c.id && (
-                        <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: '0.25rem' }}>
-                          {isOwn && (
-                            <button
-                              type="button"
-                              onClick={() => { setEditingCommentId(c.id); setEditCommentBody(c.body); }}
-                              style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
-                            >
-                              Edit
-                            </button>
-                          )}
-                          <ConfirmButton
-                            label="Delete"
-                            confirmLabel="Yes"
-                            onConfirm={() => deleteComment(c.id)}
-                            style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
-                            confirmStyle={{ background: 'none', border: '1px solid #ddd', borderRadius: 3, color: '#d94040' }}
-                          />
-                        </span>
-                      )}
-                    </div>
-                    {editingCommentId === c.id ? (
-                      <form onSubmit={(e) => saveEditComment(c.id, e)}>
-                        <textarea
-                          value={editCommentBody}
-                          onChange={(e) => setEditCommentBody(e.target.value.slice(0, COMMENT_MAX))}
-                          rows={3}
-                          maxLength={COMMENT_MAX}
-                          style={{ width: '100%', padding: '0.4rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical', marginBottom: '0.4rem' }}
-                        />
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          <button type="submit" disabled={!editCommentBody.trim()} style={{ fontSize: 12, padding: '0.2rem 0.7rem', cursor: 'pointer' }}>
-                            Save
+                    {isHidden ? (
+                      <div style={{ fontSize: 13, color: '#aaa', fontStyle: 'italic', padding: '0.4rem 0' }}>
+                        Comment removed by moderator
+                        {c.hidden_reason && <span> — {c.hidden_reason}</span>}
+                        {isModerator && (
+                          <button
+                            type="button"
+                            onClick={() => unhideComment(c.id)}
+                            style={{ marginLeft: '0.75rem', fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                          >
+                            Unhide
                           </button>
-                          <button type="button" onClick={() => setEditingCommentId(null)} style={{ fontSize: 12, padding: '0.2rem 0.7rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}>
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
+                        )}
+                      </div>
                     ) : (
                       <>
-                        <div style={{ fontSize: 14, color: '#333', lineHeight: 1.5 }}>
-                          <MarkdownContent content={c.body} />
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600 }}>
+                            {commentAuthor?.name ?? 'Unknown'}
+                          </span>
+                          <span style={{ fontSize: 12, color: '#aaa' }}>
+                            {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                          {c.edited_at && (
+                            <span style={{ fontSize: 11, color: '#bbb' }}>(edited)</span>
+                          )}
+                          {(isOwn || isModerator) && editingCommentId !== c.id && hidingCommentId !== c.id && (
+                            <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: '0.25rem' }}>
+                              {isOwn && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setEditingCommentId(c.id); setEditCommentBody(c.body); }}
+                                  style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {isModerator && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setHidingCommentId(c.id); setHideReason(''); }}
+                                  style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                                >
+                                  Hide
+                                </button>
+                              )}
+                              <ConfirmButton
+                                label="Delete"
+                                confirmLabel="Yes"
+                                onConfirm={() => deleteComment(c.id)}
+                                style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                                confirmStyle={{ background: 'none', border: '1px solid #ddd', borderRadius: 3, color: '#d94040' }}
+                              />
+                            </span>
+                          )}
                         </div>
-                        <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                          {['👍', '👎', '❤️', '🤔'].map((emoji) => {
-                            const reactionsForEmoji = (allReactions ?? []).filter(
-                              (r: CommentReaction) => r.comment_id === c.id && r.emoji === emoji,
-                            );
-                            const count = reactionsForEmoji.length;
-                            const hasReacted = currentUser
-                              ? reactionsForEmoji.some((r: CommentReaction) => r.user_id === currentUser.id)
-                              : false;
-                            if (count === 0 && !currentUser) return null;
-                            return (
-                              <button
-                                key={emoji}
-                                type="button"
-                                onClick={() => currentUser && reactToComment(c.id, emoji)}
-                                title={currentUser ? (hasReacted ? 'Remove reaction' : `React with ${emoji}`) : 'Sign in to react'}
-                                style={{
-                                  fontSize: 13,
-                                  padding: '1px 6px',
-                                  border: `1px solid ${hasReacted ? '#c3d6fb' : '#e0e0e0'}`,
-                                  borderRadius: 10,
-                                  background: hasReacted ? '#e8f0fe' : 'transparent',
-                                  cursor: currentUser ? 'pointer' : 'default',
-                                  opacity: count === 0 ? 0.35 : 1,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.2rem',
-                                  color: '#555',
-                                }}
-                              >
-                                {emoji}{count > 0 && <span style={{ fontSize: 11 }}>{count}</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        {editingCommentId === c.id ? (
+                          <form onSubmit={(e) => saveEditComment(c.id, e)}>
+                            <textarea
+                              value={editCommentBody}
+                              onChange={(e) => setEditCommentBody(e.target.value.slice(0, COMMENT_MAX))}
+                              rows={3}
+                              maxLength={COMMENT_MAX}
+                              style={{ width: '100%', padding: '0.4rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical', marginBottom: '0.4rem' }}
+                            />
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button type="submit" disabled={!editCommentBody.trim()} style={{ fontSize: 12, padding: '0.2rem 0.7rem', cursor: 'pointer' }}>Save</button>
+                              <button type="button" onClick={() => setEditingCommentId(null)} style={{ fontSize: 12, padding: '0.2rem 0.7rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}>Cancel</button>
+                            </div>
+                          </form>
+                        ) : hidingCommentId === c.id ? (
+                          <form onSubmit={(e) => hideComment(c.id, e)} style={{ marginTop: '0.25rem' }}>
+                            <input
+                              type="text"
+                              placeholder="Reason for hiding (required)"
+                              value={hideReason}
+                              onChange={(e) => setHideReason(e.target.value)}
+                              autoFocus
+                              style={{ width: '100%', padding: '0.35rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', marginBottom: '0.35rem' }}
+                            />
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button type="submit" disabled={!hideReason.trim()} style={{ fontSize: 12, padding: '0.2rem 0.7rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 3 }}>Hide</button>
+                              <button type="button" onClick={() => setHidingCommentId(null)} style={{ fontSize: 12, padding: '0.2rem 0.7rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}>Cancel</button>
+                            </div>
+                          </form>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: 14, color: '#333', lineHeight: 1.5 }}>
+                              <MarkdownContent content={c.body} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                              {['👍', '👎', '❤️', '🤔'].map((emoji) => {
+                                const reactionsForEmoji = (allReactions ?? []).filter(
+                                  (r: CommentReaction) => r.comment_id === c.id && r.emoji === emoji,
+                                );
+                                const count = reactionsForEmoji.length;
+                                const hasReacted = currentUser
+                                  ? reactionsForEmoji.some((r: CommentReaction) => r.user_id === currentUser.id)
+                                  : false;
+                                if (count === 0 && !currentUser) return null;
+                                return (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => currentUser && reactToComment(c.id, emoji)}
+                                    title={currentUser ? (hasReacted ? 'Remove reaction' : `React with ${emoji}`) : 'Sign in to react'}
+                                    style={{
+                                      fontSize: 13, padding: '1px 6px',
+                                      border: `1px solid ${hasReacted ? '#c3d6fb' : '#e0e0e0'}`,
+                                      borderRadius: 10,
+                                      background: hasReacted ? '#e8f0fe' : 'transparent',
+                                      cursor: currentUser ? 'pointer' : 'default',
+                                      opacity: count === 0 ? 0.35 : 1,
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: '#555',
+                                    }}
+                                  >
+                                    {emoji}{count > 0 && <span style={{ fontSize: 11 }}>{count}</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
                       </>
                     )}
                   </div>

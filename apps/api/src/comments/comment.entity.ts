@@ -22,4 +22,10 @@ export class Comment {
 
   @Column({ name: 'edited_at', type: 'timestamptz', nullable: true, default: null })
   edited_at!: Date | null;
+
+  @Column({ name: 'hidden_by', type: 'uuid', nullable: true, default: null })
+  hidden_by!: string | null;
+
+  @Column({ name: 'hidden_reason', type: 'varchar', length: 500, nullable: true, default: null })
+  hidden_reason!: string | null;
 }

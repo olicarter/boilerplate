@@ -84,6 +84,43 @@ export class CommentsService {
     });
   }
 
+  private async isModerator(orgId: string, userId: string): Promise<boolean> {
+    const m = await this.memberRepo.findOneBy({ organisation_id: orgId, user_id: userId });
+    return !!m && (ROLE_RANK[m.role] ?? 0) >= ROLE_RANK['moderator'];
+  }
+
+  async hide(id: string, actorId: string, reason: string): Promise<{ item: Comment; txid: number }> {
+    const comment = await this.commentRepo.findOneBy({ id });
+    if (!comment) throw new NotFoundException('Comment not found');
+    if (!(await this.isModerator(comment.organisation_id, actorId))) {
+      throw new ForbiddenException('Only moderators and admins can hide comments');
+    }
+    const trimmed = reason?.trim() ?? '';
+    if (!trimmed) throw new BadRequestException('A reason is required when hiding a comment');
+
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Comment, id, { hidden_by: actorId, hidden_reason: trimmed });
+      const item = await manager.findOneByOrFail(Comment, { id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
+  async unhide(id: string, actorId: string): Promise<{ item: Comment; txid: number }> {
+    const comment = await this.commentRepo.findOneBy({ id });
+    if (!comment) throw new NotFoundException('Comment not found');
+    if (!(await this.isModerator(comment.organisation_id, actorId))) {
+      throw new ForbiddenException('Only moderators and admins can unhide comments');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Comment, id, { hidden_by: null, hidden_reason: null });
+      const item = await manager.findOneByOrFail(Comment, { id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
   async toggleReaction(commentId: string, userId: string, emoji: string): Promise<{ item?: CommentReaction; deleted?: boolean; txid: number }> {
     if (!ALLOWED_EMOJIS.includes(emoji)) {
       throw new BadRequestException(`Emoji must be one of: ${ALLOWED_EMOJIS.join(' ')}`);

@@ -38,6 +38,18 @@ export class CommentsController {
     return this.commentsService.delete(id, req.user!.id);
   }
 
+  @Post('comments/:id/hide')
+  @UseGuards(AuthGuard)
+  hide(@Param('id') id: string, @Body() body: { reason: string }, @Req() req: AuthenticatedRequest) {
+    return this.commentsService.hide(id, req.user!.id, body.reason ?? '');
+  }
+
+  @Post('comments/:id/unhide')
+  @UseGuards(AuthGuard)
+  unhide(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.commentsService.unhide(id, req.user!.id);
+  }
+
   @Post('comments/:id/reactions')
   @UseGuards(AuthGuard)
   toggleReaction(

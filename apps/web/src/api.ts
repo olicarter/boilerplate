@@ -222,6 +222,8 @@ export interface Comment {
   body: string;
   created_at: string;
   edited_at: string | null;
+  hidden_by: string | null;
+  hidden_reason: string | null;
   [key: string]: unknown;
 }
 
@@ -256,6 +258,10 @@ export const commentsApi = {
       method: 'POST',
       body: JSON.stringify({ emoji }),
     }),
+  hide: (commentId: string, reason: string) =>
+    request<MutationResult<Comment>>(`/comments/${commentId}/hide`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  unhide: (commentId: string) =>
+    request<MutationResult<Comment>>(`/comments/${commentId}/unhide`, { method: 'POST' }),
 };
 
 export const votesApi = {
