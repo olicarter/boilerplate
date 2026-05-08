@@ -5,7 +5,8 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
     ...options,
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : null) as T;
 }
 
 export interface Passkey {
@@ -130,6 +131,16 @@ export interface DelegationVote {
   choice: string;
 }
 
+export interface DelegationChainLink {
+  user_id: string;
+  name: string;
+}
+
+export interface DelegationChain {
+  chain: DelegationChainLink[];
+  voter: (DelegationChainLink & { choice: string }) | null;
+}
+
 export interface Argument {
   id: string;
   proposal_id: string;
@@ -219,6 +230,8 @@ export const proposalsApi = {
     request<TallyResult>(`/proposals/${id}/tally`),
   myDelegationVote: (id: string) =>
     request<DelegationVote | null>(`/proposals/${id}/my-delegation-vote`),
+  myDelegationChain: (id: string) =>
+    request<DelegationChain | null>(`/proposals/${id}/my-delegation-chain`),
   versions: (id: string) =>
     request<ProposalVersion[]>(`/proposals/${id}/versions`),
   setOutcome: (id: string, outcome: Proposal['outcome']) =>

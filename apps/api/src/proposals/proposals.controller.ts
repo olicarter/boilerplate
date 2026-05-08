@@ -27,6 +27,12 @@ export class ProposalsController {
     return this.proposalsService.getMyDelegationVote(id, req.user!.id);
   }
 
+  @Get(':id/my-delegation-chain')
+  @UseGuards(AuthGuard)
+  myDelegationChain(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.getMyDelegationChain(id, req.user!.id);
+  }
+
   @Get(':id/versions')
   listVersions(@Param('id') id: string) {
     return this.proposalsService.listVersions(id);

@@ -11,6 +11,7 @@ import { Organisation } from '../organisations/organisation.entity';
 import { Membership } from '../organisations/membership.entity';
 import { DelegationsService } from '../delegations/delegations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { User } from '../users/user.entity';
 
 const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 10_000;
@@ -319,6 +320,55 @@ export class ProposalsService {
     }
 
     return tally;
+  }
+
+  /** Returns the full delegation chain for userId on this proposal, with each member's name and the final voter's choice. */
+  async getMyDelegationChain(proposalId: string, userId: string): Promise<{ chain: { user_id: string; name: string }[]; voter: { user_id: string; name: string; choice: string } | null } | null> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+    const allDelegations = await this.dataSource.getRepository(Delegation).find({ where: { organisation_id: proposal.organisation_id } });
+    const delegations = DelegationsService.activeDelegations(allDelegations);
+
+    // User voted directly — no chain to show
+    if (votes.find((v) => v.user_id === userId)) return null;
+
+    const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice]));
+    const delegationMap = this.buildDelegationMap(delegations);
+
+    // Collect the chain of user IDs
+    const MAX_DEPTH = 10;
+    const visited = new Set<string>([userId]);
+    const chainIds: string[] = [userId];
+    let current = userId;
+    let voterChoice: string | null = null;
+    let voterId: string | null = null;
+
+    while (true) {
+      const userDelegations = delegationMap.get(current);
+      if (!userDelegations) break;
+      const next = userDelegations.get(proposal.topic_id) ?? userDelegations.get(null);
+      if (!next || visited.has(next) || visited.size >= MAX_DEPTH) break;
+      visited.add(next);
+      chainIds.push(next);
+      if (directVotes.has(next)) {
+        voterChoice = directVotes.get(next)!;
+        voterId = next;
+        break;
+      }
+      current = next;
+    }
+
+    // Chain of just the user means no delegation
+    if (chainIds.length === 1) return null;
+
+    // Resolve names
+    const users = await this.dataSource.getRepository(User).findBy(chainIds.map((id) => ({ id })));
+    const nameMap = new Map(users.map((u) => [u.id, u.name]));
+
+    const chain = chainIds.map((id) => ({ user_id: id, name: nameMap.get(id) ?? 'Unknown' }));
+    const voter = voterId ? { user_id: voterId, name: nameMap.get(voterId) ?? 'Unknown', choice: voterChoice! } : null;
+
+    return { chain, voter };
   }
 
   /** Returns the delegate who voted on behalf of userId, or null if user voted directly / no delegation resolves. */

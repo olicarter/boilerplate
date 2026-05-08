@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -63,6 +63,7 @@ export function ProposalDetailPage() {
   const [tally, setTally] = useState<TallyResult | null>(null);
   const [tallyLoading, setTallyLoading] = useState(true);
   const [delegationVote, setDelegationVote] = useState<DelegationVote | null>(null);
+  const [delegationChain, setDelegationChain] = useState<DelegationChain | null>(null);
   const [voting, setVoting] = useState(false);
   const [voteError, setVoteError] = useState('');
   const [changingVote, setChangingVote] = useState(false);
@@ -131,10 +132,15 @@ export function ProposalDetailPage() {
   async function fetchMyDelegationVote() {
     if (!currentUser) return;
     try {
-      const result = await proposalsApi.myDelegationVote(id);
-      setDelegationVote(result);
+      const [vote, chain] = await Promise.all([
+        proposalsApi.myDelegationVote(id),
+        proposalsApi.myDelegationChain(id),
+      ]);
+      setDelegationVote(vote);
+      setDelegationChain(chain);
     } catch {
       setDelegationVote(null);
+      setDelegationChain(null);
     }
   }
 
@@ -169,6 +175,7 @@ export function ProposalDetailPage() {
       fetchMyDelegationVote();
     } else {
       setDelegationVote(null);
+      setDelegationChain(null);
     }
   }, [id, currentUser?.id, myVote?.id]);
 
@@ -189,6 +196,7 @@ export function ProposalDetailPage() {
       await fetchTally();
       setChangingVote(false);
       setDelegationVote(null);
+      setDelegationChain(null);
       addToast('Vote cast', 'success');
     } catch (err) {
       setVoteError(err instanceof Error ? err.message : 'Failed to cast vote.');
@@ -243,9 +251,6 @@ export function ProposalDetailPage() {
   const isAuthor = currentUser?.id === proposal.author_id;
   const canEndorse = currentUser && isDraft && !isAuthor && !!myMembership && !myEndorsement;
   const publishBlocked = isDraft && minEndorsements > 0 && endorsements.length < minEndorsements;
-  const delegateUser = delegationVote
-    ? (allUsers ?? []).find((u: User) => u.id === delegationVote.delegate_id)
-    : undefined;
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
   const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard', vetoes.length > 0) : null;
@@ -998,7 +1003,7 @@ export function ProposalDetailPage() {
           </h3>
 
           {/* Delegation override notice */}
-          {currentUser && !myVote && delegationVote && (
+          {currentUser && !myVote && delegationChain && (
             <div style={{
               background: '#f0f7ff',
               border: '1px solid #c3d6fb',
@@ -1008,13 +1013,29 @@ export function ProposalDetailPage() {
               fontSize: 13,
               color: '#444',
             }}>
-              Your delegate{' '}
-              <strong>{delegateUser?.name ?? 'someone'}</strong>{' '}
-              voted{' '}
-              <strong style={{ color: choiceColors[delegationVote.choice as VoteChoice] }}>
-                {delegationVote.choice}
-              </strong>{' '}
-              on your behalf. Cast your own vote below to override.
+              <div style={{ marginBottom: delegationChain.voter ? '0.3rem' : 0 }}>
+                <span style={{ color: '#888', fontSize: 12 }}>Your vote flows: </span>
+                {delegationChain.chain.map((link, i) => (
+                  <span key={link.user_id}>
+                    {i > 0 && <span style={{ color: '#aaa', margin: '0 0.2rem' }}>→</span>}
+                    <strong>{i === 0 ? 'You' : link.name}</strong>
+                  </span>
+                ))}
+                {delegationChain.voter && (
+                  <>
+                    <span style={{ color: '#aaa', margin: '0 0.2rem' }}>→</span>
+                    <strong>{delegationChain.voter.name}</strong>
+                    {' '}voted{' '}
+                    <strong style={{ color: choiceColors[delegationChain.voter.choice as VoteChoice] }}>
+                      {delegationChain.voter.choice}
+                    </strong>
+                  </>
+                )}
+                {!delegationChain.voter && (
+                  <span style={{ color: '#888' }}> — delegate hasn't voted yet</span>
+                )}
+              </div>
+              <span style={{ fontSize: 12, color: '#888' }}>Cast your own vote below to override.</span>
             </div>
           )}
 
