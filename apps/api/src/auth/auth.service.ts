@@ -15,7 +15,9 @@ import { User } from '../users/user.entity';
 
 const RP_ID = process.env.RP_ID ?? 'localhost';
 const RP_NAME = 'Ripple';
-const ORIGIN = process.env.ORIGIN ?? 'http://localhost:5173';
+const ORIGIN = process.env.ORIGIN
+  ? process.env.ORIGIN.split(',').map((o) => o.trim())
+  : ['https://localhost:5174', 'http://localhost:5173'];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_MAX = 100;
