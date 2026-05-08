@@ -13,9 +13,11 @@ test('shows delegation override banner when delegate has voted', async ({ page, 
   // Bob votes yes (using bob fixture's standalone request context)
   await createVote(page.request, proposal.id, bob.id, 'yes');
 
-  // Alice views the proposal — should see the delegation banner
+  // Alice views the proposal — should see the delegation chain banner
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
-  await expect(page.getByText(/Bob.*voted.*yes.*on your behalf/)).toBeVisible();
+  await expect(page.getByText('Your vote flows', { exact: false })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('Bob', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('yes', { exact: true }).first()).toBeVisible();
 });
 
 test('delegation banner not shown when user voted directly', async ({ page, asAlice, bob }) => {
@@ -29,7 +31,7 @@ test('delegation banner not shown when user voted directly', async ({ page, asAl
   await createVote(page.request, proposal.id, asAlice.id, 'no');
 
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
-  await expect(page.getByText(/on your behalf/)).not.toBeVisible();
+  await expect(page.getByText('Your vote flows', { exact: false })).not.toBeVisible({ timeout: 10000 });
 });
 
 test('delegation banner disappears after casting own vote', async ({ page, asAlice, bob }) => {
@@ -40,11 +42,11 @@ test('delegation banner disappears after casting own vote', async ({ page, asAli
   await createVote(page.request, proposal.id, bob.id, 'yes');
 
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
-  await expect(page.getByText(/on your behalf/)).toBeVisible();
+  await expect(page.getByText('Your vote flows', { exact: false })).toBeVisible({ timeout: 10000 });
 
-  // Alice votes directly (castVote, since she hasn't voted before)
+  // Alice votes directly
   await page.getByRole('button', { name: 'no' }).click();
-  await expect(page.getByText(/on your behalf/)).not.toBeVisible();
+  await expect(page.getByText('Your vote flows', { exact: false })).not.toBeVisible({ timeout: 10000 });
   await expect(page.getByText('Vote cast')).toBeVisible();
 });
 

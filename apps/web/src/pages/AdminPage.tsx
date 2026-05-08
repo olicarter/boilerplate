@@ -59,6 +59,11 @@ export function AdminPage() {
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsError, setDefaultsError] = useState('');
 
+  const [requireApproval, setRequireApproval] = useState<boolean>((org as { require_member_approval?: boolean }).require_member_approval ?? false);
+  const [savingApproval, setSavingApproval] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+
   const [transferToId, setTransferToId] = useState('');
   const [transferring, setTransferring] = useState(false);
 
@@ -191,6 +196,44 @@ export function AdminPage() {
     }
   }
 
+  async function saveRequireApproval(value: boolean) {
+    setRequireApproval(value);
+    setSavingApproval(true);
+    try {
+      await orgsApi.update(org.slug, { require_member_approval: value });
+      addToast('Setting saved', 'success');
+    } catch {
+      addToast('Failed to save setting', 'error');
+      setRequireApproval((org as { require_member_approval?: boolean }).require_member_approval ?? false);
+    } finally {
+      setSavingApproval(false);
+    }
+  }
+
+  async function handleApproveMember(userId: string) {
+    setApprovingId(userId);
+    try {
+      await orgsApi.approveMember(org.slug, userId);
+      addToast('Member approved', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to approve member', 'error');
+    } finally {
+      setApprovingId(null);
+    }
+  }
+
+  async function handleRejectMember(userId: string) {
+    setRejectingId(userId);
+    try {
+      await orgsApi.rejectMember(org.slug, userId);
+      addToast('Member request rejected', 'info');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to reject member', 'error');
+    } finally {
+      setRejectingId(null);
+    }
+  }
+
   async function handleTransferOwnership() {
     if (!transferToId) return;
     setTransferring(true);
@@ -225,8 +268,9 @@ export function AdminPage() {
   };
 
   const nonAdminMembers = orgMembers.filter(
-    (m: Membership) => m.user_id !== currentUser?.id && m.role !== 'admin',
+    (m: Membership) => m.user_id !== currentUser?.id && m.role !== 'admin' && m.status !== 'pending',
   );
+  const pendingMembers = orgMembers.filter((m: Membership) => m.status === 'pending');
 
   return (
     <div style={{ maxWidth: 560 }}>
@@ -460,8 +504,66 @@ export function AdminPage() {
               Allow anyone to discover and join this organisation
             </label>
           </div>
+          <div>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Require approval for new members</p>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+              When enabled, users who join publicly will be placed in a pending queue until an admin approves them.
+            </p>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingApproval ? 'not-allowed' : 'pointer' }}>
+              <input
+                id="admin-require-approval"
+                type="checkbox"
+                checked={requireApproval}
+                onChange={(e) => saveRequireApproval(e.target.checked)}
+                disabled={savingApproval}
+              />
+              Require admin approval before new members can participate
+            </label>
+          </div>
         </div>
       </section>
+
+      {/* Pending member approvals */}
+      {pendingMembers.length > 0 && (
+        <section style={{ marginBottom: '2.5rem' }}>
+          <h3 style={sectionHeading}>Pending approval ({pendingMembers.length})</h3>
+          <p style={{ margin: '0.25rem 0 0.75rem', fontSize: 13, color: '#888' }}>
+            These users have requested to join and are waiting for approval.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {pendingMembers.map((m: Membership) => {
+              const user = usersById.get(m.user_id);
+              return (
+                <div
+                  key={m.user_id}
+                  data-testid="pending-member-row"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', border: '1px solid #dde8ff', borderRadius: 6, background: '#f5f8ff' }}
+                >
+                  <span style={{ fontSize: 14 }}>{user?.name ?? m.user_id}</span>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => handleApproveMember(m.user_id)}
+                      disabled={approvingId === m.user_id || rejectingId === m.user_id}
+                      data-testid="approve-member-btn"
+                      style={{ fontSize: 13, padding: '0.3rem 0.75rem', cursor: 'pointer', color: '#1a7a1a', border: '1px solid #a5d6a7', background: '#f1fff1', borderRadius: 4 }}
+                    >
+                      {approvingId === m.user_id ? 'Approving…' : 'Approve'}
+                    </button>
+                    <ConfirmButton
+                      label="Reject"
+                      confirmLabel="Yes, reject"
+                      onConfirm={() => handleRejectMember(m.user_id)}
+                      disabled={approvingId === m.user_id || rejectingId === m.user_id}
+                      style={{ fontSize: 13, padding: '0.3rem 0.75rem', cursor: 'pointer', color: '#d94040', border: '1px solid #f5c5c5', background: 'none', borderRadius: 4 }}
+                      confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Transfer ownership */}
       {nonAdminMembers.length > 0 && (

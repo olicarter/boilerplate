@@ -311,7 +311,7 @@ export class ProposalsService {
 
     if (proposal.quorum != null) {
       const eligibleCount = await this.memberRepo.count({
-        where: { organisation_id: proposal.organisation_id },
+        where: { organisation_id: proposal.organisation_id, status: 'approved' as any },
       });
       tally.eligible_count = eligibleCount;
       tally.quorum_met = eligibleCount > 0

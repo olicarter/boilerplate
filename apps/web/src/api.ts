@@ -54,6 +54,7 @@ export interface Organisation {
   is_public: boolean;
   veto_role: 'moderator' | 'admin';
   min_endorsements: number;
+  require_member_approval: boolean;
   created_at: string;
   [key: string]: unknown;
 }
@@ -63,6 +64,7 @@ export interface Membership {
   organisation_id: string;
   user_id: string;
   role: 'admin' | 'moderator' | 'member' | 'observer';
+  status: 'pending' | 'approved';
   joined_at: string;
   invited_by: string | null;
   [key: string]: unknown;
@@ -177,7 +179,7 @@ export const orgsApi = {
   get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
   create: (data: { name: string; slug?: string; description?: string }) =>
     request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
-  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements'>>) =>
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval'>>) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
   transferOwnership: (slug: string, toUserId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
@@ -194,6 +196,10 @@ export const orgsApi = {
     request<MutationResult<Membership>>(`/orgs/${slug}/join`, { method: 'POST', body: JSON.stringify({ token }) }),
   joinPublic: (slug: string) =>
     request<MutationResult<Membership>>(`/orgs/${slug}/join`, { method: 'POST', body: JSON.stringify({}) }),
+  approveMember: (slug: string, userId: string) =>
+    request<MutationResult<Membership>>(`/orgs/${slug}/members/${userId}/approve`, { method: 'POST' }),
+  rejectMember: (slug: string, userId: string) =>
+    request<{ txid: number }>(`/orgs/${slug}/members/${userId}/reject`, { method: 'POST' }),
   generateInviteToken: (slug: string) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'POST' }),
   revokeInviteToken: (slug: string) =>

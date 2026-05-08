@@ -44,6 +44,9 @@ export class Organisation {
   @Column({ name: 'min_endorsements', type: 'int', default: 0 })
   min_endorsements!: number;
 
+  @Column({ name: 'require_member_approval', type: 'boolean', default: false })
+  require_member_approval!: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

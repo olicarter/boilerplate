@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Organisation } from './organisation.entity';
-import { Membership, MemberRole } from './membership.entity';
+import { Membership, MemberRole, MemberStatus } from './membership.entity';
 import { Proposal } from '../proposals/proposal.entity';
 import { AuditLogService } from '../audit-log/audit-log.service';
 
@@ -43,7 +43,7 @@ export class OrganisationsService {
   }
 
   async findForUser(userId: string): Promise<Organisation[]> {
-    const memberships = await this.memberRepo.find({ where: { user_id: userId } });
+    const memberships = await this.memberRepo.find({ where: { user_id: userId, status: 'approved' as MemberStatus } });
     if (memberships.length === 0) return [];
     const orgIds = memberships.map((m) => m.organisation_id);
     return this.orgRepo
@@ -86,7 +86,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -105,6 +105,7 @@ export class OrganisationsService {
       if (data.is_public !== undefined) updates.is_public = data.is_public;
       if (data.veto_role !== undefined) updates.veto_role = data.veto_role;
       if (data.min_endorsements !== undefined) updates.min_endorsements = data.min_endorsements;
+      if (data.require_member_approval !== undefined) updates.require_member_approval = data.require_member_approval;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -263,6 +264,7 @@ export class OrganisationsService {
     if (!org.is_public) throw new ForbiddenException('This organisation is not open to the public');
     const existing = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: userId });
     if (existing) return { item: existing, txid: 0 };
+    const status: MemberStatus = org.require_member_approval ? 'pending' : 'approved';
     return this.dataSource.transaction(async (manager) => {
       const membership = manager.create(Membership, {
         id: randomUUID(),
@@ -270,11 +272,43 @@ export class OrganisationsService {
         user_id: userId,
         role: 'member',
         invited_by: null,
+        status,
       });
       const item = await manager.save(membership);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item, txid: parseInt(row.txid, 10) };
     });
+  }
+
+  async approveMember(slug: string, targetUserId: string, actorId: string): Promise<{ item: Membership; txid: number }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin', 'moderator']);
+    const membership = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: targetUserId });
+    if (!membership) throw new NotFoundException('Member not found');
+    if (membership.status !== 'pending') throw new BadRequestException('Member is not pending approval');
+    const result = await this.dataSource.transaction(async (manager) => {
+      await manager.update(Membership, membership.id, { status: 'approved' });
+      const item = await manager.findOneByOrFail(Membership, { id: membership.id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+    this.auditLog.log(org.id, actorId, 'member.approved', 'user', targetUserId, {});
+    return result;
+  }
+
+  async rejectMember(slug: string, targetUserId: string, actorId: string): Promise<{ txid: number }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin', 'moderator']);
+    const membership = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: targetUserId });
+    if (!membership) throw new NotFoundException('Member not found');
+    if (membership.status !== 'pending') throw new BadRequestException('Member is not pending approval');
+    const result = await this.dataSource.transaction(async (manager) => {
+      await manager.delete(Membership, membership.id);
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { txid: parseInt(row.txid, 10) };
+    });
+    this.auditLog.log(org.id, actorId, 'member.rejected', 'user', targetUserId, {});
+    return result;
   }
 
   async transferOwnership(
@@ -297,7 +331,7 @@ export class OrganisationsService {
   }
 
   async requireMember(orgId: string, userId: string): Promise<Membership> {
-    const m = await this.memberRepo.findOneBy({ organisation_id: orgId, user_id: userId });
+    const m = await this.memberRepo.findOneBy({ organisation_id: orgId, user_id: userId, status: 'approved' as MemberStatus });
     if (!m) throw new ForbiddenException('You are not a member of this organisation');
     return m;
   }

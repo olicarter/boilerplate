@@ -1,6 +1,7 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
 
 export type MemberRole = 'admin' | 'moderator' | 'member' | 'observer';
+export type MemberStatus = 'pending' | 'approved';
 
 @Entity('memberships')
 export class Membership {
@@ -21,4 +22,7 @@ export class Membership {
 
   @Column({ name: 'invited_by', type: 'uuid', nullable: true })
   invited_by!: string | null;
+
+  @Column({ type: 'varchar', length: 20, default: 'approved' })
+  status!: MemberStatus;
 }
