@@ -65,6 +65,7 @@ export class ProposalsService {
     closes_at?: string | null;
     threshold?: number;
     quorum?: number | null;
+    quorum_type?: 'soft' | 'hard';
     status?: 'open' | 'draft';
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();

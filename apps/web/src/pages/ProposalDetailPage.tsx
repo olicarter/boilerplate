@@ -36,7 +36,8 @@ function formatDeadline(closesAt: string): { label: string; subtext: string; urg
   return { label: `${days} day${days !== 1 ? 's' : ''} left`, subtext: `Closes ${date}`, urgent: false };
 }
 
-function computeResult(tally: TallyResult, threshold: number): 'passed' | 'failed' | 'no-votes' {
+function computeResult(tally: TallyResult, threshold: number, quorumType?: 'soft' | 'hard'): 'passed' | 'failed' | 'no-votes' {
+  if (tally.quorum_met === false && quorumType === 'hard') return 'failed';
   const decisive = tally.yes + tally.no;
   if (decisive === 0) return 'no-votes';
   return (tally.yes / decisive) * 100 >= threshold ? 'passed' : 'failed';
@@ -202,7 +203,7 @@ export function ProposalDetailPage() {
     : undefined;
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
-  const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold) : null;
+  const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard') : null;
   const comments = (allComments ?? [])
     .filter((c: Comment) => c.proposal_id === id)
     .sort((a: Comment, b: Comment) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -529,14 +530,14 @@ export function ProposalDetailPage() {
       {result && tally && (
         <div
           style={{
-            border: `1px solid ${tally.quorum_met === false ? '#fde68a' : result === 'passed' ? '#b3e5c2' : result === 'failed' ? '#f5c0c0' : '#ddd'}`,
+            border: `1px solid ${tally.quorum_met === false && proposal.quorum_type !== 'hard' ? '#fde68a' : result === 'passed' ? '#b3e5c2' : result === 'failed' ? '#f5c0c0' : '#ddd'}`,
             borderRadius: 6,
             padding: '0.75rem 1.25rem',
             marginBottom: '1.5rem',
-            background: tally.quorum_met === false ? '#fffbeb' : result === 'passed' ? '#e6f9ed' : result === 'failed' ? '#fdecea' : '#f5f5f5',
+            background: tally.quorum_met === false && proposal.quorum_type !== 'hard' ? '#fffbeb' : result === 'passed' ? '#e6f9ed' : result === 'failed' ? '#fdecea' : '#f5f5f5',
           }}
         >
-          {tally.quorum_met === false ? (
+          {tally.quorum_met === false && proposal.quorum_type !== 'hard' ? (
             <>
               <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: '#b45309' }}>Not quorate</p>
               <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
@@ -547,12 +548,13 @@ export function ProposalDetailPage() {
           ) : (
             <>
               <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: result === 'passed' ? '#2d9a4e' : result === 'failed' ? '#d94040' : '#888' }}>
-                {result === 'passed' ? 'Proposal passed' : result === 'failed' ? 'Proposal failed' : 'No decisive votes cast'}
+                {result === 'passed' ? 'Proposal passed' : result === 'failed' ? (tally.quorum_met === false ? 'Failed — quorum not met' : 'Proposal failed') : 'No decisive votes cast'}
               </p>
               {result !== 'no-votes' && (
                 <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
-                  {Math.round((tally.yes / (tally.yes + tally.no)) * 100)}% yes
-                  {' '}({threshold}% required to pass)
+                  {tally.quorum_met === false
+                    ? `${tally.eligible_count && tally.eligible_count > 0 ? Math.round((tally.total / tally.eligible_count) * 100) : 0}% of members participated (${proposal.quorum}% required)`
+                    : `${Math.round((tally.yes / (tally.yes + tally.no)) * 100)}% yes (${threshold}% required to pass)`}
                 </p>
               )}
             </>

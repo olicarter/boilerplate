@@ -31,6 +31,9 @@ export class Proposal {
   @Column({ type: 'integer', nullable: true, default: null })
   quorum!: number | null;
 
+  @Column({ type: 'varchar', length: 10, default: 'soft' })
+  quorum_type!: 'soft' | 'hard';
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 

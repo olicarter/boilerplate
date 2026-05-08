@@ -100,6 +100,7 @@ export function ProposalsPage() {
   });
   const [threshold, setThreshold] = useState(org.default_threshold ?? 50);
   const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
+  const [quorumType, setQuorumType] = useState<'soft' | 'hard'>('soft');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -145,6 +146,7 @@ export function ProposalsPage() {
     }
     setThreshold(org.default_threshold ?? 50);
     setQuorum(org.default_quorum ?? null);
+    setQuorumType('soft');
     setShowForm(false);
     setFormError('');
   }
@@ -190,6 +192,7 @@ export function ProposalsPage() {
         status: asDraft ? 'draft' : 'open',
         threshold,
         quorum,
+        quorum_type: quorumType,
         created_at: new Date().toISOString(),
         closes_at: closesAt ? new Date(closesAt).toISOString() : null,
         closed_at: null,
@@ -328,6 +331,36 @@ export function ProposalsPage() {
                 />
                 <span style={{ fontSize: 14, color: '#555', flexShrink: 0 }}>% yes</span>
               </div>
+            </div>
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label htmlFor="new-proposal-quorum" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+              Quorum <span style={{ color: '#aaa' }}>(optional — % of members who must participate)</span>
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input
+                  id="new-proposal-quorum"
+                  type="number"
+                  value={quorum ?? ''}
+                  onChange={(e) => setQuorum(e.target.value === '' ? null : Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+                  min={1}
+                  max={100}
+                  placeholder="e.g. 50"
+                  style={{ width: 90, padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+                />
+                <span style={{ fontSize: 14, color: '#555' }}>%</span>
+              </div>
+              {quorum !== null && (
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  {(['soft', 'hard'] as const).map((qt) => (
+                    <label key={qt} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: 13, cursor: 'pointer' }}>
+                      <input type="radio" name="quorum_type" value={qt} checked={quorumType === qt} onChange={() => setQuorumType(qt)} />
+                      {qt === 'soft' ? 'Soft (advisory)' : 'Hard (auto-fail)'}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           {formError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{formError}</p>}
