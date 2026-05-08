@@ -50,6 +50,7 @@ export interface Organisation {
   default_threshold: number;
   voting_visibility: 'public' | 'hidden';
   default_quorum: number | null;
+  is_public: boolean;
   created_at: string;
   [key: string]: unknown;
 }
@@ -138,7 +139,7 @@ export const orgsApi = {
   get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
   create: (data: { name: string; slug?: string; description?: string }) =>
     request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
-  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum'>>) =>
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public'>>) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
   transferOwnership: (slug: string, toUserId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
@@ -153,6 +154,8 @@ export const orgsApi = {
     request<{ txid: number }>(`/orgs/${slug}/members/${userId}`, { method: 'DELETE' }),
   joinViaToken: (slug: string, token: string) =>
     request<MutationResult<Membership>>(`/orgs/${slug}/join`, { method: 'POST', body: JSON.stringify({ token }) }),
+  joinPublic: (slug: string) =>
+    request<MutationResult<Membership>>(`/orgs/${slug}/join`, { method: 'POST', body: JSON.stringify({}) }),
   generateInviteToken: (slug: string) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'POST' }),
   revokeInviteToken: (slug: string) =>

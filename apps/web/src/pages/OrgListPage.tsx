@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
-import { v4 as uuid } from 'uuid';
 import { organisationsCollection, membershipsCollection } from '../collections';
 import { orgsApi, type Organisation, type Membership } from '../api';
 import { useCurrentUser } from '../context';
@@ -21,6 +20,24 @@ export function OrgListPage() {
       .map((m) => m.organisation_id),
   );
   const myOrgs = ((allOrgs ?? []) as Organisation[]).filter((o) => myOrgIds.has(o.id));
+  const discoverOrgs = currentUser
+    ? ((allOrgs ?? []) as Organisation[]).filter((o) => o.is_public && !myOrgIds.has(o.id))
+    : [];
+
+  const [joiningSlug, setJoiningSlug] = useState<string | null>(null);
+
+  async function handleJoinPublic(slug: string) {
+    setJoiningSlug(slug);
+    try {
+      await orgsApi.joinPublic(slug);
+      addToast('Joined organisation', 'success');
+      navigate({ to: '/orgs/$slug', params: { slug } });
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to join', 'error');
+    } finally {
+      setJoiningSlug(null);
+    }
+  }
 
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
@@ -126,6 +143,35 @@ export function OrgListPage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {discoverOrgs.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ fontSize: 13, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
+            Discover
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {discoverOrgs.map((org) => (
+              <div
+                key={org.id}
+                style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1rem 1.25rem', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem' }}>{org.name}</h3>
+                  {org.description && <p style={{ margin: 0, fontSize: 13, color: '#666' }}>{org.description}</p>}
+                  <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>/{org.slug}</p>
+                </div>
+                <button
+                  onClick={() => handleJoinPublic(org.slug)}
+                  disabled={joiningSlug === org.slug}
+                  style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', flexShrink: 0 }}
+                >
+                  {joiningSlug === org.slug ? 'Joining…' : 'Join'}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

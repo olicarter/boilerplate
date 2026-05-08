@@ -35,6 +35,9 @@ export class Organisation {
   @Column({ type: 'int', nullable: true, default: null })
   default_quorum!: number | null;
 
+  @Column({ type: 'boolean', default: false })
+  is_public!: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

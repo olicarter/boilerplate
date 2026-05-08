@@ -31,7 +31,7 @@ export class OrganisationsController {
   @UseGuards(AuthGuard)
   update(
     @Param('slug') slug: string,
-    @Body() body: { name?: string; description?: string; proposal_creation_role?: 'member' | 'moderator' | 'admin'; topic_creation_role?: 'member' | 'moderator' | 'admin'; default_voting_duration_days?: number | null; default_threshold?: number; voting_visibility?: 'public' | 'hidden'; default_quorum?: number | null },
+    @Body() body: { name?: string; description?: string; proposal_creation_role?: 'member' | 'moderator' | 'admin'; topic_creation_role?: 'member' | 'moderator' | 'admin'; default_voting_duration_days?: number | null; default_threshold?: number; voting_visibility?: 'public' | 'hidden'; default_quorum?: number | null; is_public?: boolean },
     @Req() req: AuthenticatedRequest,
   ) {
     return this.orgsService.update(slug, body, req.user!.id);
@@ -95,11 +95,7 @@ export class OrganisationsController {
     if (body.token) {
       return this.orgsService.joinViaToken(slug, req.user!.id, body.token);
     }
-    // Direct join (test-setup only path — in production use the invite token)
-    const org = await this.orgsService.findBySlug(slug);
-    const existing = await this.orgsService.getMembership(org.id, req.user!.id);
-    if (existing) return { item: existing, txid: 0 };
-    return this.orgsService.addMember(org.id, req.user!.id, 'member', req.user!.id);
+    return this.orgsService.joinPublic(slug, req.user!.id);
   }
 
   @Post(':slug/transfer-ownership')

@@ -50,6 +50,8 @@ export function AdminPage() {
   const [defaultQuorum, setDefaultQuorum] = useState<string>(
     org.default_quorum != null ? String(org.default_quorum) : '',
   );
+  const [isPublic, setIsPublic] = useState<boolean>(org.is_public ?? false);
+  const [savingPublic, setSavingPublic] = useState(false);
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsError, setDefaultsError] = useState('');
 
@@ -89,6 +91,20 @@ export function AdminPage() {
       else setTopicCreationRole(org.topic_creation_role ?? 'member');
     } finally {
       setSavingRole(false);
+    }
+  }
+
+  async function saveIsPublic(value: boolean) {
+    setIsPublic(value);
+    setSavingPublic(true);
+    try {
+      await orgsApi.update(org.slug, { is_public: value });
+      addToast('Setting saved', 'success');
+    } catch {
+      addToast('Failed to save setting', 'error');
+      setIsPublic(org.is_public ?? false);
+    } finally {
+      setSavingPublic(false);
     }
   }
 
@@ -336,6 +352,22 @@ export function AdminPage() {
                 Hide vote counts until proposal closes
               </label>
             </div>
+          </div>
+          <div>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Public organisation</p>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+              Public organisations are listed on the discovery page and anyone can join without an invitation.
+            </p>
+            <label id="admin-is-public-label" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingPublic ? 'not-allowed' : 'pointer' }}>
+              <input
+                id="admin-is-public"
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => saveIsPublic(e.target.checked)}
+                disabled={savingPublic}
+              />
+              Allow anyone to discover and join this organisation
+            </label>
           </div>
         </div>
       </section>

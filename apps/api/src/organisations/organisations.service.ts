@@ -83,7 +83,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -99,6 +99,7 @@ export class OrganisationsService {
       if (data.default_threshold !== undefined) updates.default_threshold = data.default_threshold;
       if (data.voting_visibility !== undefined) updates.voting_visibility = data.voting_visibility;
       if (data.default_quorum !== undefined) updates.default_quorum = data.default_quorum;
+      if (data.is_public !== undefined) updates.is_public = data.is_public;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -236,6 +237,25 @@ export class OrganisationsService {
         organisation_id: org.id,
         user_id: userId,
         role: 'member',
+      });
+      const item = await manager.save(membership);
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
+  async joinPublic(slug: string, userId: string): Promise<{ item: Membership; txid: number }> {
+    const org = await this.findBySlug(slug);
+    if (!org.is_public) throw new ForbiddenException('This organisation is not open to the public');
+    const existing = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: userId });
+    if (existing) return { item: existing, txid: 0 };
+    return this.dataSource.transaction(async (manager) => {
+      const membership = manager.create(Membership, {
+        id: randomUUID(),
+        organisation_id: org.id,
+        user_id: userId,
+        role: 'member',
+        invited_by: null,
       });
       const item = await manager.save(membership);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
