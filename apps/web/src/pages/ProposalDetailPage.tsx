@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -87,6 +87,9 @@ export function ProposalDetailPage() {
   const [vetoReason, setVetoReason] = useState('');
   const [castingVeto, setCastingVeto] = useState(false);
   const [showVetoForm, setShowVetoForm] = useState(false);
+  const [endorsements, setEndorsements] = useState<Endorsement[]>([]);
+  const [endorsing, setEndorsing] = useState(false);
+  const [minEndorsementsLive, setMinEndorsementsLive] = useState<number | null>(null);
   const [versions, setVersions] = useState<ProposalVersion[] | null>(null);
   const [showVersions, setShowVersions] = useState(false);
 
@@ -109,6 +112,9 @@ export function ProposalDetailPage() {
   const vetoRole = (org as { veto_role?: string }).veto_role ?? 'admin';
   const canVeto = currentUser && (ROLE_RANK[myMembership?.role ?? ''] ?? 0) >= (ROLE_RANK[vetoRole] ?? ROLE_RANK['admin']);
   const myVeto = currentUser ? vetoes.find((v) => v.author_id === currentUser.id) : undefined;
+  const minEndorsements = minEndorsementsLive ?? (org as { min_endorsements?: number }).min_endorsements ?? 0;
+  const myEndorsement = currentUser ? endorsements.find((e) => e.user_id === currentUser.id) : undefined;
+  const endorsementsNeeded = Math.max(0, minEndorsements - endorsements.length);
 
   async function fetchTally() {
     setTallyLoading(true);
@@ -141,10 +147,21 @@ export function ProposalDetailPage() {
     }
   }
 
+  async function fetchEndorsements() {
+    try {
+      const result = await endorsementsApi.list(id);
+      setEndorsements(result);
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     fetchTally();
     fetchVetoes();
+    fetchEndorsements();
     proposalsApi.versions(id).then(setVersions).catch(() => setVersions([]));
+    orgsApi.get(org.slug).then((o) => setMinEndorsementsLive(o.min_endorsements ?? 0)).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -224,6 +241,8 @@ export function ProposalDetailPage() {
   const isWithdrawn = proposal.status === 'withdrawn';
   const isDeliberating = isOpen && !!proposal.deliberation_ends_at && new Date(proposal.deliberation_ends_at as string) > new Date();
   const isAuthor = currentUser?.id === proposal.author_id;
+  const canEndorse = currentUser && isDraft && !isAuthor && !!myMembership && !myEndorsement;
+  const publishBlocked = isDraft && minEndorsements > 0 && endorsements.length < minEndorsements;
   const delegateUser = delegationVote
     ? (allUsers ?? []).find((u: User) => u.id === delegationVote.delegate_id)
     : undefined;
@@ -344,6 +363,33 @@ export function ProposalDetailPage() {
       addToast('Comment unpinned', 'info');
     } catch {
       addToast('Failed to unpin comment', 'error');
+    }
+  }
+
+  async function endorseProposal() {
+    if (!canEndorse) return;
+    setEndorsing(true);
+    try {
+      await endorsementsApi.endorse(id);
+      await fetchEndorsements();
+      addToast('Proposal endorsed', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to endorse', 'error');
+    } finally {
+      setEndorsing(false);
+    }
+  }
+
+  async function retractEndorsement() {
+    setEndorsing(true);
+    try {
+      await endorsementsApi.retract(id);
+      await fetchEndorsements();
+      addToast('Endorsement retracted', 'info');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to retract', 'error');
+    } finally {
+      setEndorsing(false);
     }
   }
 
@@ -618,29 +664,90 @@ export function ProposalDetailPage() {
         {proposal.closed_at && ` · Closed ${new Date(proposal.closed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`}
       </p>
 
-      {/* Draft banner */}
-      {isDraft && isAuthor && (
-        <div style={{
-          border: '1px solid #fde68a',
-          borderRadius: 6,
-          padding: '0.75rem 1.25rem',
-          marginBottom: '1.5rem',
-          background: '#fffbeb',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-        }}>
-          <span style={{ fontSize: 14, color: '#92400e' }}>
-            This proposal is a draft — not yet visible to other members.
-          </span>
-          <button
-            onClick={() => handleAction('Proposal published', () => proposalsApi.publish(id))}
-            disabled={actioning}
-            style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: '#b45309', color: '#fff', border: 'none', borderRadius: 4, flexShrink: 0 }}
-          >
-            Publish
-          </button>
+      {/* Draft banner + endorsements */}
+      {isDraft && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          {/* Endorsement progress */}
+          {minEndorsements > 0 && (
+            <div style={{
+              border: `1px solid ${publishBlocked ? '#fde68a' : '#b3e5c2'}`,
+              borderRadius: 6,
+              padding: '0.75rem 1.25rem',
+              marginBottom: '0.75rem',
+              background: publishBlocked ? '#fffbeb' : '#e6f9ed',
+            }}>
+              <p style={{ margin: '0 0 0.4rem', fontSize: 14, fontWeight: 600, color: publishBlocked ? '#92400e' : '#2d9a4e' }}>
+                {endorsements.length} / {minEndorsements} endorsement{minEndorsements !== 1 ? 's' : ''}
+                {publishBlocked ? ` — ${endorsementsNeeded} more needed to publish` : ' — ready to publish'}
+              </p>
+              {endorsements.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.25rem' }}>
+                  {endorsements.map((e) => {
+                    const endorser = userMap[e.user_id];
+                    return (
+                      <span key={e.id} data-testid="endorsement-badge" style={{ fontSize: 12, padding: '2px 8px', borderRadius: 12, background: '#e6f9ed', border: '1px solid #b3e5c2', color: '#1a7f37' }}>
+                        {endorser?.name ?? 'Member'}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              {canEndorse && (
+                <button
+                  type="button"
+                  onClick={endorseProposal}
+                  disabled={endorsing}
+                  data-testid="endorse-btn"
+                  style={{ marginTop: '0.5rem', fontSize: 13, padding: '0.3rem 0.9rem', cursor: 'pointer', background: '#1a7f37', color: '#fff', border: 'none', borderRadius: 4 }}
+                >
+                  {endorsing ? 'Endorsing…' : 'Endorse this proposal'}
+                </button>
+              )}
+              {myEndorsement && (
+                <button
+                  type="button"
+                  onClick={retractEndorsement}
+                  disabled={endorsing}
+                  data-testid="retract-endorsement-btn"
+                  style={{ marginTop: '0.5rem', fontSize: 12, padding: '0.3rem 0.7rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4, color: '#888' }}
+                >
+                  Retract endorsement
+                </button>
+              )}
+            </div>
+          )}
+
+          {isAuthor && (
+            <div style={{
+              border: '1px solid #fde68a',
+              borderRadius: 6,
+              padding: '0.75rem 1.25rem',
+              background: '#fffbeb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+            }}>
+              <span style={{ fontSize: 14, color: '#92400e' }}>
+                {publishBlocked
+                  ? `Needs ${endorsementsNeeded} more endorsement${endorsementsNeeded !== 1 ? 's' : ''} before publishing.`
+                  : 'This proposal is a draft — not yet visible to other members.'}
+              </span>
+              <button
+                onClick={() => handleAction('Proposal published', () => proposalsApi.publish(id))}
+                disabled={actioning || publishBlocked}
+                title={publishBlocked ? `${endorsementsNeeded} more endorsement${endorsementsNeeded !== 1 ? 's' : ''} required` : undefined}
+                style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: publishBlocked ? 'not-allowed' : 'pointer', background: publishBlocked ? '#aaa' : '#b45309', color: '#fff', border: 'none', borderRadius: 4, flexShrink: 0 }}
+              >
+                Publish
+              </button>
+            </div>
+          )}
+          {!isAuthor && minEndorsements === 0 && (
+            <div style={{ border: '1px solid #fde68a', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#fffbeb' }}>
+              <span style={{ fontSize: 14, color: '#92400e' }}>This proposal is a draft.</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -1221,6 +1328,7 @@ export function ProposalDetailPage() {
                         {editingCommentId === c.id ? (
                           <form onSubmit={(e) => saveEditComment(c.id, e)}>
                             <textarea
+                              data-testid="comment-edit-textarea"
                               value={editCommentBody}
                               onChange={(e) => setEditCommentBody(e.target.value.slice(0, COMMENT_MAX))}
                               rows={3}

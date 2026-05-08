@@ -54,6 +54,8 @@ export function AdminPage() {
   const [savingPublic, setSavingPublic] = useState(false);
   const [vetoRole, setVetoRole] = useState<'moderator' | 'admin'>((org as { veto_role?: 'moderator' | 'admin' }).veto_role ?? 'admin');
   const [savingVetoRole, setSavingVetoRole] = useState(false);
+  const [minEndorsements, setMinEndorsements] = useState<string>(String((org as { min_endorsements?: number }).min_endorsements ?? 0));
+  const [savingEndorsements, setSavingEndorsements] = useState(false);
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsError, setDefaultsError] = useState('');
 
@@ -114,6 +116,21 @@ export function AdminPage() {
       setIsPublic(org.is_public ?? false);
     } finally {
       setSavingPublic(false);
+    }
+  }
+
+  async function saveMinEndorsements(e: React.FormEvent) {
+    e.preventDefault();
+    const value = parseInt(minEndorsements, 10);
+    if (isNaN(value) || value < 0) return;
+    setSavingEndorsements(true);
+    try {
+      await orgsApi.update(org.slug, { min_endorsements: value });
+      addToast('Setting saved', 'success');
+    } catch {
+      addToast('Failed to save setting', 'error');
+    } finally {
+      setSavingEndorsements(false);
     }
   }
 
@@ -375,6 +392,26 @@ export function AdminPage() {
                 Hide vote counts until proposal closes
               </label>
             </div>
+          </div>
+          <div>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Endorsements required to publish a draft</p>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+              Set to 0 to disable — authors can publish drafts immediately. Set to 1 or more to require that many other members endorse the proposal first.
+            </p>
+            <form onSubmit={saveMinEndorsements} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="number"
+                min={0}
+                max={20}
+                value={minEndorsements}
+                onChange={(e) => setMinEndorsements(e.target.value)}
+                data-testid="min-endorsements-input"
+                style={{ width: 80, padding: '0.4rem 0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              />
+              <button type="submit" disabled={savingEndorsements} style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer' }}>
+                {savingEndorsements ? 'Saving…' : 'Save'}
+              </button>
+            </form>
           </div>
           <div>
             <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Who can cast a veto?</p>

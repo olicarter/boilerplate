@@ -70,15 +70,14 @@ test.describe('supermajority threshold', () => {
     await expect(page.getByRole('button', { name: /Simple majority/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Two-thirds/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Three-quarters/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Custom' })).toBeVisible();
+    await expect(page.getByLabel('Passing threshold')).toBeVisible();
   });
 
-  test('custom threshold input appears when Custom is selected', async ({ page, asAlice }) => {
+  test('threshold input is always visible and preset buttons update it', async ({ page, asAlice }) => {
     await page.goto(`https://localhost:5174/orgs/${ORG_SLUG}/proposals`);
     await page.getByRole('button', { name: '+ New proposal' }).click();
-    // Custom input should not be visible by default (simple majority selected)
-    await expect(page.getByLabel('new-proposal-threshold')).not.toBeVisible();
-    await page.getByRole('button', { name: 'Custom' }).click();
-    await expect(page.locator('#new-proposal-threshold')).toBeVisible();
+    await expect(page.getByLabel('Passing threshold')).toBeVisible();
+    await page.getByRole('button', { name: /Two-thirds/ }).click();
+    await expect(page.getByLabel('Passing threshold')).toHaveValue('67');
   });
 });

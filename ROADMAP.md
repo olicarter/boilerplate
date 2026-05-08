@@ -115,7 +115,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [ ] **Delegation suggestions** — when a user hasn't voted and has no delegation set, suggest members with high participation rates in that topic as potential delegates.
 
 ### Proposal endorsements
-- [ ] **Endorsement / co-sponsorship** — a proposal in draft requires N endorsements from other members before it can be formally opened. Prevents spam and low-quality proposals. Config: minimum endorsements required.
+- [x] **Endorsement / co-sponsorship** — a proposal in draft requires N endorsements from other members before it can be formally opened. Prevents spam and low-quality proposals. Config: minimum endorsements required.
 - [ ] **Signatures / petition mode** — a proposal can be opened in "petition" mode, collecting expressions of support before a formal vote. Once a signature threshold is met, it automatically transitions to voting.
 
 ### Amendments

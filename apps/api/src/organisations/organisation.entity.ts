@@ -41,6 +41,9 @@ export class Organisation {
   @Column({ name: 'veto_role', type: 'varchar', length: 20, default: 'admin' })
   veto_role!: 'moderator' | 'admin';
 
+  @Column({ name: 'min_endorsements', type: 'int', default: 0 })
+  min_endorsements!: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

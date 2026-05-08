@@ -7,13 +7,14 @@ import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { Organisation } from '../organisations/organisation.entity';
 import { Membership } from '../organisations/membership.entity';
+import { Endorsement } from '../endorsements/endorsement.entity';
 import { ProposalsController } from './proposals.controller';
 import { ProposalsService } from './proposals.service';
 import { ProposalsScheduler } from './proposals.scheduler';
 import { AuditLogModule } from '../audit-log/audit-log.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalVersion, Vote, Delegation, Organisation, Membership]), AuditLogModule],
+  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalVersion, Vote, Delegation, Organisation, Membership, Endorsement]), AuditLogModule],
   controllers: [ProposalsController],
   providers: [ProposalsService, ProposalsScheduler],
 })

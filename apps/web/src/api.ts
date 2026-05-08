@@ -52,6 +52,7 @@ export interface Organisation {
   default_quorum: number | null;
   is_public: boolean;
   veto_role: 'moderator' | 'admin';
+  min_endorsements: number;
   created_at: string;
   [key: string]: unknown;
 }
@@ -165,7 +166,7 @@ export const orgsApi = {
   get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
   create: (data: { name: string; slug?: string; description?: string }) =>
     request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
-  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role'>>) =>
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements'>>) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
   transferOwnership: (slug: string, toUserId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
@@ -295,6 +296,24 @@ export interface Veto {
   created_at: string;
   [key: string]: unknown;
 }
+
+export interface Endorsement {
+  id: string;
+  proposal_id: string;
+  organisation_id: string;
+  user_id: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export const endorsementsApi = {
+  list: (proposalId: string) =>
+    request<Endorsement[]>(`/proposals/${proposalId}/endorsements`),
+  endorse: (proposalId: string) =>
+    request<MutationResult<Endorsement>>(`/proposals/${proposalId}/endorsements`, { method: 'POST' }),
+  retract: (proposalId: string) =>
+    request<{ txid: number }>(`/proposals/${proposalId}/endorsements`, { method: 'DELETE' }),
+};
 
 export const vetoesApi = {
   cast: (proposalId: string, reason: string) =>

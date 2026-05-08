@@ -18,10 +18,10 @@ test('can edit own comment', async ({ page, asAlice }) => {
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
 
-  const textarea = page.locator('textarea').first();
+  const textarea = page.getByTestId('comment-edit-textarea');
   await textarea.clear();
   await textarea.fill('Updated comment text');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
 
   await expect(page.getByText('Comment updated')).toBeVisible();
   await expect(page.getByText('Updated comment text')).toBeVisible();
@@ -35,10 +35,10 @@ test('edited comment shows "(edited)" label', async ({ page, asAlice }) => {
 
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
-  const textarea = page.locator('textarea').first();
+  const textarea = page.getByTestId('comment-edit-textarea');
   await textarea.clear();
   await textarea.fill('Second version');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
 
   await expect(page.getByText('(edited)')).toBeVisible();
 });
@@ -50,10 +50,10 @@ test('cancel edit restores original comment', async ({ page, asAlice }) => {
 
   await page.goto(`/orgs/ripple-test/proposals/${proposal.id}`);
   await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
-  const textarea = page.locator('textarea').first();
+  const textarea = page.getByTestId('comment-edit-textarea');
   await textarea.clear();
   await textarea.fill('Discarded change');
-  await page.getByRole('button', { name: 'Cancel' }).last().click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).last().click();
 
   await expect(page.getByText('Keep this comment')).toBeVisible();
   await expect(page.getByText('Discarded change')).not.toBeVisible();

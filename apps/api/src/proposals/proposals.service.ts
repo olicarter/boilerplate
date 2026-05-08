@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Proposal, ProposalStatus } from './proposal.entity';
+import { Endorsement } from '../endorsements/endorsement.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
@@ -195,6 +196,18 @@ export class ProposalsService {
   }
 
   async publish(id: string, userId: string) {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id });
+    const org = await this.orgRepo.findOneByOrFail({ id: proposal.organisation_id });
+
+    if ((org.min_endorsements ?? 0) > 0) {
+      const endorsementCount = await this.dataSource.getRepository(Endorsement).count({ where: { proposal_id: id } });
+      if (endorsementCount < org.min_endorsements) {
+        throw new BadRequestException(
+          `This proposal needs ${org.min_endorsements} endorsement${org.min_endorsements !== 1 ? 's' : ''} before it can be published (${endorsementCount} so far)`,
+        );
+      }
+    }
+
     const result = await this.transition(id, userId, 'draft', 'open', { status: 'open' });
     this.auditLog.log(result.item.organisation_id, userId, 'proposal.published', 'proposal', id, { title: result.item.title });
     return result;

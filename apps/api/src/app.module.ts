@@ -13,6 +13,7 @@ import { OrganisationsModule } from './organisations/organisations.module';
 import { ArgumentsModule } from './arguments/arguments.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { VetoesModule } from './vetoes/vetoes.module';
+import { EndorsementsModule } from './endorsements/endorsements.module';
 import { User } from './users/user.entity';
 import { Topic } from './topics/topic.entity';
 import { Proposal } from './proposals/proposal.entity';
@@ -27,6 +28,7 @@ import { Membership } from './organisations/membership.entity';
 import { Argument } from './arguments/argument.entity';
 import { AuditLogEntry } from './audit-log/audit-log.entity';
 import { Veto } from './vetoes/veto.entity';
+import { Endorsement } from './endorsements/endorsement.entity';
 
 @Module({
   imports: [
@@ -36,7 +38,7 @@ import { Veto } from './vetoes/veto.entity';
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
-      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, Argument, AuditLogEntry, Veto],
+      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, Argument, AuditLogEntry, Veto, Endorsement],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,
@@ -52,6 +54,7 @@ import { Veto } from './vetoes/veto.entity';
     ArgumentsModule,
     AuditLogModule,
     VetoesModule,
+    EndorsementsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
