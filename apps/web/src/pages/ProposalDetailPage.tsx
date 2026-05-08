@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, type TallyResult, type DelegationVote, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -46,7 +46,7 @@ function computeResult(tally: TallyResult, threshold: number, quorumType?: 'soft
 export function ProposalDetailPage() {
   const { id } = useParams({ strict: false }) as { id: string };
   const currentUser = useCurrentUser();
-  const { org, collections: { proposalsCollection, topicsCollection, votesCollection, commentsCollection, commentReactionsCollection } } = useOrg();
+  const { org, collections: { proposalsCollection, topicsCollection, votesCollection, commentsCollection, commentReactionsCollection, argumentsCollection } } = useOrg();
 
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
@@ -54,6 +54,7 @@ export function ProposalDetailPage() {
   const { data: allUsers } = useLiveQuery(usersCollection);
   const { data: allComments } = useLiveQuery(commentsCollection);
   const { data: allReactions } = useLiveQuery(commentReactionsCollection);
+  const { data: allArguments } = useLiveQuery(argumentsCollection);
   const { data: allMemberships } = useLiveQuery(membershipsCollection);
 
   const addToast = useToast();
@@ -77,6 +78,9 @@ export function ProposalDetailPage() {
   const [editCommentBody, setEditCommentBody] = useState('');
   const [hidingCommentId, setHidingCommentId] = useState<string | null>(null);
   const [hideReason, setHideReason] = useState('');
+  const [argBody, setArgBody] = useState('');
+  const [argSide, setArgSide] = useState<'for' | 'against'>('for');
+  const [postingArg, setPostingArg] = useState(false);
   const [versions, setVersions] = useState<ProposalVersion[] | null>(null);
   const [showVersions, setShowVersions] = useState(false);
 
@@ -209,6 +213,11 @@ export function ProposalDetailPage() {
   const comments = (allComments ?? [])
     .filter((c: Comment) => c.proposal_id === id)
     .sort((a: Comment, b: Comment) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const proposalArguments = (allArguments ?? [])
+    .filter((a: Argument) => a.proposal_id === id)
+    .sort((a: Argument, b: Argument) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const forArguments = proposalArguments.filter((a: Argument) => a.side === 'for');
+  const againstArguments = proposalArguments.filter((a: Argument) => a.side === 'against');
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
   async function handleAction(successMsg: string, action: () => Promise<unknown>) {
@@ -268,6 +277,30 @@ export function ProposalDetailPage() {
       addToast('Comment updated', 'success');
     } catch {
       addToast('Failed to update comment', 'error');
+    }
+  }
+
+  async function postArgument(e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentUser || !argBody.trim()) return;
+    setPostingArg(true);
+    try {
+      await argumentsApi.create(id, { id: crypto.randomUUID(), side: argSide, body: argBody.trim() });
+      setArgBody('');
+      addToast(`${argSide === 'for' ? 'For' : 'Against'} argument added`, 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to post argument', 'error');
+    } finally {
+      setPostingArg(false);
+    }
+  }
+
+  async function deleteArgument(argId: string) {
+    try {
+      await argumentsApi.delete(argId);
+      addToast('Argument removed', 'info');
+    } catch {
+      addToast('Failed to delete argument', 'error');
     }
   }
 
@@ -785,6 +818,83 @@ export function ProposalDetailPage() {
           )}
         </div>
       )}
+
+      {/* Arguments */}
+      <div style={{ marginTop: '2.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+        <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Arguments ({proposalArguments.length})
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+          {(['for', 'against'] as const).map((side) => {
+            const items = side === 'for' ? forArguments : againstArguments;
+            const color = side === 'for' ? '#1a7f37' : '#d94040';
+            const label = side === 'for' ? 'For' : 'Against';
+            return (
+              <div key={side}>
+                <p style={{ margin: '0 0 0.6rem', fontSize: 13, fontWeight: 600, color }}>{label}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {items.map((a: Argument) => {
+                    const argAuthor = a.author_id ? userMap[a.author_id] : undefined;
+                    const isOwn = currentUser?.id === a.author_id;
+                    return (
+                      <div
+                        key={a.id}
+                        data-testid={`argument-${side}`}
+                        style={{ border: `1px solid ${side === 'for' ? '#d3f0da' : '#f5c0c0'}`, borderRadius: 6, padding: '0.6rem 0.75rem', fontSize: 13, color: '#333', lineHeight: 1.5 }}
+                      >
+                        <p style={{ margin: '0 0 0.3rem' }}>{a.body}</p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 11, color: '#aaa' }}>{argAuthor?.name ?? 'Unknown'}</span>
+                          {(isOwn || isModerator) && (
+                            <ConfirmButton
+                              label="Remove"
+                              confirmLabel="Yes"
+                              onConfirm={() => deleteArgument(a.id)}
+                              style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                              confirmStyle={{ background: 'none', border: '1px solid #ddd', borderRadius: 3, color: '#d94040' }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {items.length === 0 && (
+                    <p style={{ fontSize: 12, color: '#bbb', margin: 0 }}>No {label.toLowerCase()} arguments yet.</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {currentUser && isOpen && (
+          <form onSubmit={postArgument} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {(['for', 'against'] as const).map((s) => (
+                <label key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: 13, cursor: 'pointer' }}>
+                  <input type="radio" name="arg-side" value={s} checked={argSide === s} onChange={() => setArgSide(s)} />
+                  <span style={{ color: s === 'for' ? '#1a7f37' : '#d94040', fontWeight: 600 }}>{s === 'for' ? 'For' : 'Against'}</span>
+                </label>
+              ))}
+            </div>
+            <textarea
+              value={argBody}
+              onChange={(e) => setArgBody(e.target.value.slice(0, 2000))}
+              rows={2}
+              placeholder={argSide === 'against' ? 'Add an against argument…' : 'Add a for argument…'}
+              style={{ width: '100%', padding: '0.4rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical' }}
+            />
+            <div>
+              <button
+                type="submit"
+                disabled={postingArg || !argBody.trim()}
+                style={{ fontSize: 12, padding: '0.25rem 0.9rem', cursor: 'pointer' }}
+              >
+                {postingArg ? 'Adding…' : 'Add argument'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
 
       {/* Comments */}
       <div style={{ marginTop: '2.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>

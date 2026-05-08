@@ -1,9 +1,9 @@
 import { electricCollectionOptions } from '@tanstack/electric-db-collection';
 import { createCollection } from '@tanstack/react-db';
 import {
-  usersApi, topicsApi, proposalsApi, delegationsApi, votesApi, commentsApi, orgsApi,
+  usersApi, topicsApi, proposalsApi, delegationsApi, votesApi, commentsApi, orgsApi, argumentsApi,
   type User, type Organisation, type Membership, type Topic, type Proposal,
-  type Delegation, type Vote, type Comment, type CommentReaction,
+  type Delegation, type Vote, type Comment, type CommentReaction, type Argument,
 } from './api';
 
 const shapeUrl = `${window.location.origin}/electric/v1/shape`;
@@ -203,6 +203,24 @@ export function createOrgCollections(orgId: string) {
     }),
   );
 
+  const argumentsCollection = createCollection(
+    electricCollectionOptions<Argument>({
+      id: `arguments-${orgId}`,
+      shapeOptions: { url: shapeUrl, params: { table: 'arguments', where } },
+      getKey: (row: unknown) => (row as Argument).id,
+      onInsert: async ({ transaction }) => {
+        const a = transaction.mutations[0].modified as Argument;
+        const result = await argumentsApi.create(a.proposal_id, { id: a.id, side: a.side, body: a.body });
+        return { txid: result.txid };
+      },
+      onDelete: async ({ transaction }) => {
+        const a = transaction.mutations[0].original as Argument;
+        const result = await argumentsApi.delete(a.id);
+        return { txid: result.txid };
+      },
+    }),
+  );
+
   return {
     topicsCollection,
     proposalsCollection,
@@ -210,5 +228,6 @@ export function createOrgCollections(orgId: string) {
     votesCollection,
     commentsCollection,
     commentReactionsCollection,
+    argumentsCollection,
   };
 }

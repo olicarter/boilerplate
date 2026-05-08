@@ -10,6 +10,7 @@ import { VotesModule } from './votes/votes.module';
 import { AuthModule } from './auth/auth.module';
 import { CommentsModule } from './comments/comments.module';
 import { OrganisationsModule } from './organisations/organisations.module';
+import { ArgumentsModule } from './arguments/arguments.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { User } from './users/user.entity';
 import { Topic } from './topics/topic.entity';
@@ -22,6 +23,7 @@ import { CommentReaction } from './comments/comment-reaction.entity';
 import { ProposalVersion } from './proposals/proposal-version.entity';
 import { Organisation } from './organisations/organisation.entity';
 import { Membership } from './organisations/membership.entity';
+import { Argument } from './arguments/argument.entity';
 import { AuditLogEntry } from './audit-log/audit-log.entity';
 
 @Module({
@@ -32,7 +34,7 @@ import { AuditLogEntry } from './audit-log/audit-log.entity';
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
-      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, AuditLogEntry],
+      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, Argument, AuditLogEntry],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,
@@ -45,6 +47,7 @@ import { AuditLogEntry } from './audit-log/audit-log.entity';
     AuthModule,
     CommentsModule,
     OrganisationsModule,
+    ArgumentsModule,
     AuditLogModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

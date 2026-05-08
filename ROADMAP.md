@@ -136,7 +136,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **Edit / delete own comments** — authors can edit or delete their own comments; "edited" label shown.
 - [x] **Moderator comment management** — moderators can hide (soft-delete) any comment with a reason. Hidden comments are replaced with a "removed by moderator" placeholder visible to admins.
 - [ ] **Comment pinning** — proposal authors and moderators can pin up to 2 comments (e.g. "Key context" or "Author's response") to the top.
-- [ ] **For / Against arguments** — structured argument section separate from general comments: members can post a "For" or "Against" argument, each displayed in its own column. Encourages considered deliberation over reactive commenting.
+- [x] **For / Against arguments** — structured argument section separate from general comments: members can post a "For" or "Against" argument, each displayed in its own column. Encourages considered deliberation over reactive commenting.
 
 ### Deliberation periods
 - [ ] **Deliberation window** — a proposal can have a `deliberation_ends_at` before `closes_at`. Voting is disabled during this window; only discussion is permitted. Visual timeline on the proposal page: Deliberation → Voting → Closed.

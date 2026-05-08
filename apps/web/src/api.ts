@@ -126,6 +126,17 @@ export interface DelegationVote {
   choice: string;
 }
 
+export interface Argument {
+  id: string;
+  proposal_id: string;
+  organisation_id: string;
+  author_id: string | null;
+  side: 'for' | 'against';
+  body: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
 export interface AuditLogEntry {
   id: string;
   org_id: string;
@@ -263,6 +274,13 @@ export const commentsApi = {
     request<MutationResult<Comment>>(`/comments/${commentId}/hide`, { method: 'POST', body: JSON.stringify({ reason }) }),
   unhide: (commentId: string) =>
     request<MutationResult<Comment>>(`/comments/${commentId}/unhide`, { method: 'POST' }),
+};
+
+export const argumentsApi = {
+  create: (proposalId: string, data: { id: string; side: 'for' | 'against'; body: string }) =>
+    request<MutationResult<Argument>>(`/proposals/${proposalId}/arguments`, { method: 'POST', body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    request<{ txid: number }>(`/arguments/${id}`, { method: 'DELETE' }),
 };
 
 export const votesApi = {
