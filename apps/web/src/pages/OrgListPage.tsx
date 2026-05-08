@@ -39,6 +39,7 @@ export function OrgListPage() {
     }
   }
 
+  const hasOrgs = myOrgs.length > 0;
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -67,7 +68,7 @@ export function OrgListPage() {
     <div style={{ maxWidth: 600 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Organisations</h2>
-        {currentUser && !showCreate && (
+        {currentUser && !showCreate && hasOrgs && (
           <button onClick={() => setShowCreate(true)} style={{ fontSize: 13, padding: '0.35rem 0.9rem' }}>
             + New organisation
           </button>
@@ -116,14 +117,21 @@ export function OrgListPage() {
       )}
 
       {myOrgs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#aaa' }}>
-          <p style={{ fontSize: 15, marginBottom: '0.5rem' }}>No organisations yet.</p>
-          {currentUser ? (
-            <p style={{ fontSize: 13 }}>Create one to start voting.</p>
-          ) : (
-            <p style={{ fontSize: 13 }}>Sign in to join or create an organisation.</p>
-          )}
-        </div>
+        showCreate ? null : (
+          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+            <p style={{ fontSize: '2rem', margin: '0 0 0.75rem' }}>🗳️</p>
+            <p style={{ fontSize: 16, fontWeight: 600, margin: '0 0 0.5rem', color: '#222' }}>Welcome to Ripple</p>
+            <p style={{ fontSize: 14, color: '#666', margin: '0 0 1.5rem' }}>
+              Run transparent votes for any group — cooperatives, DAOs, community organisations, and more.
+            </p>
+            <button
+              onClick={() => setShowCreate(true)}
+              style={{ fontSize: 14, padding: '0.6rem 1.5rem', cursor: 'pointer' }}
+            >
+              Create your first organisation
+            </button>
+          </div>
+        )
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {myOrgs.map((org) => (

@@ -360,6 +360,14 @@ function RootComponent() {
     setUser(null);
   }
 
+  if (!user) {
+    return (
+      <UserContext.Provider value={null}>
+        <AuthPanel onLogin={handleLogin} />
+      </UserContext.Provider>
+    );
+  }
+
   return (
     <UserContext.Provider value={user}>
       <Shell user={user} onLogout={handleLogout}>
