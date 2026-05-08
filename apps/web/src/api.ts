@@ -126,6 +126,17 @@ export interface DelegationVote {
   choice: string;
 }
 
+export interface AuditLogEntry {
+  id: string;
+  org_id: string;
+  actor_id: string | null;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
 export const usersApi = {
   create: (data: { id: string; name: string; email: string }) =>
     request<MutationResult<User>>('/users', { method: 'POST', body: JSON.stringify(data) }),
@@ -161,6 +172,7 @@ export const orgsApi = {
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'POST' }),
   revokeInviteToken: (slug: string) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'DELETE' }),
+  listAuditLog: (slug: string) => request<AuditLogEntry[]>(`/orgs/${slug}/audit-log`),
 };
 
 export const topicsApi = {

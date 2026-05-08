@@ -10,6 +10,7 @@ import { DataSource, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Organisation } from './organisation.entity';
 import { Membership, MemberRole } from './membership.entity';
+import { AuditLogService } from '../audit-log/audit-log.service';
 
 function toSlug(value: string): string {
   return value
@@ -27,6 +28,7 @@ export class OrganisationsService {
     @InjectRepository(Membership)
     private readonly memberRepo: Repository<Membership>,
     private readonly dataSource: DataSource,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async findAll(): Promise<Organisation[]> {
@@ -89,7 +91,7 @@ export class OrganisationsService {
     const org = await this.findBySlug(slug);
     await this.requireRole(org.id, userId, ['admin']);
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const updates: Partial<Organisation> = {};
       if (data.name !== undefined) updates.name = data.name.trim();
       if (data.description !== undefined) updates.description = data.description;
@@ -105,6 +107,8 @@ export class OrganisationsService {
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item, txid: parseInt(row.txid, 10) };
     });
+    this.auditLog.log(org.id, userId, 'org.settings_changed', 'org', org.id, data as Record<string, unknown>);
+    return result;
   }
 
   async delete(slug: string, userId: string): Promise<{ txid: number }> {
@@ -143,7 +147,7 @@ export class OrganisationsService {
     const existing = await this.memberRepo.findOneBy({ organisation_id: orgId, user_id: targetUserId });
     if (existing) throw new ConflictException('User is already a member');
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const membership = manager.create(Membership, {
         id: randomUUID(),
         organisation_id: orgId,
@@ -155,6 +159,8 @@ export class OrganisationsService {
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item, txid: parseInt(row.txid, 10) };
     });
+    this.auditLog.log(orgId, actorId, 'member.added', 'user', targetUserId, { role });
+    return result;
   }
 
   async updateMemberRole(
@@ -167,12 +173,15 @@ export class OrganisationsService {
     const membership = await this.memberRepo.findOneBy({ organisation_id: orgId, user_id: targetUserId });
     if (!membership) throw new NotFoundException('Member not found');
 
-    return this.dataSource.transaction(async (manager) => {
+    const prevRole = membership.role;
+    const result = await this.dataSource.transaction(async (manager) => {
       await manager.update(Membership, membership.id, { role });
       const item = await manager.findOneByOrFail(Membership, { id: membership.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item, txid: parseInt(row.txid, 10) };
     });
+    this.auditLog.log(orgId, actorId, 'member.role_changed', 'user', targetUserId, { from: prevRole, to: role });
+    return result;
   }
 
   async removeMember(
@@ -192,11 +201,13 @@ export class OrganisationsService {
       if (adminCount <= 1) throw new ForbiddenException('Cannot remove the last admin');
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       await manager.delete(Membership, membership.id);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { txid: parseInt(row.txid, 10) };
     });
+    this.auditLog.log(orgId, actorId, 'member.removed', 'user', targetUserId, { role: membership.role });
+    return result;
   }
 
   // --- Invite token ---

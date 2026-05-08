@@ -4,9 +4,10 @@ import { Organisation } from './organisation.entity';
 import { Membership } from './membership.entity';
 import { OrganisationsService } from './organisations.service';
 import { OrganisationsController } from './organisations.controller';
+import { AuditLogModule } from '../audit-log/audit-log.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organisation, Membership])],
+  imports: [TypeOrmModule.forFeature([Organisation, Membership]), AuditLogModule],
   providers: [OrganisationsService],
   controllers: [OrganisationsController],
   exports: [OrganisationsService],

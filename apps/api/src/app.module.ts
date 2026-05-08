@@ -10,6 +10,7 @@ import { VotesModule } from './votes/votes.module';
 import { AuthModule } from './auth/auth.module';
 import { CommentsModule } from './comments/comments.module';
 import { OrganisationsModule } from './organisations/organisations.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
 import { User } from './users/user.entity';
 import { Topic } from './topics/topic.entity';
 import { Proposal } from './proposals/proposal.entity';
@@ -21,6 +22,7 @@ import { CommentReaction } from './comments/comment-reaction.entity';
 import { ProposalVersion } from './proposals/proposal-version.entity';
 import { Organisation } from './organisations/organisation.entity';
 import { Membership } from './organisations/membership.entity';
+import { AuditLogEntry } from './audit-log/audit-log.entity';
 
 @Module({
   imports: [
@@ -30,7 +32,7 @@ import { Membership } from './organisations/membership.entity';
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
-      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership],
+      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, AuditLogEntry],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,
@@ -43,6 +45,7 @@ import { Membership } from './organisations/membership.entity';
     AuthModule,
     CommentsModule,
     OrganisationsModule,
+    AuditLogModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

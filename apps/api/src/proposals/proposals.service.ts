@@ -9,6 +9,7 @@ import { Delegation } from '../delegations/delegation.entity';
 import { Organisation } from '../organisations/organisation.entity';
 import { Membership } from '../organisations/membership.entity';
 import { DelegationsService } from '../delegations/delegations.service';
+import { AuditLogService } from '../audit-log/audit-log.service';
 
 const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 10_000;
@@ -41,6 +42,7 @@ export class ProposalsService {
     @InjectRepository(Membership)
     private readonly memberRepo: Repository<Membership>,
     private readonly dataSource: DataSource,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   findAll(): Promise<Proposal[]> {
@@ -85,7 +87,7 @@ export class ProposalsService {
       throw new ForbiddenException(`Only ${org.proposal_creation_role}s and above can create proposals`);
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const proposal = manager.create(Proposal, {
         description: '',
         closed_at: null,
@@ -98,6 +100,8 @@ export class ProposalsService {
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };
     });
+    this.auditLog.log(data.organisation_id, data.author_id, 'proposal.created', 'proposal', result.item.id, { title: result.item.title, status: result.item.status });
+    return result;
   }
 
   async update(
@@ -188,20 +192,28 @@ export class ProposalsService {
     return this.update(id, patch);
   }
 
-  publish(id: string, userId: string) {
-    return this.transition(id, userId, 'draft', 'open', { status: 'open' });
+  async publish(id: string, userId: string) {
+    const result = await this.transition(id, userId, 'draft', 'open', { status: 'open' });
+    this.auditLog.log(result.item.organisation_id, userId, 'proposal.published', 'proposal', id, { title: result.item.title });
+    return result;
   }
 
-  close(id: string, userId: string) {
-    return this.transition(id, userId, 'open', 'closed', { status: 'closed', closed_at: new Date() }, true);
+  async close(id: string, userId: string) {
+    const result = await this.transition(id, userId, 'open', 'closed', { status: 'closed', closed_at: new Date() }, true);
+    this.auditLog.log(result.item.organisation_id, userId, 'proposal.closed', 'proposal', id, { title: result.item.title });
+    return result;
   }
 
-  reopen(id: string, userId: string) {
-    return this.transition(id, userId, 'closed', 'open', { status: 'open', closed_at: null }, true);
+  async reopen(id: string, userId: string) {
+    const result = await this.transition(id, userId, 'closed', 'open', { status: 'open', closed_at: null }, true);
+    this.auditLog.log(result.item.organisation_id, userId, 'proposal.reopened', 'proposal', id, { title: result.item.title });
+    return result;
   }
 
-  withdraw(id: string, userId: string) {
-    return this.transition(id, userId, ['open', 'closed'], 'withdrawn', { status: 'withdrawn', closed_at: new Date() }, true);
+  async withdraw(id: string, userId: string) {
+    const result = await this.transition(id, userId, ['open', 'closed'], 'withdrawn', { status: 'withdrawn', closed_at: new Date() }, true);
+    this.auditLog.log(result.item.organisation_id, userId, 'proposal.withdrawn', 'proposal', id, { title: result.item.title });
+    return result;
   }
 
   async autoCloseExpired(): Promise<number> {

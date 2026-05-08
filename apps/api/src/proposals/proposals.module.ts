@@ -10,9 +10,10 @@ import { Membership } from '../organisations/membership.entity';
 import { ProposalsController } from './proposals.controller';
 import { ProposalsService } from './proposals.service';
 import { ProposalsScheduler } from './proposals.scheduler';
+import { AuditLogModule } from '../audit-log/audit-log.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalVersion, Vote, Delegation, Organisation, Membership])],
+  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalVersion, Vote, Delegation, Organisation, Membership]), AuditLogModule],
   controllers: [ProposalsController],
   providers: [ProposalsService, ProposalsScheduler],
 })

@@ -1,11 +1,15 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { OrganisationsService } from './organisations.service';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 import type { MemberRole } from './membership.entity';
 
 @Controller('orgs')
 export class OrganisationsController {
-  constructor(private readonly orgsService: OrganisationsService) {}
+  constructor(
+    private readonly orgsService: OrganisationsService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard)
@@ -118,5 +122,13 @@ export class OrganisationsController {
   @UseGuards(AuthGuard)
   revokeInviteToken(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
     return this.orgsService.revokeInviteToken(slug, req.user!.id);
+  }
+
+  @Get(':slug/audit-log')
+  @UseGuards(AuthGuard)
+  async getAuditLog(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    const org = await this.orgsService.findBySlug(slug);
+    await this.orgsService.requireRole(org.id, req.user!.id, ['admin']);
+    return this.auditLog.list(org.id, 50);
   }
 }

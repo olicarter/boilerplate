@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, type Membership, type User } from '../api';
+import { orgsApi, type AuditLogEntry, type Membership, type User } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 
@@ -59,6 +59,13 @@ export function AdminPage() {
   const [transferring, setTransferring] = useState(false);
 
   const [deleting, setDeleting] = useState(false);
+
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [auditLogLoading, setAuditLogLoading] = useState(true);
+
+  useEffect(() => {
+    orgsApi.listAuditLog(org.slug).then(setAuditLog).catch(() => {}).finally(() => setAuditLogLoading(false));
+  }, [org.slug]);
 
   if (!isAdmin) {
     return <p style={{ fontSize: 14, color: '#d94040' }}>Access denied — admins only.</p>;
@@ -406,6 +413,35 @@ export function AdminPage() {
           </div>
         </section>
       )}
+
+      {/* Audit log */}
+      <section style={{ marginBottom: '2.5rem' }}>
+        <h3 style={sectionHeading}>Recent activity</h3>
+        {auditLogLoading ? (
+          <p style={{ fontSize: 13, color: '#aaa', marginTop: '0.75rem' }}>Loading…</p>
+        ) : auditLog.length === 0 ? (
+          <p style={{ fontSize: 13, color: '#aaa', marginTop: '0.75rem' }}>No activity recorded yet.</p>
+        ) : (
+          <ul style={{ margin: '0.75rem 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {auditLog.map((entry) => {
+              const actor = entry.actor_id ? usersById.get(entry.actor_id) : null;
+              const actorName = actor?.name ?? entry.actor_id ?? 'System';
+              const date = new Date(entry.created_at).toLocaleString();
+              return (
+                <li key={entry.id} style={{ fontSize: 13, color: '#555', borderBottom: '1px solid #f0f0f0', paddingBottom: '0.35rem' }}>
+                  <span style={{ color: '#222', fontWeight: 500 }}>{actorName}</span>
+                  {' · '}
+                  <span data-testid="audit-action">{entry.action}</span>
+                  {Object.keys(entry.metadata ?? {}).length > 0 && (
+                    <span style={{ color: '#aaa' }}> · {JSON.stringify(entry.metadata)}</span>
+                  )}
+                  <span style={{ float: 'right', color: '#bbb' }}>{date}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       {/* Danger zone */}
       <section style={{ border: '1px solid #f5c0c0', borderRadius: 6, padding: '1rem 1.25rem' }}>

@@ -76,9 +76,9 @@ Current state: users can register with passkeys, create proposals under topics, 
 ### Organisation settings
 - [x] **Default voting duration** — org-level setting for the default `closes_at` offset when creating a proposal (e.g. 7 days). Authors can override per-proposal.
 - [x] **Default passing threshold** — org-level default (e.g. 50%). Can be overridden per-proposal.
-- [ ] **Default quorum** — minimum percentage of eligible voters (or weight) that must participate for a result to be binding. Can be overridden per-proposal.
+- [x] **Default quorum** — minimum percentage of eligible voters (or weight) that must participate for a result to be binding. Can be overridden per-proposal.
 - [x] **Voting visibility** — org setting: are live vote counts visible during the voting period, or hidden until close? Hidden-until-close prevents bandwagon effects.
-- [ ] **Public organisation** — toggle: should proposals and results be visible to non-members? Useful for community groups that want transparency.
+- [x] **Public organisation** — toggle: anyone can discover and join without an invite token; org appears in the discover section on the home page.
 
 ---
 
@@ -95,8 +95,8 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [ ] **Temperature check** — lightweight, non-binding straw poll attached to a proposal in draft stage. Helps authors gauge support before formally opening a vote.
 
 ### Quorum & thresholds
-- [ ] **Hard quorum** — if participation (direct votes + delegated weight) does not reach the quorum threshold by deadline, the proposal fails automatically regardless of the yes/no split.
-- [ ] **Soft quorum** — proposal result is advisory only if quorum isn't met; clearly labelled as "not binding".
+- [x] **Hard quorum** — if participation (direct votes + delegated weight) does not reach the quorum threshold by deadline, the proposal fails automatically regardless of the yes/no split.
+- [x] **Soft quorum** — proposal result is advisory only if quorum isn't met; clearly labelled as "not binding".
 - [ ] **Dynamic quorum** — quorum requirement scales with the proposal's estimated impact level (low / medium / high / constitutional), set by the author or a moderator.
 - [ ] **Supermajority threshold** — set a threshold above 50% (e.g. 66%, 75%) for high-impact decisions like constitutional changes or large expenditures.
 - [ ] **Veto rights** — certain roles (e.g. a board member or founder) can cast a veto vote that blocks a proposal regardless of the vote count. Vetoes must include a written reason.
@@ -177,12 +177,12 @@ Current state: users can register with passkeys, create proposals under topics, 
 
 ### Participation analytics
 - [ ] **Org dashboard** — graphs showing: proposals over time, participation rate per proposal, average turnout, most active topics. Filterable by date range.
-- [ ] **Member engagement score** — per-member score based on: proposals voted on / total open proposals × 100. Shown on member directory and their profile. Not competitive, just for self-awareness.
+- [x] **Member engagement score** — per-member score based on: proposals voted on / total open proposals × 100. Shown on member directory and their profile. Not competitive, just for self-awareness.
 - [ ] **Proposal outcome tracking** — tag closed proposals with whether the resulting decision was implemented. Lets the org track follow-through on their own decisions.
 - [ ] **Topic-level stats** — for each topic: number of proposals, average participation, pass rate, most active members.
 
 ### Audit & transparency
-- [ ] **Audit log** — immutable append-only log of all significant actions: proposal created/edited/closed/withdrawn, vote cast/changed, delegation added/removed, member invited/removed, role changed, org setting changed. Stored in `audit_log` (id, org_id, actor_id, action, target_type, target_id, metadata jsonb, created_at).
+- [x] **Audit log** — immutable append-only log of all significant actions: proposal created/edited/closed/withdrawn, vote cast/changed, delegation added/removed, member invited/removed, role changed, org setting changed. Stored in `audit_log` (id, org_id, actor_id, action, target_type, target_id, metadata jsonb, created_at).
 - [ ] **Public results page** — for public organisations, a read-only page at `/orgs/:slug/results` showing all closed proposals and their outcomes. No login required. Good for community groups publishing governance decisions.
 - [ ] **Vote receipt** — after voting, users can download a signed receipt (JSON + signature) proving their vote was recorded correctly. Useful for high-stakes decisions.
 - [ ] **Export** — admins can export proposal results and vote tallies as CSV or PDF. Individual users can export their own voting history.
