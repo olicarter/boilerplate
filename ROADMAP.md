@@ -183,7 +183,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 
 ### Audit & transparency
 - [x] **Audit log** — immutable append-only log of all significant actions: proposal created/edited/closed/withdrawn, vote cast/changed, delegation added/removed, member invited/removed, role changed, org setting changed. Stored in `audit_log` (id, org_id, actor_id, action, target_type, target_id, metadata jsonb, created_at).
-- [ ] **Public results page** — for public organisations, a read-only page at `/orgs/:slug/results` showing all closed proposals and their outcomes. No login required. Good for community groups publishing governance decisions.
+- [x] **Public results page** — for public organisations, a read-only page at `/orgs/:slug/results` showing all closed proposals and their outcomes. No login required. Good for community groups publishing governance decisions.
 - [ ] **Vote receipt** — after voting, users can download a signed receipt (JSON + signature) proving their vote was recorded correctly. Useful for high-stakes decisions.
 - [ ] **Export** — admins can export proposal results and vote tallies as CSV or PDF. Individual users can export their own voting history.
 

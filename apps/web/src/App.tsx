@@ -26,6 +26,7 @@ import { OrgListPage } from './pages/OrgListPage';
 import { OrgHomePage } from './pages/OrgHomePage';
 import { JoinPage } from './pages/JoinPage';
 import { AdminPage } from './pages/AdminPage';
+import { PublicResultsPage } from './pages/PublicResultsPage';
 import { OrgProvider } from './OrgContext';
 
 const STORAGE_KEY = 'ripple_user';
@@ -502,9 +503,16 @@ const adminRoute = createRoute({
   component: AdminPage,
 });
 
+const publicResultsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orgs/$slug/results',
+  component: PublicResultsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
   orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, membersRoute, userProfileRoute, joinRoute, adminRoute]),
+  publicResultsRoute,
 ]);
 
 const router = createRouter({ routeTree });

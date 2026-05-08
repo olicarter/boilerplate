@@ -173,6 +173,7 @@ export const orgsApi = {
   revokeInviteToken: (slug: string) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'DELETE' }),
   listAuditLog: (slug: string) => request<AuditLogEntry[]>(`/orgs/${slug}/audit-log`),
+  getPublicResults: (slug: string) => request<{ org: Organisation; proposals: Proposal[] }>(`/orgs/${slug}/results`),
 };
 
 export const topicsApi = {

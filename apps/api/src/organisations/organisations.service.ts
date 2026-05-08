@@ -10,6 +10,7 @@ import { DataSource, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Organisation } from './organisation.entity';
 import { Membership, MemberRole } from './membership.entity';
+import { Proposal } from '../proposals/proposal.entity';
 import { AuditLogService } from '../audit-log/audit-log.service';
 
 function toSlug(value: string): string {
@@ -305,5 +306,18 @@ export class OrganisationsService {
       throw new ForbiddenException(`Requires role: ${roles.join(' or ')}`);
     }
     return m;
+  }
+
+  async getPublicResults(slug: string): Promise<{ org: Organisation; proposals: Proposal[] }> {
+    const org = await this.findBySlug(slug);
+    if (!org.is_public) throw new ForbiddenException('This organisation does not have a public results page');
+    const proposals = await this.dataSource.getRepository(Proposal).find({
+      where: [
+        { organisation_id: org.id, status: 'closed' as any },
+        { organisation_id: org.id, status: 'withdrawn' as any },
+      ],
+      order: { closed_at: 'DESC', created_at: 'DESC' },
+    });
+    return { org, proposals };
   }
 }

@@ -131,4 +131,9 @@ export class OrganisationsController {
     await this.orgsService.requireRole(org.id, req.user!.id, ['admin']);
     return this.auditLog.list(org.id, 50);
   }
+
+  @Get(':slug/results')
+  async getPublicResults(@Param('slug') slug: string) {
+    return this.orgsService.getPublicResults(slug);
+  }
 }
