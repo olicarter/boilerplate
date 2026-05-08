@@ -42,4 +42,7 @@ export class Proposal {
 
   @Column({ name: 'closed_at', type: 'timestamptz', nullable: true })
   closed_at!: Date | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true, default: null })
+  outcome!: 'implemented' | 'not_implemented' | 'in_progress' | null;
 }

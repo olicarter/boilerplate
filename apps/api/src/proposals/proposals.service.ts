@@ -106,7 +106,7 @@ export class ProposalsService {
 
   async update(
     id: string,
-    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>,
+    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold' | 'outcome'>>,
   ): Promise<{ item: Proposal; txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       await manager.update(Proposal, id, data);
@@ -214,6 +214,19 @@ export class ProposalsService {
     const result = await this.transition(id, userId, ['open', 'closed'], 'withdrawn', { status: 'withdrawn', closed_at: new Date() }, true);
     this.auditLog.log(result.item.organisation_id, userId, 'proposal.withdrawn', 'proposal', id, { title: result.item.title });
     return result;
+  }
+
+  async setOutcome(
+    id: string,
+    userId: string,
+    outcome: 'implemented' | 'not_implemented' | 'in_progress' | null,
+  ): Promise<{ item: Proposal; txid: number }> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id });
+    if (proposal.status !== 'closed') throw new BadRequestException('Outcome can only be set on closed proposals');
+    if (!(await this.canModerate(proposal.organisation_id, userId))) {
+      throw new ForbiddenException('Only moderators and admins can set proposal outcomes');
+    }
+    return this.update(id, { outcome });
   }
 
   async autoCloseExpired(): Promise<number> {

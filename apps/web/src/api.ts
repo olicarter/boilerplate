@@ -85,6 +85,7 @@ export interface Proposal {
   threshold: number;
   quorum: number | null;
   quorum_type: 'soft' | 'hard';
+  outcome: 'implemented' | 'not_implemented' | 'in_progress' | null;
   created_at: string;
   closes_at: string | null;
   closed_at: string | null;
@@ -217,6 +218,8 @@ export const proposalsApi = {
     request<DelegationVote | null>(`/proposals/${id}/my-delegation-vote`),
   versions: (id: string) =>
     request<ProposalVersion[]>(`/proposals/${id}/versions`),
+  setOutcome: (id: string, outcome: Proposal['outcome']) =>
+    request<MutationResult<Proposal>>(`/proposals/${id}/outcome`, { method: 'POST', body: JSON.stringify({ outcome }) }),
 };
 
 export const delegationsApi = {
@@ -236,6 +239,7 @@ export interface Comment {
   edited_at: string | null;
   hidden_by: string | null;
   hidden_reason: string | null;
+  pinned_at: string | null;
   [key: string]: unknown;
 }
 
@@ -274,6 +278,10 @@ export const commentsApi = {
     request<MutationResult<Comment>>(`/comments/${commentId}/hide`, { method: 'POST', body: JSON.stringify({ reason }) }),
   unhide: (commentId: string) =>
     request<MutationResult<Comment>>(`/comments/${commentId}/unhide`, { method: 'POST' }),
+  pin: (commentId: string) =>
+    request<MutationResult<Comment>>(`/comments/${commentId}/pin`, { method: 'POST' }),
+  unpin: (commentId: string) =>
+    request<MutationResult<Comment>>(`/comments/${commentId}/unpin`, { method: 'POST' }),
 };
 
 export const argumentsApi = {

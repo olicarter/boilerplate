@@ -38,6 +38,18 @@ export class CommentsController {
     return this.commentsService.delete(id, req.user!.id);
   }
 
+  @Post('comments/:id/pin')
+  @UseGuards(AuthGuard)
+  pin(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.commentsService.pin(id, req.user!.id);
+  }
+
+  @Post('comments/:id/unpin')
+  @UseGuards(AuthGuard)
+  unpin(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.commentsService.unpin(id, req.user!.id);
+  }
+
   @Post('comments/:id/hide')
   @UseGuards(AuthGuard)
   hide(@Param('id') id: string, @Body() body: { reason: string }, @Req() req: AuthenticatedRequest) {

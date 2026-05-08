@@ -84,6 +84,47 @@ export class CommentsService {
     });
   }
 
+  async pin(id: string, actorId: string): Promise<{ item: Comment; txid: number }> {
+    const comment = await this.commentRepo.findOneBy({ id });
+    if (!comment) throw new NotFoundException('Comment not found');
+    if (!(await this.isModerator(comment.organisation_id, actorId))) {
+      // Also allow the proposal author
+      const proposal = await this.proposalRepo.findOneByOrFail({ id: comment.proposal_id });
+      if (proposal.author_id !== actorId) throw new ForbiddenException('Only moderators or the proposal author can pin comments');
+    }
+    // Max 2 pins per proposal
+    const pinCount = await this.commentRepo.count({
+      where: { proposal_id: comment.proposal_id },
+    });
+    const pinnedCount = await this.commentRepo
+      .createQueryBuilder('c')
+      .where('c.proposal_id = :pid AND c.pinned_at IS NOT NULL', { pid: comment.proposal_id })
+      .getCount();
+    if (pinnedCount >= 2 && !comment.pinned_at) throw new BadRequestException('Maximum 2 comments can be pinned per proposal');
+
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Comment, id, { pinned_at: new Date() });
+      const item = await manager.findOneByOrFail(Comment, { id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
+  async unpin(id: string, actorId: string): Promise<{ item: Comment; txid: number }> {
+    const comment = await this.commentRepo.findOneBy({ id });
+    if (!comment) throw new NotFoundException('Comment not found');
+    if (!(await this.isModerator(comment.organisation_id, actorId))) {
+      const proposal = await this.proposalRepo.findOneByOrFail({ id: comment.proposal_id });
+      if (proposal.author_id !== actorId) throw new ForbiddenException('Only moderators or the proposal author can unpin comments');
+    }
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Comment, id, { pinned_at: null });
+      const item = await manager.findOneByOrFail(Comment, { id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
   private async isModerator(orgId: string, userId: string): Promise<boolean> {
     const m = await this.memberRepo.findOneBy({ organisation_id: orgId, user_id: userId });
     return !!m && (ROLE_RANK[m.role] ?? 0) >= ROLE_RANK['moderator'];

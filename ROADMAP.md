@@ -135,7 +135,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **Comment reactions** — emoji reactions (👍 👎 ❤️ 🤔) on comments via `comment_reactions` table; toggle behaviour.
 - [x] **Edit / delete own comments** — authors can edit or delete their own comments; "edited" label shown.
 - [x] **Moderator comment management** — moderators can hide (soft-delete) any comment with a reason. Hidden comments are replaced with a "removed by moderator" placeholder visible to admins.
-- [ ] **Comment pinning** — proposal authors and moderators can pin up to 2 comments (e.g. "Key context" or "Author's response") to the top.
+- [x] **Comment pinning** — proposal authors and moderators can pin up to 2 comments (e.g. "Key context" or "Author's response") to the top.
 - [x] **For / Against arguments** — structured argument section separate from general comments: members can post a "For" or "Against" argument, each displayed in its own column. Encourages considered deliberation over reactive commenting.
 
 ### Deliberation periods
@@ -178,7 +178,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 ### Participation analytics
 - [ ] **Org dashboard** — graphs showing: proposals over time, participation rate per proposal, average turnout, most active topics. Filterable by date range.
 - [x] **Member engagement score** — per-member score based on: proposals voted on / total open proposals × 100. Shown on member directory and their profile. Not competitive, just for self-awareness.
-- [ ] **Proposal outcome tracking** — tag closed proposals with whether the resulting decision was implemented. Lets the org track follow-through on their own decisions.
+- [x] **Proposal outcome tracking** — tag closed proposals with whether the resulting decision was implemented. Lets the org track follow-through on their own decisions.
 - [ ] **Topic-level stats** — for each topic: number of proposals, average participation, pass rate, most active members.
 
 ### Audit & transparency

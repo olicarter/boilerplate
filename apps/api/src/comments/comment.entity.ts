@@ -28,4 +28,7 @@ export class Comment {
 
   @Column({ name: 'hidden_reason', type: 'varchar', length: 500, nullable: true, default: null })
   hidden_reason!: string | null;
+
+  @Column({ name: 'pinned_at', type: 'timestamptz', nullable: true, default: null })
+  pinned_at!: Date | null;
 }

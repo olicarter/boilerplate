@@ -75,6 +75,16 @@ export class ProposalsController {
     return this.proposalsService.withdraw(id, req.user!.id);
   }
 
+  @Post(':id/outcome')
+  @UseGuards(AuthGuard)
+  setOutcome(
+    @Param('id') id: string,
+    @Body() body: { outcome: 'implemented' | 'not_implemented' | 'in_progress' | null },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.setOutcome(id, req.user!.id, body.outcome);
+  }
+
   @Delete(':id')
   @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {

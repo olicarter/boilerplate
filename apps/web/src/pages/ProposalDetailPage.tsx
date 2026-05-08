@@ -81,6 +81,7 @@ export function ProposalDetailPage() {
   const [argBody, setArgBody] = useState('');
   const [argSide, setArgSide] = useState<'for' | 'against'>('for');
   const [postingArg, setPostingArg] = useState(false);
+  const [savingOutcome, setSavingOutcome] = useState(false);
   const [versions, setVersions] = useState<ProposalVersion[] | null>(null);
   const [showVersions, setShowVersions] = useState(false);
 
@@ -212,7 +213,12 @@ export function ProposalDetailPage() {
   const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard') : null;
   const comments = (allComments ?? [])
     .filter((c: Comment) => c.proposal_id === id)
-    .sort((a: Comment, b: Comment) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    .sort((a: Comment, b: Comment) => {
+      // Pinned first, then chronological
+      if (a.pinned_at && !b.pinned_at) return -1;
+      if (!a.pinned_at && b.pinned_at) return 1;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
   const proposalArguments = (allArguments ?? [])
     .filter((a: Argument) => a.proposal_id === id)
     .sort((a: Argument, b: Argument) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -301,6 +307,36 @@ export function ProposalDetailPage() {
       addToast('Argument removed', 'info');
     } catch {
       addToast('Failed to delete argument', 'error');
+    }
+  }
+
+  async function pinComment(commentId: string) {
+    try {
+      await commentsApi.pin(commentId);
+      addToast('Comment pinned', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to pin comment', 'error');
+    }
+  }
+
+  async function unpinComment(commentId: string) {
+    try {
+      await commentsApi.unpin(commentId);
+      addToast('Comment unpinned', 'info');
+    } catch {
+      addToast('Failed to unpin comment', 'error');
+    }
+  }
+
+  async function saveOutcome(outcome: Proposal['outcome']) {
+    setSavingOutcome(true);
+    try {
+      await proposalsApi.setOutcome(id, outcome);
+      addToast('Outcome saved', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to save outcome', 'error');
+    } finally {
+      setSavingOutcome(false);
     }
   }
 
@@ -616,6 +652,39 @@ export function ProposalDetailPage() {
                 </p>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* Outcome tracking (closed proposals, moderators only) */}
+      {proposal.status === 'closed' && (
+        <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {proposal.outcome && (
+            <span
+              data-testid="outcome-badge"
+              style={{
+                fontSize: 12, fontWeight: 600, padding: '0.2rem 0.65rem', borderRadius: 12,
+                border: '1px solid',
+                color: proposal.outcome === 'implemented' ? '#1a7f37' : proposal.outcome === 'in_progress' ? '#b45309' : '#888',
+                borderColor: proposal.outcome === 'implemented' ? '#1a7f37' : proposal.outcome === 'in_progress' ? '#b45309' : '#ccc',
+              }}
+            >
+              {proposal.outcome === 'implemented' ? 'Implemented' : proposal.outcome === 'in_progress' ? 'In progress' : 'Not implemented'}
+            </span>
+          )}
+          {isModerator && (
+            <select
+              value={proposal.outcome ?? ''}
+              onChange={(e) => saveOutcome((e.target.value || null) as Proposal['outcome'])}
+              disabled={savingOutcome}
+              data-testid="outcome-select"
+              style={{ fontSize: 12, padding: '0.2rem 0.5rem', border: '1px solid #ddd', borderRadius: 4, color: '#555', cursor: 'pointer' }}
+            >
+              <option value="">Set outcome…</option>
+              <option value="implemented">Implemented</option>
+              <option value="in_progress">In progress</option>
+              <option value="not_implemented">Not implemented</option>
+            </select>
           )}
         </div>
       )}
@@ -949,10 +1018,13 @@ export function ProposalDetailPage() {
                           <span style={{ fontSize: 12, color: '#aaa' }}>
                             {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
+                          {c.pinned_at && (
+                            <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>📌 Pinned</span>
+                          )}
                           {c.edited_at && (
                             <span style={{ fontSize: 11, color: '#bbb' }}>(edited)</span>
                           )}
-                          {(isOwn || isModerator) && editingCommentId !== c.id && hidingCommentId !== c.id && (
+                          {(isOwn || isModerator || isAuthor) && editingCommentId !== c.id && hidingCommentId !== c.id && (
                             <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: '0.25rem' }}>
                               {isOwn && (
                                 <button
@@ -961,6 +1033,15 @@ export function ProposalDetailPage() {
                                   style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
                                 >
                                   Edit
+                                </button>
+                              )}
+                              {(isModerator || isAuthor) && (
+                                <button
+                                  type="button"
+                                  onClick={() => c.pinned_at ? unpinComment(c.id) : pinComment(c.id)}
+                                  style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                                >
+                                  {c.pinned_at ? 'Unpin' : 'Pin'}
                                 </button>
                               )}
                               {isModerator && (
