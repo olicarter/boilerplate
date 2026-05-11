@@ -11,6 +11,7 @@ import { randomUUID } from 'crypto';
 import { Organisation } from './organisation.entity';
 import { Membership, MemberRole, MemberStatus } from './membership.entity';
 import { Proposal } from '../proposals/proposal.entity';
+import { User } from '../users/user.entity';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -29,6 +30,8 @@ export class OrganisationsService {
     private readonly orgRepo: Repository<Organisation>,
     @InjectRepository(Membership)
     private readonly memberRepo: Repository<Membership>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
@@ -385,6 +388,32 @@ export class OrganisationsService {
       throw new ForbiddenException(`Requires role: ${roles.join(' or ')}`);
     }
     return m;
+  }
+
+  async searchMembers(slug: string, q: string): Promise<{ id: string; name: string }[]> {
+    const org = await this.findBySlug(slug);
+    const members = await this.memberRepo.find({ where: { organisation_id: org.id, status: 'approved' as MemberStatus } });
+    const userIds = members.map((m) => m.user_id);
+    if (userIds.length === 0) return [];
+    const users = await this.userRepo
+      .createQueryBuilder('u')
+      .where('u.id IN (:...ids)', { ids: userIds })
+      .andWhere('u.name ILIKE :q', { q: `${q.replace(/%/g, '\\%')}%` })
+      .orderBy('u.name', 'ASC')
+      .limit(10)
+      .getMany();
+    return users.map((u) => ({ id: u.id, name: u.name }));
+  }
+
+  async getMembersWithNames(orgId: string): Promise<{ userId: string; name: string }[]> {
+    const members = await this.memberRepo.find({ where: { organisation_id: orgId, status: 'approved' as MemberStatus } });
+    if (members.length === 0) return [];
+    const userIds = members.map((m) => m.user_id);
+    const users = await this.userRepo
+      .createQueryBuilder('u')
+      .where('u.id IN (:...ids)', { ids: userIds })
+      .getMany();
+    return users.map((u) => ({ userId: u.id, name: u.name }));
   }
 
   async getPublicResults(slug: string): Promise<{ org: Organisation; proposals: Proposal[] }> {

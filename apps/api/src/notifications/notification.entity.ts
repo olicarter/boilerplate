@@ -4,7 +4,8 @@ export type NotificationType =
   | 'proposal.opened'
   | 'proposal.closed'
   | 'delegate.voted'
-  | 'member.joined';
+  | 'member.joined'
+  | 'comment.mention';
 
 @Entity('notifications')
 export class Notification {

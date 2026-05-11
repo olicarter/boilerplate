@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { OrganisationsService } from './organisations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
@@ -53,6 +53,12 @@ export class OrganisationsController {
   async listMembers(@Param('slug') slug: string) {
     const org = await this.orgsService.findBySlug(slug);
     return this.orgsService.listMembers(org.id);
+  }
+
+  @Get(':slug/members/search')
+  @UseGuards(AuthGuard)
+  searchMembers(@Param('slug') slug: string, @Query('q') q = '') {
+    return this.orgsService.searchMembers(slug, q);
   }
 
   @Post(':slug/members')

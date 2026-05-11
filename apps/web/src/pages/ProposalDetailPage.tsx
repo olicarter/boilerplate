@@ -9,6 +9,7 @@ import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
 import { ConfirmButton } from '../components/ConfirmButton';
+import { MentionTextarea } from '../components/MentionTextarea';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 
@@ -1434,12 +1435,15 @@ export function ProposalDetailPage() {
                   </span>
                 )}
               </div>
-              <textarea
+              <MentionTextarea
                 id="comment-body"
+                data-testid="comment-body"
                 value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value.slice(0, COMMENT_MAX))}
+                onChange={setCommentBody}
+                orgSlug={org.slug}
+                maxLength={COMMENT_MAX}
                 rows={3}
-                placeholder="Share your thoughts…"
+                placeholder="Share your thoughts… Use @Name to mention members"
                 style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical' }}
               />
             </div>

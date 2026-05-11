@@ -6,6 +6,8 @@ import { Comment } from './comment.entity';
 import { CommentReaction } from './comment-reaction.entity';
 import { Proposal } from '../proposals/proposal.entity';
 import { Membership } from '../organisations/membership.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { OrganisationsService } from '../organisations/organisations.service';
 
 const BODY_MAX = 5000;
 const ALLOWED_EMOJIS = ['👍', '👎', '❤️', '🤔'];
@@ -23,6 +25,8 @@ export class CommentsService {
     @InjectRepository(Membership)
     private readonly memberRepo: Repository<Membership>,
     private readonly dataSource: DataSource,
+    private readonly notifications: NotificationsService,
+    private readonly orgsService: OrganisationsService,
   ) {}
 
   findByProposal(proposalId: string): Promise<Comment[]> {
@@ -43,12 +47,15 @@ export class CommentsService {
 
     const proposal = await this.proposalRepo.findOneByOrFail({ id: data.proposal_id });
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const comment = manager.create(Comment, { ...data, organisation_id: proposal.organisation_id });
       const saved = await manager.save(comment);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };
     });
+
+    await this.notifyMentions(data.body, data.author_id, proposal.organisation_id, data.proposal_id, result.item.id);
+    return result;
   }
 
   async edit(id: string, userId: string, body: string): Promise<{ item: Comment; txid: number }> {
@@ -59,12 +66,42 @@ export class CommentsService {
     if (!trimmed) throw new BadRequestException('Comment body is required');
     if (trimmed.length > BODY_MAX) throw new BadRequestException(`Comment exceeds ${BODY_MAX} characters`);
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       await manager.update(Comment, id, { body: trimmed, edited_at: new Date() });
       const item = await manager.findOneByOrFail(Comment, { id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item, txid: parseInt(row.txid, 10) };
     });
+
+    await this.notifyMentions(trimmed, userId, comment.organisation_id, comment.proposal_id, id);
+    return result;
+  }
+
+  private async notifyMentions(
+    body: string,
+    authorId: string,
+    orgId: string,
+    proposalId: string,
+    commentId: string,
+  ): Promise<void> {
+    try {
+      const members = await this.orgsService.getMembersWithNames(orgId);
+      const mentioned = members.filter(
+        (m) => m.userId !== authorId && body.includes(`@${m.name}`),
+      );
+      if (mentioned.length === 0) return;
+      await this.notifications.createMany(
+        mentioned.map((m) => ({
+          userId: m.userId,
+          orgId,
+          type: 'comment.mention' as const,
+          actorId: authorId,
+          targetType: 'proposal',
+          targetId: proposalId,
+          metadata: { commentId },
+        })),
+      );
+    } catch { /* non-critical */ }
   }
 
   async delete(id: string, userId: string): Promise<{ txid: number }> {

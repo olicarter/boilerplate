@@ -209,6 +209,8 @@ export const orgsApi = {
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'DELETE' }),
   listAuditLog: (slug: string) => request<AuditLogEntry[]>(`/orgs/${slug}/audit-log`),
   getPublicResults: (slug: string) => request<{ org: Organisation; proposals: Proposal[] }>(`/orgs/${slug}/results`),
+  searchMembers: (slug: string, q: string) =>
+    request<{ id: string; name: string }[]>(`/orgs/${slug}/members/search?q=${encodeURIComponent(q)}`),
 };
 
 export const topicsApi = {
