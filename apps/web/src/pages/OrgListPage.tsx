@@ -5,6 +5,8 @@ import { organisationsCollection, membershipsCollection } from '../collections';
 import { orgsApi, type Organisation, type Membership } from '../api';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
+import { Button } from '../components/ui';
+import styles from './OrgListPage.module.css';
 
 export function OrgListPage() {
   const currentUser = useCurrentUser();
@@ -65,24 +67,19 @@ export function OrgListPage() {
   }
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Organisations</h2>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h2 className={styles.heading}>Organisations</h2>
         {currentUser && !showCreate && hasOrgs && (
-          <button onClick={() => setShowCreate(true)} style={{ fontSize: 13, padding: '0.35rem 0.9rem' }}>
-            + New organisation
-          </button>
+          <Button size="sm" onClick={() => setShowCreate(true)}>+ New organisation</Button>
         )}
       </div>
 
       {showCreate && (
-        <form
-          onSubmit={handleCreate}
-          style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1.25rem', marginBottom: '1.5rem', background: '#fafafa' }}
-        >
-          <h3 style={{ margin: '0 0 1rem', fontSize: 14 }}>New organisation</h3>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="org-name" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Name</label>
+        <form className={styles.form} onSubmit={handleCreate}>
+          <h3 className={styles.formTitle}>New organisation</h3>
+          <div className={styles.formField}>
+            <label htmlFor="org-name" className={styles.formLabel}>Name</label>
             <input
               id="org-name"
               type="text"
@@ -90,64 +87,53 @@ export function OrgListPage() {
               onChange={(e) => setName(e.target.value)}
               required
               autoFocus
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.formInput}
             />
           </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label htmlFor="org-desc" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-              Description <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span>
+          <div className={styles.formField}>
+            <label htmlFor="org-desc" className={styles.formLabel}>
+              Description <span className={styles.formLabelNote}>(optional)</span>
             </label>
             <textarea
               id="org-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
+              className={styles.formTextarea}
             />
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button type="submit" disabled={creating || !name.trim()} style={{ fontSize: 13, padding: '0.35rem 0.9rem' }}>
+          <div className={styles.formActions}>
+            <Button type="submit" disabled={creating || !name.trim()} size="sm">
               {creating ? 'Creating…' : 'Create'}
-            </button>
-            <button type="button" onClick={() => setShowCreate(false)} style={{ fontSize: 13, padding: '0.35rem 0.9rem', background: 'none', border: '1px solid #ddd' }}>
+            </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setShowCreate(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
       {myOrgs.length === 0 ? (
         showCreate ? null : (
-          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-            <p style={{ fontSize: '2rem', margin: '0 0 0.75rem' }}>🗳️</p>
-            <p style={{ fontSize: 16, fontWeight: 600, margin: '0 0 0.5rem', color: '#222' }}>Welcome to Ripple</p>
-            <p style={{ fontSize: 14, color: '#666', margin: '0 0 1.5rem' }}>
+          <div className={styles.empty}>
+            <p className={styles.emptyIcon}>🗳️</p>
+            <p className={styles.emptyTitle}>Welcome to Ripple</p>
+            <p className={styles.emptyDescription}>
               Run transparent votes for any group — cooperatives, DAOs, community organisations, and more.
             </p>
-            <button
-              onClick={() => setShowCreate(true)}
-              style={{ fontSize: 14, padding: '0.6rem 1.5rem', cursor: 'pointer' }}
-            >
+            <Button onClick={() => setShowCreate(true)}>
               Create your first organisation
-            </button>
+            </Button>
           </div>
         )
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className={styles.list}>
           {myOrgs.map((org) => (
-            <Link
-              key={org.id}
-              to="/orgs/$slug"
-              params={{ slug: org.slug }}
-              style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
-            >
-              <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1rem 1.25rem', background: '#fff', cursor: 'pointer' }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#999')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#ddd')}
-              >
-                <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem' }}>{org.name}</h3>
-                {org.description && <p style={{ margin: 0, fontSize: 13, color: '#666' }}>{org.description}</p>}
-                <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>/{org.slug}</p>
+            <Link key={org.id} to="/orgs/$slug" params={{ slug: org.slug }} className={styles.card}>
+              <div className={styles.cardInner}>
+                <h3 className={styles.cardName}>{org.name}</h3>
+                {org.description && <p className={styles.cardDescription}>{org.description}</p>}
+                <p className={styles.cardSlug}>/{org.slug}</p>
               </div>
             </Link>
           ))}
@@ -155,28 +141,23 @@ export function OrgListPage() {
       )}
 
       {discoverOrgs.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
-          <h3 style={{ fontSize: 13, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
-            Discover
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className={styles.discoverSection}>
+          <h3 className={styles.discoverHeading}>Discover</h3>
+          <div className={styles.discoverList}>
             {discoverOrgs.map((org) => (
-              <div
-                key={org.id}
-                style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1rem 1.25rem', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
-              >
+              <div key={org.id} className={styles.discoverCard}>
                 <div style={{ minWidth: 0 }}>
-                  <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem' }}>{org.name}</h3>
-                  {org.description && <p style={{ margin: 0, fontSize: 13, color: '#666' }}>{org.description}</p>}
-                  <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>/{org.slug}</p>
+                  <h3 className={styles.cardName}>{org.name}</h3>
+                  {org.description && <p className={styles.cardDescription}>{org.description}</p>}
+                  <p className={styles.cardSlug}>/{org.slug}</p>
                 </div>
-                <button
+                <Button
+                  size="sm"
                   onClick={() => handleJoinPublic(org.slug)}
                   disabled={joiningSlug === org.slug}
-                  style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', flexShrink: 0 }}
                 >
                   {joiningSlug === org.slug ? 'Joining…' : 'Join'}
-                </button>
+                </Button>
               </div>
             ))}
           </div>

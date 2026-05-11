@@ -4,6 +4,8 @@ import { orgsApi } from '../api';
 import { useCurrentUser } from '../context';
 import { useOrg } from '../OrgContext';
 import { useToast } from '../components/Toast';
+import { Button } from '../components/ui';
+import styles from './JoinPage.module.css';
 
 export function JoinPage() {
   const { org } = useOrg();
@@ -30,23 +32,25 @@ export function JoinPage() {
 
   if (!token) {
     return (
-      <div style={{ maxWidth: 400, margin: '4rem auto', textAlign: 'center' }}>
-        <p style={{ color: '#d94040' }}>This invite link is invalid or has expired.</p>
+      <div className={styles.wrapper}>
+        <p className={styles.error}>This invite link is invalid or has expired.</p>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '4rem auto', padding: '2rem', border: '1px solid #ddd', borderRadius: 8, textAlign: 'center' }}>
-      <h2 style={{ marginTop: 0, fontSize: '1.25rem' }}>{org.name}</h2>
-      {org.description && <p style={{ color: '#555', fontSize: 14, marginBottom: '1.5rem' }}>{org.description}</p>}
-      {currentUser ? (
-        <button onClick={handleJoin} disabled={joining} style={{ padding: '0.6rem 1.5rem', fontSize: 15 }}>
-          {joining ? 'Joining…' : 'Join organisation'}
-        </button>
-      ) : (
-        <p style={{ color: '#888', fontSize: 14 }}>Sign in to join this organisation.</p>
-      )}
+    <div className={styles.wrapper}>
+      <div className={styles.card}>
+        <h2 className={styles.orgName}>{org.name}</h2>
+        {org.description && <p className={styles.orgDescription}>{org.description}</p>}
+        {currentUser ? (
+          <Button onClick={handleJoin} disabled={joining}>
+            {joining ? 'Joining…' : 'Join organisation'}
+          </Button>
+        ) : (
+          <p className={styles.signIn}>Sign in to join this organisation.</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,36 @@
+.wrapper {
+  max-width: 400px;
+  margin: var(--space-16) auto 0;
+}
+
+.card {
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.orgName {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+.orgDescription {
+  font-size: var(--text-base);
+  color: var(--color-fg-muted);
+  margin: 0 0 var(--space-6);
+}
+
+.error {
+  color: var(--color-error);
+  font-size: var(--text-base);
+  text-align: center;
+}
+
+.signIn {
+  font-size: var(--text-base);
+  color: var(--color-fg-subtle);
+  margin: 0;
+}
