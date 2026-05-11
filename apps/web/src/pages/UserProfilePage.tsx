@@ -1,25 +1,32 @@
 import { useParams, Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
-import { usersCollection } from '../collections';
+import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
-import type { User, Vote, Delegation, Proposal, Topic } from '../api';
+import type { User, Vote, Delegation, Proposal, Topic, Membership } from '../api';
 
 export function UserProfilePage() {
   const { id } = useParams({ strict: false }) as { id: string };
   const { slug } = useParams({ strict: false }) as { slug: string };
   const currentUser = useCurrentUser();
-  const { collections: { votesCollection, delegationsCollection, proposalsCollection, topicsCollection } } = useOrg();
+  const { org, collections: { votesCollection, delegationsCollection, proposalsCollection, topicsCollection } } = useOrg();
 
   const { data: allUsers } = useLiveQuery(usersCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
   const { data: allDelegations } = useLiveQuery(delegationsCollection);
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
+  const { data: allMemberships } = useLiveQuery(membershipsCollection);
 
   const user = (allUsers ?? []).find((u: User) => u.id === id);
   const votes = (allVotes ?? []).filter((v: Vote) => v.user_id === id);
   const outgoing = (allDelegations ?? []).filter((d: Delegation) => d.delegator_id === id);
+  const membership = (allMemberships ?? []).find((m: Membership) => m.organisation_id === org.id && m.user_id === id);
+  const weightMode = (org as { weight_mode?: string }).weight_mode ?? 'manual';
+  const ROLE_WEIGHT: Record<string, number> = { admin: 3, moderator: 2, member: 1, observer: 0 };
+  const displayWeight = weightMode === 'by_role'
+    ? (membership ? (ROLE_WEIGHT[membership.role] ?? 1) : null)
+    : (membership ? ((membership as { weight?: number }).weight ?? null) : null);
 
   const proposalMap = Object.fromEntries((allProposals ?? []).map((p: Proposal) => [p.id, p]));
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
@@ -62,6 +69,16 @@ export function UserProfilePage() {
           <p style={{ margin: '0.2rem 0 0', fontSize: 12, color: '#aaa' }}>
             Member since {new Date(user.created_at).toLocaleDateString()}
           </p>
+          {membership && (
+            <p style={{ margin: '0.2rem 0 0', fontSize: 12, color: '#888' }}>
+              {membership.role.charAt(0).toUpperCase() + membership.role.slice(1)}
+              {displayWeight !== null && displayWeight !== 1 && (
+                <span style={{ marginLeft: '0.5rem', background: '#e8f0fe', color: '#1a56d6', padding: '1px 6px', borderRadius: 8, fontSize: 11 }}>
+                  weight {displayWeight}
+                </span>
+              )}
+            </p>
+          )}
           {user.bio && (
             <p data-testid="user-bio" style={{ margin: '0.5rem 0 0', fontSize: 13, color: '#555' }}>{user.bio as string}</p>
           )}

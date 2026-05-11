@@ -1493,16 +1493,25 @@ export function ProposalDetailPage() {
                     <strong>{i === 0 ? 'You' : link.name}</strong>
                   </span>
                 ))}
-                {delegationChain.voter && (
-                  <>
-                    <span style={{ color: '#aaa', margin: '0 0.2rem' }}>→</span>
-                    <strong>{delegationChain.voter.name}</strong>
-                    {' '}voted{' '}
-                    <strong style={{ color: choiceColors[delegationChain.voter.choice as VoteChoice] }}>
-                      {delegationChain.voter.choice}
-                    </strong>
-                  </>
-                )}
+                {delegationChain.voter && (() => {
+                  const voterMembership = (allMemberships ?? []).find((m: Membership) => m.organisation_id === org.id && m.user_id === delegationChain.voter!.user_id);
+                  const orgWeightMode = (org as { weight_mode?: string }).weight_mode ?? 'manual';
+                  const ROLE_W: Record<string, number> = { admin: 3, moderator: 2, member: 1, observer: 0 };
+                  const voterWeight = orgWeightMode === 'by_role'
+                    ? (voterMembership ? (ROLE_W[voterMembership.role] ?? 1) : 1)
+                    : (voterMembership ? ((voterMembership as { weight?: number }).weight ?? 1) : 1);
+                  return (
+                    <>
+                      <span style={{ color: '#aaa', margin: '0 0.2rem' }}>→</span>
+                      <strong>{delegationChain.voter.name}</strong>
+                      {voterWeight !== 1 && <span style={{ marginLeft: 4, fontSize: 11, background: '#e8f0fe', color: '#1a56d6', padding: '1px 5px', borderRadius: 7 }}>×{voterWeight}</span>}
+                      {' '}voted{' '}
+                      <strong style={{ color: choiceColors[delegationChain.voter.choice as VoteChoice] }}>
+                        {delegationChain.voter.choice}
+                      </strong>
+                    </>
+                  );
+                })()}
                 {!delegationChain.voter && (
                   <span style={{ color: '#888' }}> — delegate hasn't voted yet</span>
                 )}
