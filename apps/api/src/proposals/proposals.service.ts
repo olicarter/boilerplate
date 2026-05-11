@@ -592,4 +592,33 @@ export class ProposalsService {
       current = next;
     }
   }
+
+  async sendVoteReminder(proposalId: string, requesterId: string): Promise<{ count: number }> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    if (proposal.status !== 'open') throw new BadRequestException('Can only send reminders for open proposals');
+    if (!(await this.canModerate(proposal.organisation_id, requesterId))) {
+      throw new ForbiddenException('Only moderators can send vote reminders');
+    }
+
+    const members = await this.memberRepo.find({ where: { organisation_id: proposal.organisation_id, status: 'approved' as any } });
+    const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+    const votedUserIds = new Set(votes.map((v) => v.user_id));
+
+    const nonVoters = members.filter((m) => !votedUserIds.has(m.user_id) && m.user_id !== requesterId);
+    if (nonVoters.length === 0) return { count: 0 };
+
+    await this.notifications.createMany(
+      nonVoters.map((m) => ({
+        userId: m.user_id,
+        orgId: proposal.organisation_id,
+        type: 'proposal.vote_reminder' as const,
+        actorId: requesterId,
+        targetType: 'proposal',
+        targetId: proposalId,
+        metadata: { proposalTitle: proposal.title },
+      })),
+    );
+
+    return { count: nonVoters.length };
+  }
 }

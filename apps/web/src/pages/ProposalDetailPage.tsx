@@ -1405,6 +1405,16 @@ export function ProposalDetailPage() {
                 Export CSV
               </a>
             )}
+            {isModerator && isOpen && !isDiscussion && (
+              <button
+                data-testid="send-vote-reminder"
+                onClick={() => handleAction('Vote reminder sent', () => proposalsApi.sendVoteReminder(id))}
+                disabled={actioning}
+                style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none' }}
+              >
+                Send vote reminder
+              </button>
+            )}
             {isModerator && (
               <button
                 data-testid={proposal.pinned ? 'unpin-proposal' : 'pin-proposal'}

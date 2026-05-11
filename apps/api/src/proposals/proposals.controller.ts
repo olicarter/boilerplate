@@ -101,6 +101,12 @@ export class ProposalsController {
     return this.proposalsService.setOutcome(id, req.user!.id, body.outcome);
   }
 
+  @Post(':id/vote-reminder')
+  @UseGuards(AuthGuard)
+  sendVoteReminder(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.sendVoteReminder(id, req.user!.id);
+  }
+
   @Post(':id/pin')
   @UseGuards(AuthGuard)
   pin(@Param('id') id: string, @Req() req: AuthenticatedRequest) {

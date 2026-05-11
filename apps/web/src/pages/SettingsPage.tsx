@@ -13,6 +13,7 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   'comment.posted': 'Someone comments on a proposal you voted on',
   'delegation.added': 'Someone delegates to you',
   'delegation.removed': 'Someone removes their delegation from you',
+  'proposal.vote_reminder': 'A moderator sends a vote reminder',
 };
 
 export function SettingsPage() {

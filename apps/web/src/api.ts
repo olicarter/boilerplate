@@ -288,6 +288,8 @@ export const proposalsApi = {
     request<MutationResult<Proposal>>(`/proposals/${id}/pin`, { method: 'POST' }),
   unpin: (id: string) =>
     request<MutationResult<Proposal>>(`/proposals/${id}/unpin`, { method: 'POST' }),
+  sendVoteReminder: (id: string) =>
+    request<{ count: number }>(`/proposals/${id}/vote-reminder`, { method: 'POST' }),
   listReactions: (id: string) =>
     request<ProposalReaction[]>(`/proposals/${id}/reactions`),
   react: (id: string, emoji: string) =>

@@ -8,7 +8,8 @@ export type NotificationType =
   | 'comment.mention'
   | 'comment.posted'
   | 'delegation.added'
-  | 'delegation.removed';
+  | 'delegation.removed'
+  | 'proposal.vote_reminder';
 
 @Entity('notifications')
 export class Notification {
