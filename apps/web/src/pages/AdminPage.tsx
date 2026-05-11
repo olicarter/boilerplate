@@ -7,6 +7,8 @@ import { usersCollection, membershipsCollection } from '../collections';
 import { orgsApi, type AuditLogEntry, type Membership, type User, type Organisation } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
+import { Button } from '../components/ui';
+import styles from './AdminPage.module.css';
 
 type CreationRole = 'member' | 'moderator' | 'admin';
 
@@ -88,7 +90,7 @@ export function AdminPage() {
   }, [org.slug]);
 
   if (!isAdmin) {
-    return <p style={{ fontSize: 14, color: '#d94040' }}>Access denied — admins only.</p>;
+    return <p className={styles.denied}>Access denied — admins only.</p>;
   }
 
   async function saveOrgInfo(e: React.FormEvent) {
@@ -273,13 +275,13 @@ export function AdminPage() {
   }
 
   async function addTemplate() {
-    const name = newTmplName.trim();
-    if (!name) return;
+    const tmplName = newTmplName.trim();
+    if (!tmplName) return;
     setSavingTemplate(true);
     try {
       const updated = [...templates, {
         id: crypto.randomUUID(),
-        name,
+        name: tmplName,
         description: newTmplDescription.trim(),
         proposal_type: newTmplType,
         threshold: newTmplThreshold,
@@ -321,29 +323,21 @@ export function AdminPage() {
     }
   }
 
-  const sectionHeading: React.CSSProperties = {
-    margin: '0 0 0.25rem',
-    fontSize: 13,
-    color: '#aaa',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  };
-
   const nonAdminMembers = orgMembers.filter(
     (m: Membership) => m.user_id !== currentUser?.id && m.role !== 'admin' && m.status !== 'pending',
   );
   const pendingMembers = orgMembers.filter((m: Membership) => m.status === 'pending');
 
   return (
-    <div style={{ maxWidth: 560 }}>
-      <h2 style={{ margin: '0 0 2rem', fontSize: '1.4rem' }}>Admin</h2>
+    <div className={styles.page}>
+      <h2 className={styles.heading}>Admin</h2>
 
       {/* Org info */}
-      <section style={{ marginBottom: '2.5rem' }}>
-        <h3 style={sectionHeading}>Organisation info</h3>
-        <form onSubmit={saveOrgInfo} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-          <div>
-            <label htmlFor="admin-name" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Name</label>
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Organisation info</h3>
+        <form className={styles.form} onSubmit={saveOrgInfo}>
+          <div className={styles.formField}>
+            <label htmlFor="admin-name" className={styles.formLabel}>Name</label>
             <input
               id="admin-name"
               type="text"
@@ -351,37 +345,35 @@ export function AdminPage() {
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={255}
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
+              className={styles.formInput}
             />
           </div>
-          <div>
-            <label htmlFor="admin-description" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Description</label>
+          <div className={styles.formField}>
+            <label htmlFor="admin-description" className={styles.formLabel}>Description</label>
             <textarea
               id="admin-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical' }}
+              className={styles.formTextarea}
             />
           </div>
-          {infoError && <p style={{ color: '#d94040', fontSize: 13, margin: 0 }}>{infoError}</p>}
+          {infoError && <p className={styles.formError}>{infoError}</p>}
           <div>
-            <button type="submit" disabled={savingInfo} style={{ fontSize: 13, padding: '0.35rem 1rem', cursor: 'pointer' }}>
+            <Button type="submit" size="sm" disabled={savingInfo}>
               {savingInfo ? 'Saving…' : 'Save changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </section>
 
       {/* Proposal defaults */}
-      <section style={{ marginBottom: '2.5rem' }}>
-        <h3 style={sectionHeading}>Proposal defaults</h3>
-        <form onSubmit={saveDefaults} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-          <div>
-            <label htmlFor="admin-duration" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-              Default voting duration (days)
-            </label>
-            <p style={{ margin: '0 0 6px', fontSize: 12, color: '#aaa' }}>Leave blank for no deadline by default.</p>
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Proposal defaults</h3>
+        <form className={styles.form} onSubmit={saveDefaults}>
+          <div className={styles.formField}>
+            <label htmlFor="admin-duration" className={styles.formLabel}>Default voting duration (days)</label>
+            <p className={styles.formHint}>Leave blank for no deadline by default.</p>
             <input
               id="admin-duration"
               type="number"
@@ -390,13 +382,12 @@ export function AdminPage() {
               value={defaultDuration}
               onChange={(e) => setDefaultDuration(e.target.value)}
               placeholder="e.g. 7"
-              style={{ width: 120, padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.formInput}
+              style={{ width: 120 }}
             />
           </div>
-          <div>
-            <label htmlFor="admin-threshold" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-              Default passing threshold (%)
-            </label>
+          <div className={styles.formField}>
+            <label htmlFor="admin-threshold" className={styles.formLabel}>Default passing threshold (%)</label>
             <input
               id="admin-threshold"
               type="number"
@@ -404,14 +395,13 @@ export function AdminPage() {
               max={100}
               value={defaultThreshold}
               onChange={(e) => setDefaultThreshold(e.target.value)}
-              style={{ width: 120, padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.formInput}
+              style={{ width: 120 }}
             />
           </div>
-          <div>
-            <label htmlFor="admin-quorum" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-              Default quorum (% of members who must participate)
-            </label>
-            <p style={{ margin: '0 0 6px', fontSize: 12, color: '#aaa' }}>Leave blank for no quorum requirement by default.</p>
+          <div className={styles.formField}>
+            <label htmlFor="admin-quorum" className={styles.formLabel}>Default quorum (% of members who must participate)</label>
+            <p className={styles.formHint}>Leave blank for no quorum requirement by default.</p>
             <input
               id="admin-quorum"
               type="number"
@@ -420,27 +410,28 @@ export function AdminPage() {
               value={defaultQuorum}
               onChange={(e) => setDefaultQuorum(e.target.value)}
               placeholder="e.g. 50"
-              style={{ width: 120, padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.formInput}
+              style={{ width: 120 }}
             />
           </div>
-          {defaultsError && <p style={{ color: '#d94040', fontSize: 13, margin: 0 }}>{defaultsError}</p>}
+          {defaultsError && <p className={styles.formError}>{defaultsError}</p>}
           <div>
-            <button type="submit" disabled={savingDefaults} style={{ fontSize: 13, padding: '0.35rem 1rem', cursor: 'pointer' }}>
+            <Button type="submit" size="sm" disabled={savingDefaults}>
               {savingDefaults ? 'Saving…' : 'Save defaults'}
-            </button>
+            </Button>
           </div>
         </form>
       </section>
 
       {/* Permissions */}
-      <section style={{ marginBottom: '2.5rem' }}>
-        <h3 style={sectionHeading}>Permissions</h3>
-        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Permissions</h3>
+        <div className={styles.permissionsBlock}>
           <div>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Who can create proposals?</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <p className={styles.permQuestion}>Who can create proposals?</p>
+            <div className={styles.radioGroup}>
               {(['member', 'moderator', 'admin'] as CreationRole[]).map((role) => (
-                <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingRole ? 'not-allowed' : 'pointer' }}>
+                <label key={role} className={styles.radioLabel} aria-disabled={savingRole ? 'true' : undefined}>
                   <input
                     type="radio"
                     name="proposal_creation_role"
@@ -455,10 +446,10 @@ export function AdminPage() {
             </div>
           </div>
           <div>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Who can create topics?</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <p className={styles.permQuestion}>Who can create topics?</p>
+            <div className={styles.radioGroup}>
               {(['member', 'moderator', 'admin'] as CreationRole[]).map((role) => (
-                <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingRole ? 'not-allowed' : 'pointer' }}>
+                <label key={role} className={styles.radioLabel} aria-disabled={savingRole ? 'true' : undefined}>
                   <input
                     type="radio"
                     name="topic_creation_role"
@@ -473,9 +464,9 @@ export function AdminPage() {
             </div>
           </div>
           <div>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Voting visibility during open proposals</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingVisibility ? 'not-allowed' : 'pointer' }}>
+            <p className={styles.permQuestion}>Voting visibility during open proposals</p>
+            <div className={styles.radioGroup}>
+              <label className={styles.radioLabel} aria-disabled={savingVisibility ? 'true' : undefined}>
                 <input
                   type="radio"
                   name="voting_visibility"
@@ -486,7 +477,7 @@ export function AdminPage() {
                 />
                 Show live vote counts
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingVisibility ? 'not-allowed' : 'pointer' }}>
+              <label className={styles.radioLabel} aria-disabled={savingVisibility ? 'true' : undefined}>
                 <input
                   type="radio"
                   name="voting_visibility"
@@ -500,11 +491,11 @@ export function AdminPage() {
             </div>
           </div>
           <div>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Endorsements required to publish a draft</p>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+            <p className={styles.permQuestion}>Endorsements required to publish a draft</p>
+            <p className={styles.formHint}>
               Set to 0 to disable — authors can publish drafts immediately. Set to 1 or more to require that many other members endorse the proposal first.
             </p>
-            <form onSubmit={saveMinEndorsements} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <form onSubmit={saveMinEndorsements} className={styles.endorseRow}>
               <input
                 type="number"
                 min={0}
@@ -512,20 +503,19 @@ export function AdminPage() {
                 value={minEndorsements}
                 onChange={(e) => setMinEndorsements(e.target.value)}
                 data-testid="min-endorsements-input"
-                style={{ width: 80, padding: '0.4rem 0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+                className={styles.formInput}
+                style={{ width: 80 }}
               />
-              <button type="submit" disabled={savingEndorsements} style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer' }}>
+              <Button type="submit" size="sm" disabled={savingEndorsements}>
                 {savingEndorsements ? 'Saving…' : 'Save'}
-              </button>
+              </Button>
             </form>
           </div>
           <div>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Who can cast a veto?</p>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
-              A veto blocks a proposal from passing regardless of vote counts.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingVetoRole ? 'not-allowed' : 'pointer' }}>
+            <p className={styles.permQuestion}>Who can cast a veto?</p>
+            <p className={styles.formHint}>A veto blocks a proposal from passing regardless of vote counts.</p>
+            <div className={styles.radioGroup}>
+              <label className={styles.radioLabel} aria-disabled={savingVetoRole ? 'true' : undefined}>
                 <input
                   type="radio"
                   name="veto_role"
@@ -536,7 +526,7 @@ export function AdminPage() {
                 />
                 Moderator and above
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingVetoRole ? 'not-allowed' : 'pointer' }}>
+              <label className={styles.radioLabel} aria-disabled={savingVetoRole ? 'true' : undefined}>
                 <input
                   type="radio"
                   name="veto_role"
@@ -551,11 +541,11 @@ export function AdminPage() {
             </div>
           </div>
           <div>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Public organisation</p>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+            <p className={styles.permQuestion}>Public organisation</p>
+            <p className={styles.formHint}>
               Public organisations are listed on the discovery page and anyone can join without an invitation.
             </p>
-            <label id="admin-is-public-label" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingPublic ? 'not-allowed' : 'pointer' }}>
+            <label id="admin-is-public-label" className={styles.checkLabel} aria-disabled={savingPublic ? 'true' : undefined}>
               <input
                 id="admin-is-public"
                 type="checkbox"
@@ -567,11 +557,11 @@ export function AdminPage() {
             </label>
           </div>
           <div>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Require approval for new members</p>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+            <p className={styles.permQuestion}>Require approval for new members</p>
+            <p className={styles.formHint}>
               When enabled, users who join publicly will be placed in a pending queue until an admin approves them.
             </p>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingApproval ? 'not-allowed' : 'pointer' }}>
+            <label className={styles.checkLabel} aria-disabled={savingApproval ? 'true' : undefined}>
               <input
                 id="admin-require-approval"
                 type="checkbox"
@@ -583,13 +573,13 @@ export function AdminPage() {
             </label>
           </div>
           <div>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Vote weight mode</p>
-            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+            <p className={styles.permQuestion}>Vote weight mode</p>
+            <p className={styles.formHint}>
               Manual: admins assign a numeric weight to each member. By role: admin=3, moderator=2, member=1, observer=0.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <div className={styles.radioGroup}>
               {(['manual', 'by_role'] as const).map((mode) => (
-                <label key={mode} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingWeightMode ? 'not-allowed' : 'pointer' }}>
+                <label key={mode} className={styles.radioLabel} aria-disabled={savingWeightMode ? 'true' : undefined}>
                   <input
                     type="radio"
                     name="weight_mode"
@@ -606,39 +596,33 @@ export function AdminPage() {
         </div>
       </section>
 
-      {/* Pending member approvals */}
+      {/* Pending approvals */}
       {pendingMembers.length > 0 && (
-        <section style={{ marginBottom: '2.5rem' }}>
-          <h3 style={sectionHeading}>Pending approval ({pendingMembers.length})</h3>
-          <p style={{ margin: '0.25rem 0 0.75rem', fontSize: 13, color: '#888' }}>
-            These users have requested to join and are waiting for approval.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Pending approval ({pendingMembers.length})</h3>
+          <p className={styles.sectionHint}>These users have requested to join and are waiting for approval.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             {pendingMembers.map((m: Membership) => {
               const user = usersById.get(m.user_id);
               return (
-                <div
-                  key={m.user_id}
-                  data-testid="pending-member-row"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', border: '1px solid #dde8ff', borderRadius: 6, background: '#f5f8ff' }}
-                >
-                  <span style={{ fontSize: 14 }}>{user?.name ?? m.user_id}</span>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
+                <div key={m.user_id} data-testid="pending-member-row" className={styles.pendingRow}>
+                  <span className={styles.pendingName}>{user?.name ?? m.user_id}</span>
+                  <div className={styles.pendingActions}>
+                    <Button
+                      size="sm"
                       onClick={() => handleApproveMember(m.user_id)}
                       disabled={approvingId === m.user_id || rejectingId === m.user_id}
                       data-testid="approve-member-btn"
-                      style={{ fontSize: 13, padding: '0.3rem 0.75rem', cursor: 'pointer', color: '#1a7a1a', border: '1px solid #a5d6a7', background: '#f1fff1', borderRadius: 4 }}
                     >
                       {approvingId === m.user_id ? 'Approving…' : 'Approve'}
-                    </button>
+                    </Button>
                     <ConfirmButton
                       label="Reject"
                       confirmLabel="Yes, reject"
                       onConfirm={() => handleRejectMember(m.user_id)}
                       disabled={approvingId === m.user_id || rejectingId === m.user_id}
-                      style={{ fontSize: 13, padding: '0.3rem 0.75rem', cursor: 'pointer', color: '#d94040', border: '1px solid #f5c5c5', background: 'none', borderRadius: 4 }}
-                      confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                      style={{ fontSize: 'var(--text-xs)', padding: '0 var(--space-2)', height: '26px', color: 'var(--color-error)', border: '1px solid var(--color-error-border)', background: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                      confirmStyle={{ color: 'var(--color-error)', border: '1px solid var(--color-error)', background: 'none', borderRadius: 'var(--radius-sm)' }}
                     />
                   </div>
                 </div>
@@ -650,16 +634,15 @@ export function AdminPage() {
 
       {/* Transfer ownership */}
       {nonAdminMembers.length > 0 && (
-        <section style={{ marginBottom: '2.5rem' }}>
-          <h3 style={sectionHeading}>Transfer ownership</h3>
-          <p style={{ margin: '0.25rem 0 0.75rem', fontSize: 13, color: '#888' }}>
-            Promote another member to admin and step down to member yourself.
-          </p>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Transfer ownership</h3>
+          <p className={styles.sectionHint}>Promote another member to admin and step down to member yourself.</p>
+          <div className={styles.transferRow}>
             <select
               value={transferToId}
               onChange={(e) => setTransferToId(e.target.value)}
-              style={{ fontSize: 13, padding: '0.4rem 0.6rem', border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.formSelect}
+              style={{ width: 'auto' }}
             >
               <option value="">Select a member…</option>
               {nonAdminMembers.map((m: Membership) => {
@@ -676,115 +659,114 @@ export function AdminPage() {
               confirmLabel="Yes, transfer"
               onConfirm={handleTransferOwnership}
               disabled={!transferToId || transferring}
-              style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none', borderRadius: 4 }}
-              confirmStyle={{ border: '1px solid #ddd', background: 'none', borderRadius: 4 }}
+              style={{ fontSize: 'var(--text-sm)', padding: '0 var(--space-3)', height: '32px', border: 'var(--border)', background: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--color-fg)' }}
+              confirmStyle={{ border: 'var(--border)', background: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--color-fg)' }}
             />
           </div>
         </section>
       )}
 
-      {/* Proposal templates */}
-      <section style={{ marginBottom: '2.5rem' }}>
-        <h3 style={sectionHeading}>Proposal templates</h3>
-        <p style={{ margin: '0.25rem 0 0.75rem', fontSize: 13, color: '#888' }}>
+      {/* Templates */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Proposal templates</h3>
+        <p className={styles.sectionHint}>
           Templates pre-fill the new proposal form. Members see a "Use template" button when templates exist.
         </p>
         {templates.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+          <div className={styles.templateList}>
             {templates.map((t) => (
-              <div
-                key={t.id}
-                data-testid="template-row"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', border: '1px solid #ddd', borderRadius: 6, background: '#fafafa' }}
-              >
+              <div key={t.id} data-testid="template-row" className={styles.templateRow}>
                 <div>
-                  <span style={{ fontWeight: 500, fontSize: 14 }}>{t.name}</span>
-                  <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888' }}>
+                  <span className={styles.templateName}>{t.name}</span>
+                  <span className={styles.templateMeta}>
                     {t.proposal_type === 'standard' ? 'Vote' : t.proposal_type === 'discussion' ? 'Discussion' : 'Multiple choice'} · {t.threshold}% threshold
                   </span>
                 </div>
-                <button
+                <Button
+                  variant="danger"
+                  size="sm"
                   onClick={() => removeTemplate(t.id)}
-                  style={{ fontSize: 12, color: '#d94040', border: '1px solid #f5c5c5', background: 'none', borderRadius: 4, padding: '0.2rem 0.6rem', cursor: 'pointer' }}
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
           </div>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 420 }}>
+        <div className={styles.templateFormWrap}>
           <input
             type="text"
             placeholder="Template name"
             value={newTmplName}
             onChange={(e) => setNewTmplName(e.target.value)}
             data-testid="template-name-input"
-            style={{ padding: '0.4rem 0.6rem', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+            className={styles.formInput}
           />
           <input
             type="text"
             placeholder="Description (optional)"
             value={newTmplDescription}
             onChange={(e) => setNewTmplDescription(e.target.value)}
-            style={{ padding: '0.4rem 0.6rem', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+            className={styles.formInput}
           />
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className={styles.templateTypeRow}>
             <select
               value={newTmplType}
               onChange={(e) => setNewTmplType(e.target.value as 'standard' | 'discussion' | 'multiple_choice')}
-              style={{ flex: 1, padding: '0.35rem', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+              className={styles.formSelect}
             >
               <option value="standard">Vote</option>
               <option value="discussion">Discussion</option>
               <option value="multiple_choice">Multiple choice</option>
             </select>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <label style={{ fontSize: 13 }}>Threshold</label>
+            <div className={styles.templateThresholdRow}>
+              <label className={styles.formLabel}>Threshold</label>
               <input
                 type="number"
                 min={1}
                 max={100}
                 value={newTmplThreshold}
                 onChange={(e) => setNewTmplThreshold(Number(e.target.value))}
-                style={{ width: 60, padding: '0.35rem', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+                className={styles.formInput}
+                style={{ width: 60 }}
               />
-              <span style={{ fontSize: 13 }}>%</span>
+              <span className={styles.formLabel}>%</span>
             </div>
           </div>
-          <button
+          <Button
+            size="sm"
             onClick={addTemplate}
             disabled={savingTemplate || !newTmplName.trim()}
             data-testid="add-template-btn"
-            style={{ alignSelf: 'flex-start', padding: '0.4rem 1rem', fontSize: 13, cursor: 'pointer' }}
+            style={{ alignSelf: 'flex-start' }}
           >
             {savingTemplate ? 'Adding…' : '+ Add template'}
-          </button>
+          </Button>
         </div>
       </section>
 
       {/* Audit log */}
-      <section style={{ marginBottom: '2.5rem' }}>
-        <h3 style={sectionHeading}>Recent activity</h3>
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Recent activity</h3>
         {auditLogLoading ? (
-          <p style={{ fontSize: 13, color: '#aaa', marginTop: '0.75rem' }}>Loading…</p>
+          <p className={styles.sectionHint}>Loading…</p>
         ) : auditLog.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#aaa', marginTop: '0.75rem' }}>No activity recorded yet.</p>
+          <p className={styles.sectionHint}>No activity recorded yet.</p>
         ) : (
-          <ul style={{ margin: '0.75rem 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <ul className={styles.auditList}>
             {auditLog.map((entry) => {
               const actor = entry.actor_id ? usersById.get(entry.actor_id) : null;
               const actorName = actor?.name ?? entry.actor_id ?? 'System';
               const date = new Date(entry.created_at).toLocaleString();
               return (
-                <li key={entry.id} style={{ fontSize: 13, color: '#555', borderBottom: '1px solid #f0f0f0', paddingBottom: '0.35rem' }}>
-                  <span style={{ color: '#222', fontWeight: 500 }}>{actorName}</span>
+                <li key={entry.id} className={styles.auditEntry}>
+                  <span className={styles.auditActor}>{actorName}</span>
                   {' · '}
                   <span data-testid="audit-action">{entry.action}</span>
                   {Object.keys(entry.metadata ?? {}).length > 0 && (
-                    <span style={{ color: '#aaa' }}> · {JSON.stringify(entry.metadata)}</span>
+                    <span className={styles.auditMeta}> · {JSON.stringify(entry.metadata)}</span>
                   )}
-                  <span style={{ float: 'right', color: '#bbb' }}>{date}</span>
+                  <span className={styles.auditDate}>{date}</span>
                 </li>
               );
             })}
@@ -793,9 +775,9 @@ export function AdminPage() {
       </section>
 
       {/* Danger zone */}
-      <section style={{ border: '1px solid #f5c0c0', borderRadius: 6, padding: '1rem 1.25rem' }}>
-        <h3 style={{ ...sectionHeading, color: '#d94040' }}>Danger zone</h3>
-        <p style={{ margin: '0.25rem 0 0.75rem', fontSize: 13, color: '#888' }}>
+      <section className={styles.dangerSection}>
+        <h3 className={styles.dangerTitle}>Danger zone</h3>
+        <p className={styles.sectionHint}>
           Permanently delete this organisation and all its proposals, votes, and delegations. This cannot be undone.
         </p>
         <ConfirmButton
@@ -803,8 +785,8 @@ export function AdminPage() {
           confirmLabel="Yes, delete permanently"
           onConfirm={deleteOrg}
           disabled={deleting}
-          style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
-          confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+          style={{ fontSize: 'var(--text-sm)', padding: '0 var(--space-3)', height: '32px', color: 'var(--color-error)', border: '1px solid var(--color-error)', background: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+          confirmStyle={{ color: 'var(--color-error)', border: '1px solid var(--color-error)', background: 'none', borderRadius: 'var(--radius-sm)' }}
         />
       </section>
     </div>
