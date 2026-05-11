@@ -1,7 +1,7 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
 
 export type ProposalStatus = 'draft' | 'open' | 'closed' | 'withdrawn';
-export type ProposalType = 'standard' | 'discussion' | 'multiple_choice';
+export type ProposalType = 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice';
 
 @Entity('proposals')
 export class Proposal {

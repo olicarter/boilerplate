@@ -79,7 +79,7 @@ export class ProposalsService {
     quorum?: number | null;
     quorum_type?: 'soft' | 'hard';
     status?: 'open' | 'draft';
-    proposal_type?: 'standard' | 'discussion' | 'multiple_choice';
+    proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice';
     tags?: string[];
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();

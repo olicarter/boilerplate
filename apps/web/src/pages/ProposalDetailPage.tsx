@@ -37,9 +37,21 @@ function formatDeadline(closesAt: string): { label: string; subtext: string; urg
   return { label: `${days} day${days !== 1 ? 's' : ''} left`, subtext: `Closes ${date}`, urgent: false };
 }
 
-function computeResult(tally: TallyResult, threshold: number, quorumType?: 'soft' | 'hard', vetoed?: boolean): 'passed' | 'failed' | 'no-votes' {
+function computeResult(
+  tally: TallyResult,
+  threshold: number,
+  quorumType?: 'soft' | 'hard',
+  vetoed?: boolean,
+  proposalType?: string,
+): 'passed' | 'failed' | 'no-votes' | 'blocked' | 'advisory' {
   if (vetoed) return 'failed';
   if (tally.quorum_met === false && quorumType === 'hard') return 'failed';
+  if (proposalType === 'temperature_check') return 'advisory';
+  if (proposalType === 'consent') {
+    if (tally.no > 0) return 'blocked';
+    if (tally.yes === 0 && tally.no === 0) return 'no-votes';
+    return 'passed';
+  }
   const decisive = tally.yes + tally.no;
   if (decisive === 0) return 'no-votes';
   return (tally.yes / decisive) * 100 >= threshold ? 'passed' : 'failed';
@@ -264,6 +276,11 @@ export function ProposalDetailPage() {
   const isWithdrawn = proposal.status === 'withdrawn';
   const isDiscussion = proposal.proposal_type === 'discussion';
   const isMultipleChoice = proposal.proposal_type === 'multiple_choice';
+  const isApproval = proposal.proposal_type === 'approval';
+  const isScoreVoting = proposal.proposal_type === 'score_voting';
+  const isRankedChoice = proposal.proposal_type === 'ranked_choice';
+  const isTemperatureCheck = proposal.proposal_type === 'temperature_check';
+  const isConsent = proposal.proposal_type === 'consent';
   const proposalOptions = ((allProposalOptions ?? []) as ProposalOption[])
     .filter((o) => o.proposal_id === id)
     .sort((a, b) => a.position - b.position);
@@ -273,7 +290,7 @@ export function ProposalDetailPage() {
   const publishBlocked = isDraft && minEndorsements > 0 && endorsements.length < minEndorsements;
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
-  const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard', vetoes.length > 0) : null;
+  const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard', vetoes.length > 0, proposal.proposal_type) : null;
   const comments = (allComments ?? [])
     .filter((c: Comment) => c.proposal_id === id)
     .sort((a: Comment, b: Comment) => {
@@ -627,6 +644,16 @@ export function ProposalDetailPage() {
             Failed
           </span>
         )}
+        {result === 'blocked' && (
+          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500, background: '#fdecea', color: '#d94040', border: '1px solid #f5c0c0' }}>
+            Blocked
+          </span>
+        )}
+        {result === 'advisory' && (
+          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
+            Advisory
+          </span>
+        )}
       </div>
 
       {editing ? (
@@ -731,6 +758,31 @@ export function ProposalDetailPage() {
               {isMultipleChoice && (
                 <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
                   Multiple choice
+                </span>
+              )}
+              {isApproval && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
+                  Approval voting
+                </span>
+              )}
+              {isScoreVoting && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
+                  Score voting
+                </span>
+              )}
+              {isRankedChoice && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
+                  Ranked choice
+                </span>
+              )}
+              {isTemperatureCheck && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', verticalAlign: 'middle' }}>
+                  Temperature check
+                </span>
+              )}
+              {isConsent && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff', verticalAlign: 'middle' }}>
+                  Consent
                 </span>
               )}
             </h2>
@@ -983,14 +1035,30 @@ export function ProposalDetailPage() {
       {result && tally && !isDiscussion && (
         <div
           style={{
-            border: `1px solid ${tally.quorum_met === false && proposal.quorum_type !== 'hard' ? '#fde68a' : result === 'passed' ? '#b3e5c2' : result === 'failed' ? '#f5c0c0' : '#ddd'}`,
+            border: `1px solid ${result === 'advisory' ? '#fed7aa' : result === 'blocked' ? '#f5c0c0' : tally.quorum_met === false && proposal.quorum_type !== 'hard' ? '#fde68a' : result === 'passed' ? '#b3e5c2' : result === 'failed' ? '#f5c0c0' : '#ddd'}`,
             borderRadius: 6,
             padding: '0.75rem 1.25rem',
             marginBottom: '1.5rem',
-            background: tally.quorum_met === false && proposal.quorum_type !== 'hard' ? '#fffbeb' : result === 'passed' ? '#e6f9ed' : result === 'failed' ? '#fdecea' : '#f5f5f5',
+            background: result === 'advisory' ? '#fff7ed' : result === 'blocked' ? '#fdecea' : tally.quorum_met === false && proposal.quorum_type !== 'hard' ? '#fffbeb' : result === 'passed' ? '#e6f9ed' : result === 'failed' ? '#fdecea' : '#f5f5f5',
           }}
         >
-          {tally.quorum_met === false && proposal.quorum_type !== 'hard' ? (
+          {result === 'advisory' ? (
+            <>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: '#c2410c' }}>Temperature check — advisory only</p>
+              <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
+                {tally.yes + tally.no > 0
+                  ? `${Math.round((tally.yes / (tally.yes + tally.no)) * 100)}% yes, ${Math.round((tally.no / (tally.yes + tally.no)) * 100)}% no — non-binding sentiment gauge`
+                  : 'No votes yet.'}
+              </p>
+            </>
+          ) : result === 'blocked' ? (
+            <>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: '#d94040' }}>Blocked — requires discussion</p>
+              <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
+                {tally.no} member{tally.no !== 1 ? 's' : ''} raised a paramount objection.
+              </p>
+            </>
+          ) : tally.quorum_met === false && proposal.quorum_type !== 'hard' ? (
             <>
               <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: '#b45309' }}>Not quorate</p>
               <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
@@ -1001,9 +1069,9 @@ export function ProposalDetailPage() {
           ) : (
             <>
               <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: result === 'passed' ? '#2d9a4e' : result === 'failed' ? '#d94040' : '#888' }}>
-                {result === 'passed' ? 'Proposal passed' : result === 'failed' ? (tally.quorum_met === false ? 'Failed — quorum not met' : 'Proposal failed') : 'No decisive votes cast'}
+                {result === 'passed' ? (isConsent ? 'Passes by consent' : 'Proposal passed') : result === 'failed' ? (tally.quorum_met === false ? 'Failed — quorum not met' : 'Proposal failed') : 'No decisive votes cast'}
               </p>
-              {result !== 'no-votes' && (
+              {result !== 'no-votes' && !isConsent && (
                 <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#666' }}>
                   {tally.quorum_met === false
                     ? `${tally.eligible_count && tally.eligible_count > 0 ? Math.round((tally.total / tally.eligible_count) * 100) : 0}% of members participated (${proposal.quorum}% required)`
@@ -1114,6 +1182,11 @@ export function ProposalDetailPage() {
       )}
 
       {/* Tally */}
+      {isTemperatureCheck && isOpen && (
+        <div style={{ border: '1px solid #fed7aa', borderRadius: 6, padding: '0.6rem 1rem', marginBottom: '1rem', background: '#fff7ed' }}>
+          <p style={{ margin: 0, fontSize: 13, color: '#c2410c' }}>This is a non-binding temperature check — results are advisory only and do not constitute a formal decision.</p>
+        </div>
+      )}
       {!isDiscussion && <div
         style={{
           border: '1px solid #ddd',
@@ -1124,7 +1197,7 @@ export function ProposalDetailPage() {
         }}
       >
         <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Results
+          {isTemperatureCheck ? 'Sentiment (non-binding)' : 'Results'}
         </h3>
         {org.voting_visibility === 'hidden' && isOpen && !isDeliberating ? (
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Vote counts are hidden until this proposal closes.</p>
@@ -1154,6 +1227,18 @@ export function ProposalDetailPage() {
                 )}
                 <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>{tally.total} vote{tally.total !== 1 ? 's' : ''} total</p>
               </div>
+            ) : isConsent ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {([['yes', 'Consent', '#2d9a4e'], ['abstain', 'Stand Aside', '#888'], ['no', 'Block', '#d94040']] as [string, string, string][]).map(([choice, label, color]) => {
+                  const count = choice === 'yes' ? tally.yes : choice === 'no' ? tally.no : tally.abstain;
+                  return (
+                    <div key={choice} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: 13 }}>
+                      <span style={{ minWidth: 80, color, fontWeight: 600 }}>{label}</span>
+                      <span style={{ color: '#555' }}>{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <VoteTally tally={tally} />
             )}
@@ -1182,7 +1267,11 @@ export function ProposalDetailPage() {
                 const voter = (allUsers ?? []).find((u: User) => u.id === v.user_id);
                 return (
                   <div key={v.id} data-testid="vote-statement" style={{ fontSize: 13, display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                    <span style={{ color: choiceColors[(v.choice as VoteChoice) ?? 'abstain'], fontWeight: 600, minWidth: 48, textTransform: 'capitalize' }}>{v.choice ?? 'voted'}</span>
+                    <span style={{ color: choiceColors[(v.choice as VoteChoice) ?? 'abstain'], fontWeight: 600, minWidth: 48, textTransform: 'capitalize' }}>
+                    {isConsent
+                      ? (v.choice === 'yes' ? 'Consent' : v.choice === 'no' ? 'Block' : 'Stand aside')
+                      : (v.choice ?? 'voted')}
+                  </span>
                     <span style={{ color: '#888' }}><strong style={{ color: '#444' }}>{voter?.name ?? 'Unknown'}</strong>: <em>{v.reason as string}</em></span>
                   </div>
                 );
@@ -1257,8 +1346,12 @@ export function ProposalDetailPage() {
           ) : myVote && !changingVote ? (
             <div>
               <p style={{ margin: '0 0 0.5rem', fontSize: 14 }}>
-                {isMultipleChoice ? (
+                {isMultipleChoice || isApproval || isScoreVoting || isRankedChoice ? (
                   <>You voted for <strong>{proposalOptions.find((o) => o.id === myVote.option_id)?.text ?? 'unknown option'}</strong>.</>
+                ) : isConsent ? (
+                  <>You <strong style={{ color: myVote.choice === 'yes' ? '#2d9a4e' : myVote.choice === 'no' ? '#d94040' : '#888' }}>
+                    {myVote.choice === 'yes' ? 'consented' : myVote.choice === 'no' ? 'blocked' : 'stood aside'}
+                  </strong>.</>
                 ) : (
                   <>You voted <strong style={{ color: choiceColors[myVote.choice as VoteChoice] }}>{myVote.choice}</strong>.</>
                 )}
@@ -1334,7 +1427,10 @@ export function ProposalDetailPage() {
                 </div>
               ) : (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {(['yes', 'no', 'abstain'] as VoteChoice[]).map((choice) => (
+                {(isConsent
+                  ? [['yes', 'Consent'], ['abstain', 'Stand Aside'], ['no', 'Block']] as [VoteChoice, string][]
+                  : (['yes', 'no', 'abstain'] as VoteChoice[]).map((c) => [c, c] as [VoteChoice, string])
+                ).map(([choice, label]) => (
                   <button
                     key={choice}
                     onClick={() => (myVote ? changeVote(choice) : castVote(choice))}
@@ -1343,14 +1439,14 @@ export function ProposalDetailPage() {
                       fontSize: 13,
                       padding: '0.35rem 1rem',
                       cursor: 'pointer',
-                      background: choiceColors[choice],
+                      background: choice === 'no' && isConsent ? '#d94040' : choiceColors[choice],
                       color: '#fff',
                       border: 'none',
                       borderRadius: 4,
                       textTransform: 'capitalize',
                     }}
                   >
-                    {choice}
+                    {label}
                   </button>
                 ))}
                 {changingVote && (

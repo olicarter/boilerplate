@@ -109,7 +109,7 @@ export function ProposalsPage() {
   const [deliberationEndsAt, setDeliberationEndsAt] = useState('');
   const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
   const [quorumType, setQuorumType] = useState<'soft' | 'hard'>('soft');
-  const [proposalType, setProposalType] = useState<'standard' | 'discussion' | 'multiple_choice'>('standard');
+  const [proposalType, setProposalType] = useState<'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice'>('standard');
   const [mcOptions, setMcOptions] = useState<string[]>(['', '']);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -201,14 +201,16 @@ export function ProposalsPage() {
       }
 
       const proposalId = uuid();
-      if (proposalType === 'multiple_choice') {
+      const needsOptions = ['multiple_choice', 'approval', 'score_voting', 'ranked_choice'].includes(proposalType);
+      if (needsOptions) {
         const validOpts = mcOptions.map((o) => o.trim()).filter(Boolean);
         if (validOpts.length < 2) {
-          setFormError('Multiple choice proposals need at least 2 options.');
+          setFormError('This proposal type needs at least 2 options.');
           setSubmitting(false);
           return;
         }
       }
+      const noDeadline = proposalType === 'discussion';
       const proposalTx = proposalsCollection.insert({
         id: proposalId,
         organisation_id: org.id,
@@ -222,12 +224,12 @@ export function ProposalsPage() {
         quorum,
         quorum_type: quorumType,
         created_at: new Date().toISOString(),
-        closes_at: (proposalType === 'discussion' || proposalType === 'multiple_choice') ? null : (closesAt ? new Date(closesAt).toISOString() : null),
-        deliberation_ends_at: (proposalType === 'discussion' || proposalType === 'multiple_choice') ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
+        closes_at: noDeadline ? null : (closesAt ? new Date(closesAt).toISOString() : null),
+        deliberation_ends_at: noDeadline ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
         closed_at: null,
       } as Proposal);
       await proposalTx.isPersisted.promise;
-      if (proposalType === 'multiple_choice') {
+      if (needsOptions) {
         const validOpts = mcOptions.map((o) => o.trim()).filter(Boolean);
         await Promise.all(validOpts.map((text, i) =>
           proposalOptionsApi.create(proposalId, { id: uuid(), text, position: i }),
@@ -277,7 +279,7 @@ export function ProposalsPage() {
                 onChange={(e) => {
                   const tmplId = e.target.value;
                   if (!tmplId) return;
-                  const templates = (org as { proposal_templates?: Array<{ id: string; name: string; description: string; proposal_type: 'standard' | 'discussion' | 'multiple_choice'; threshold: number }> }).proposal_templates ?? [];
+                  const templates = (org as { proposal_templates?: Array<{ id: string; name: string; description: string; proposal_type: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent'; threshold: number }> }).proposal_templates ?? [];
                   const tmpl = templates.find((t) => t.id === tmplId);
                   if (!tmpl) return;
                   setDescription(tmpl.description);
@@ -363,10 +365,15 @@ export function ProposalsPage() {
           )}
           <div style={{ marginBottom: '0.75rem' }}>
             <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Proposal type</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {([
                 { value: 'standard', label: 'Vote' },
                 { value: 'multiple_choice', label: 'Multiple choice' },
+                { value: 'approval', label: 'Approval' },
+                { value: 'score_voting', label: 'Score' },
+                { value: 'ranked_choice', label: 'Ranked choice' },
+                { value: 'temperature_check', label: 'Temperature check' },
+                { value: 'consent', label: 'Consent' },
                 { value: 'discussion', label: 'Discussion only' },
               ] as const).map(({ value, label }) => (
                 <button
@@ -394,8 +401,23 @@ export function ProposalsPage() {
             {proposalType === 'multiple_choice' && (
               <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members pick one option. Add at least 2 options below.</p>
             )}
+            {proposalType === 'approval' && (
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members approve as many options as they like. The most-approved option wins.</p>
+            )}
+            {proposalType === 'score_voting' && (
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members rate each option 0–5. The highest mean score wins.</p>
+            )}
+            {proposalType === 'ranked_choice' && (
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members rank options in order of preference. Instant-runoff voting determines the winner.</p>
+            )}
+            {proposalType === 'temperature_check' && (
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>A non-binding straw poll to gauge sentiment before a formal vote. Results are advisory only.</p>
+            )}
+            {proposalType === 'consent' && (
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Passes unless someone raises a paramount objection (Block). Good for consensus-oriented groups.</p>
+            )}
           </div>
-          {proposalType === 'multiple_choice' && (
+          {(['multiple_choice', 'approval', 'score_voting', 'ranked_choice'] as const).includes(proposalType as any) && (
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Options</label>
               {mcOptions.map((opt, i) => (
@@ -428,7 +450,7 @@ export function ProposalsPage() {
               )}
             </div>
           )}
-          {proposalType === 'standard' && (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          {proposalType !== 'discussion' && (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
             <div>
               <label htmlFor="new-proposal-deliberation-ends-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
                 Deliberation ends <span style={{ color: '#aaa' }}>(optional)</span>
@@ -748,6 +770,31 @@ export function ProposalsPage() {
                         {p.proposal_type === 'multiple_choice' && (
                           <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
                             Multiple choice
+                          </span>
+                        )}
+                        {p.proposal_type === 'approval' && (
+                          <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
+                            Approval
+                          </span>
+                        )}
+                        {p.proposal_type === 'score_voting' && (
+                          <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
+                            Score
+                          </span>
+                        )}
+                        {p.proposal_type === 'ranked_choice' && (
+                          <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
+                            Ranked choice
+                          </span>
+                        )}
+                        {p.proposal_type === 'temperature_check' && (
+                          <span style={{ ...badge, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
+                            Temp check
+                          </span>
+                        )}
+                        {p.proposal_type === 'consent' && (
+                          <span style={{ ...badge, background: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff' }}>
+                            Consent
                           </span>
                         )}
                         {isDraft && (
