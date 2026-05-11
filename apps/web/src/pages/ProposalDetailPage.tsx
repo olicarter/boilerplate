@@ -249,6 +249,7 @@ export function ProposalDetailPage() {
   const isDraft = proposal.status === 'draft';
   const isOpen = proposal.status === 'open';
   const isWithdrawn = proposal.status === 'withdrawn';
+  const isDiscussion = proposal.proposal_type === 'discussion';
   const isDeliberating = isOpen && !!proposal.deliberation_ends_at && new Date(proposal.deliberation_ends_at as string) > new Date();
   const isAuthor = currentUser?.id === proposal.author_id;
   const canEndorse = currentUser && isDraft && !isAuthor && !!myMembership && !myEndorsement;
@@ -622,7 +623,14 @@ export function ProposalDetailPage() {
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>{proposal.title}</h2>
+            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>
+              {proposal.title}
+              {isDiscussion && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', verticalAlign: 'middle' }}>
+                  Discussion
+                </span>
+              )}
+            </h2>
             {(isAuthor || isModerator) && (isDraft || isOpen) && (
               <button
                 type="button"
@@ -826,7 +834,7 @@ export function ProposalDetailPage() {
       )}
 
       {/* Result banner */}
-      {result && tally && (
+      {result && tally && !isDiscussion && (
         <div
           style={{
             border: `1px solid ${tally.quorum_met === false && proposal.quorum_type !== 'hard' ? '#fde68a' : result === 'passed' ? '#b3e5c2' : result === 'failed' ? '#f5c0c0' : '#ddd'}`,
@@ -895,7 +903,7 @@ export function ProposalDetailPage() {
       )}
 
       {/* Vetoes */}
-      {(vetoes.length > 0 || (canVeto && isOpen)) && (
+      {!isDiscussion && (vetoes.length > 0 || (canVeto && isOpen)) && (
         <div style={{ marginBottom: '1.5rem' }}>
           {vetoes.length > 0 && (
             <div style={{ border: '1px solid #f5c0c0', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#fdecea', marginBottom: '0.75rem' }}>
@@ -960,7 +968,7 @@ export function ProposalDetailPage() {
       )}
 
       {/* Tally */}
-      <div
+      {!isDiscussion && <div
         style={{
           border: '1px solid #ddd',
           borderRadius: 6,
@@ -990,10 +998,10 @@ export function ProposalDetailPage() {
         ) : (
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Could not load tally.</p>
         )}
-      </div>
+      </div>}
 
       {/* Vote action */}
-      {isDeliberating && (
+      {!isDiscussion && isDeliberating && (
         <div style={{ border: '1px solid #ddd6fe', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#faf5ff', marginBottom: '1.5rem' }}>
           <p style={{ margin: 0, fontSize: 14, color: '#6d28d9', fontWeight: 500 }}>Deliberation phase — voting is not yet open.</p>
           <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#888' }}>
@@ -1001,7 +1009,7 @@ export function ProposalDetailPage() {
           </p>
         </div>
       )}
-      {isOpen && !isDeliberating && (
+      {!isDiscussion && isOpen && !isDeliberating && (
         <div
           style={{
             border: '1px solid #ddd',
@@ -1126,13 +1134,13 @@ export function ProposalDetailPage() {
         </div>
       )}
 
-      {isWithdrawn && (
+      {!isDiscussion && isWithdrawn && (
         <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#f9f9f9', marginBottom: '1.5rem' }}>
           <p style={{ margin: 0, fontSize: 14, color: '#888' }}>This proposal was withdrawn — voting is no longer available.</p>
         </div>
       )}
 
-      {!isOpen && !isWithdrawn && (
+      {!isDiscussion && !isOpen && !isWithdrawn && (
         <p style={{ fontSize: 13, color: '#aaa' }}>This proposal is closed — voting is no longer available.</p>
       )}
 

@@ -107,6 +107,7 @@ export function ProposalsPage() {
   const [deliberationEndsAt, setDeliberationEndsAt] = useState('');
   const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
   const [quorumType, setQuorumType] = useState<'soft' | 'hard'>('soft');
+  const [proposalType, setProposalType] = useState<'standard' | 'discussion'>('standard');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -154,6 +155,7 @@ export function ProposalsPage() {
     setThreshold(org.default_threshold ?? 50);
     setQuorum(org.default_quorum ?? null);
     setQuorumType('soft');
+    setProposalType('standard');
     setShowForm(false);
     setFormError('');
   }
@@ -197,12 +199,13 @@ export function ProposalsPage() {
         title: title.trim(),
         description: description.trim(),
         status: asDraft ? 'draft' : 'open',
+        proposal_type: proposalType,
         threshold,
         quorum,
         quorum_type: quorumType,
         created_at: new Date().toISOString(),
-        closes_at: closesAt ? new Date(closesAt).toISOString() : null,
-        deliberation_ends_at: deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null,
+        closes_at: proposalType === 'discussion' ? null : (closesAt ? new Date(closesAt).toISOString() : null),
+        deliberation_ends_at: proposalType === 'discussion' ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
         closed_at: null,
       } as Proposal);
       await proposalTx.isPersisted.promise;
@@ -309,7 +312,34 @@ export function ProposalsPage() {
               />
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Proposal type</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {(['standard', 'discussion'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  data-testid={`proposal-type-${t}`}
+                  onClick={() => setProposalType(t)}
+                  style={{
+                    fontSize: 13,
+                    padding: '0.3rem 0.9rem',
+                    borderRadius: 4,
+                    border: '1px solid #ddd',
+                    background: proposalType === t ? '#222' : 'none',
+                    color: proposalType === t ? '#fff' : '#333',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {t === 'standard' ? 'Vote' : 'Discussion only'}
+                </button>
+              ))}
+            </div>
+            {proposalType === 'discussion' && (
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Discussion-only proposals have no formal vote — members comment and deliberate only.</p>
+            )}
+          </div>
+          {proposalType === 'standard' && (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
             <div>
               <label htmlFor="new-proposal-deliberation-ends-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
                 Deliberation ends <span style={{ color: '#aaa' }}>(optional)</span>
@@ -402,7 +432,7 @@ export function ProposalsPage() {
                 </div>
               )}
             </div>
-          </div>
+          </div></>)}
           {formError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{formError}</p>}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit" disabled={submitting} style={{ padding: '0.4rem 1.25rem', fontSize: 13 }}>
@@ -595,6 +625,11 @@ export function ProposalsPage() {
                         {topic && (
                           <span style={{ ...badge, background: '#e8f0fe', color: '#1a56d6', border: '1px solid #c3d6fb' }}>
                             {topic.name}
+                          </span>
+                        )}
+                        {p.proposal_type === 'discussion' && (
+                          <span style={{ ...badge, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                            Discussion
                           </span>
                         )}
                         {isDraft && (

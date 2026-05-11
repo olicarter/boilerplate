@@ -74,6 +74,7 @@ export class ProposalsService {
     quorum?: number | null;
     quorum_type?: 'soft' | 'hard';
     status?: 'open' | 'draft';
+    proposal_type?: 'standard' | 'discussion';
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Title is required');

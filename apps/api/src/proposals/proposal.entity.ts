@@ -1,6 +1,7 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
 
 export type ProposalStatus = 'draft' | 'open' | 'closed' | 'withdrawn';
+export type ProposalType = 'standard' | 'discussion';
 
 @Entity('proposals')
 export class Proposal {
@@ -45,6 +46,9 @@ export class Proposal {
 
   @Column({ name: 'closed_at', type: 'timestamptz', nullable: true })
   closed_at!: Date | null;
+
+  @Column({ name: 'proposal_type', type: 'varchar', length: 20, default: 'standard' })
+  proposal_type!: ProposalType;
 
   @Column({ type: 'varchar', length: 20, nullable: true, default: null })
   outcome!: 'implemented' | 'not_implemented' | 'in_progress' | null;

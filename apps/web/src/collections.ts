@@ -108,6 +108,7 @@ export function createOrgCollections(orgId: string) {
           deliberation_ends_at: p.deliberation_ends_at,
           threshold: p.threshold,
           status: p.status as 'open' | 'draft',
+          proposal_type: p.proposal_type,
         });
         return { txid: result.txid };
       },

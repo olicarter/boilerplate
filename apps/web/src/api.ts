@@ -88,6 +88,7 @@ export interface Proposal {
   title: string;
   description: string;
   status: 'draft' | 'open' | 'closed' | 'withdrawn';
+  proposal_type: 'standard' | 'discussion';
   threshold: number;
   quorum: number | null;
   quorum_type: 'soft' | 'hard';
@@ -223,7 +224,7 @@ export const topicsApi = {
 };
 
 export const proposalsApi = {
-  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft' }) =>
+  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
