@@ -31,6 +31,7 @@ import { PublicResultsPage } from './pages/PublicResultsPage';
 import { ActivityFeedPage } from './pages/ActivityFeedPage';
 import { DelegationNetworkPage } from './pages/DelegationNetworkPage';
 import { OrgProvider } from './OrgContext';
+import styles from './styles/Shell.module.css';
 
 const STORAGE_KEY = 'ripple_user';
 
@@ -101,76 +102,140 @@ function AuthPanel({ onLogin }: { onLogin: (user: User) => void }) {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '4rem auto', padding: '2rem', border: '1px solid #ddd', borderRadius: 8 }}>
-      <h2 style={{ marginTop: 0 }}>{mode === 'login' ? 'Sign in' : 'Create account'}</h2>
-
-      {mode === 'login' ? (
-        <>
-          <button onClick={handleLogin} disabled={loading} style={{ padding: '0.5rem 1.5rem', width: '100%', marginBottom: '1rem' }}>
-            {loading ? 'Waiting for passkey…' : 'Sign in with passkey'}
-          </button>
-          <p style={{ margin: 0, fontSize: 14, color: '#666' }}>
-            No account?{' '}
-            <button onClick={() => { setMode('register'); setError(''); }} style={{ background: 'none', border: 'none', color: 'blue', cursor: 'pointer', padding: 0 }}>
-              Register
-            </button>
-          </p>
-        </>
-      ) : (
-        <form onSubmit={handleRegister}>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="reg-name" style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>Name</label>
-            <input
-              id="reg-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={{ width: '100%', padding: '0.5rem', boxSizing: 'border-box', fontSize: 14 }}
-            />
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      background: 'var(--color-bg)',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: 360,
+        padding: 'var(--space-8)',
+        border: 'var(--border)',
+        borderRadius: 'var(--radius)',
+      }}>
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <div style={{
+            fontSize: 'var(--text-xs)',
+            fontWeight: 'var(--weight-bold)',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--color-fg)',
+            marginBottom: 'var(--space-5)',
+          }}>
+            Ripple
           </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label htmlFor="reg-email" style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>Email</label>
-            <input
-              id="reg-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', padding: '0.5rem', boxSizing: 'border-box', fontSize: 14 }}
-            />
-          </div>
-          <button type="submit" disabled={loading} style={{ padding: '0.5rem 1.5rem', width: '100%', marginBottom: '1rem' }}>
-            {loading ? 'Waiting for passkey…' : 'Create passkey'}
-          </button>
-          <p style={{ margin: 0, fontSize: 14, color: '#666' }}>
-            Already have an account?{' '}
-            <button onClick={() => { setMode('login'); setError(''); }} style={{ background: 'none', border: 'none', color: 'blue', cursor: 'pointer', padding: 0 }}>
-              Sign in
-            </button>
+          <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-1)' }}>
+            {mode === 'login' ? 'Sign in' : 'Create account'}
+          </h1>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)' }}>
+            {mode === 'login' ? 'Use your passkey to continue.' : 'Register with a passkey.'}
           </p>
-        </form>
-      )}
+        </div>
 
-      {error && <p style={{ color: 'red', marginTop: '1rem', marginBottom: 0 }}>{error}</p>}
+        {mode === 'login' ? (
+          <>
+            <button
+              onClick={handleLogin}
+              disabled={loading}
+              style={{
+                width: '100%',
+                height: 36,
+                background: 'var(--color-accent)',
+                color: 'var(--color-accent-fg)',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-base)',
+                fontWeight: 'var(--weight-medium)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1,
+                marginBottom: 'var(--space-4)',
+                transition: 'background var(--transition-fast)',
+              }}
+            >
+              {loading ? 'Waiting for passkey…' : 'Sign in with passkey'}
+            </button>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: 0 }}>
+              No account?{' '}
+              <button
+                onClick={() => { setMode('register'); setError(''); }}
+                style={{ background: 'none', border: 'none', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', cursor: 'pointer', padding: 0, fontWeight: 'var(--weight-medium)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+              >
+                Register
+              </button>
+            </p>
+          </>
+        ) : (
+          <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <div>
+              <label htmlFor="reg-name" style={{ display: 'block', marginBottom: 'var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--color-fg-muted)' }}>Name</label>
+              <input
+                id="reg-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                style={{ width: '100%', height: 32, padding: '0 var(--space-3)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', border: 'var(--border)', borderRadius: 'var(--radius-sm)', outline: 'none', color: 'var(--color-fg)' }}
+              />
+            </div>
+            <div>
+              <label htmlFor="reg-email" style={{ display: 'block', marginBottom: 'var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--color-fg-muted)' }}>Email</label>
+              <input
+                id="reg-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{ width: '100%', height: 32, padding: '0 var(--space-3)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', border: 'var(--border)', borderRadius: 'var(--radius-sm)', outline: 'none', color: 'var(--color-fg)' }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                height: 36,
+                background: 'var(--color-accent)',
+                color: 'var(--color-accent-fg)',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-base)',
+                fontWeight: 'var(--weight-medium)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1,
+                marginTop: 'var(--space-1)',
+              }}
+            >
+              {loading ? 'Waiting for passkey…' : 'Create passkey'}
+            </button>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: 0 }}>
+              Already have an account?{' '}
+              <button
+                onClick={() => { setMode('login'); setError(''); }}
+                style={{ background: 'none', border: 'none', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', cursor: 'pointer', padding: 0, fontWeight: 'var(--weight-medium)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+              >
+                Sign in
+              </button>
+            </p>
+          </form>
+        )}
+
+        {error && (
+          <p style={{ color: 'var(--color-error)', marginTop: 'var(--space-4)', marginBottom: 0, fontSize: 'var(--text-base)' }}>
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-const linkStyle: React.CSSProperties = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left',
-  padding: '0.5rem 1.25rem',
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 400,
-  textDecoration: 'none',
-  color: 'inherit',
-  boxSizing: 'border-box',
-};
+const navLinkStyle = { className: styles.navLink };
+const navLinkActiveStyle = { className: `${styles.navLink} ${styles.navLinkActive}` };
 
 function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlug?: string; orgId?: string; onClose?: () => void }) {
   const { data: allMemberships } = useLiveQuery(membershipsCollection);
@@ -179,78 +244,24 @@ function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlu
     : false;
 
   return (
-    <div style={{ flex: 1 }}>
+    <nav className={styles.nav}>
       {orgSlug ? (
         <>
-          <Link
-            to="/orgs/$slug/proposals"
-            params={{ slug: orgSlug }}
-            style={linkStyle}
-            activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-            onClick={onClose}
-          >
-            Proposals
-          </Link>
-          <Link
-            to="/orgs/$slug/delegations"
-            params={{ slug: orgSlug }}
-            style={linkStyle}
-            activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-            onClick={onClose}
-          >
-            Delegations
-          </Link>
-          <Link
-            to="/orgs/$slug/members"
-            params={{ slug: orgSlug }}
-            style={linkStyle}
-            activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-            onClick={onClose}
-          >
-            Members
-          </Link>
-          <Link
-            to="/orgs/$slug/activity"
-            params={{ slug: orgSlug }}
-            style={linkStyle}
-            activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-            onClick={onClose}
-          >
-            Activity
-          </Link>
+          <Link to="/orgs/$slug/proposals" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Proposals</Link>
+          <Link to="/orgs/$slug/delegations" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Delegations</Link>
+          <Link to="/orgs/$slug/members" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Members</Link>
+          <Link to="/orgs/$slug/activity" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Activity</Link>
           {isAdmin && (
-            <Link
-              to="/orgs/$slug/admin"
-              params={{ slug: orgSlug }}
-              style={linkStyle}
-              activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-              onClick={onClose}
-            >
-              Admin
-            </Link>
+            <Link to="/orgs/$slug/admin" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Admin</Link>
           )}
         </>
       ) : (
-        <Link
-          to="/"
-          style={linkStyle}
-          activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-          onClick={onClose}
-        >
-          Organisations
-        </Link>
+        <Link to="/" {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Organisations</Link>
       )}
       {user && (
-        <Link
-          to="/settings"
-          style={linkStyle}
-          activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
-          onClick={onClose}
-        >
-          Settings
-        </Link>
+        <Link to="/settings" {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Settings</Link>
       )}
-    </div>
+    </nav>
   );
 }
 
@@ -266,70 +277,44 @@ function Shell({ user, onLogout, orgSlug, orgId, children, notificationOrgSlug }
   const isMobile = useIsMobile();
 
   const userSection = (
-    <div style={{ padding: '0 1.25rem', borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
+    <div className={styles.userSection}>
       {user ? (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+          <div className={styles.userRow}>
             {orgSlug ? (
-              <Link
-                to="/orgs/$slug/users/$id"
-                params={{ slug: orgSlug, id: user.id }}
-                style={{ fontSize: 13, color: '#555', textDecoration: 'none' }}
-              >
+              <Link to="/orgs/$slug/users/$id" params={{ slug: orgSlug, id: user.id }} className={styles.userName}>
                 {user.name}
               </Link>
             ) : (
-              <span style={{ fontSize: 13, color: '#555' }}>{user.name}</span>
+              <span className={styles.userName}>{user.name}</span>
             )}
             <NotificationBell orgSlug={notificationOrgSlug ?? orgSlug} />
           </div>
-          <button onClick={onLogout} style={{ fontSize: 13 }}>Sign out</button>
+          <button onClick={onLogout} className={styles.signOut}>Sign out</button>
         </>
       ) : (
-        <p style={{ fontSize: 13, color: '#999', margin: 0 }}>Not signed in</p>
+        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-sidebar-fg-muted)' }}>Not signed in</span>
       )}
     </div>
   );
 
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-        <header style={{
-          display: 'flex', alignItems: 'center', gap: '0.75rem',
-          padding: '0.75rem 1rem', borderBottom: '1px solid #ddd',
-          background: '#f8f8f8', flexShrink: 0,
-        }}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open menu"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: '0.25rem', color: '#333' }}
-          >
+      <div className={styles.mobileShell}>
+        <header className={styles.mobileHeader}>
+          <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className={styles.menuButton}>
             ☰
           </button>
-          <span style={{ fontWeight: 700, fontSize: '1rem' }}>Ripple</span>
+          <span className={styles.mobileWordmark}>Ripple</span>
         </header>
 
         {sidebarOpen && (
           <>
-            <div
-              onClick={() => setSidebarOpen(false)}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 10 }}
-            />
-            <div style={{
-              position: 'fixed', top: 0, left: 0, bottom: 0, width: 240,
-              zIndex: 11, background: '#f8f8f8',
-              boxShadow: '2px 0 12px rgba(0,0,0,0.15)',
-              display: 'flex', flexDirection: 'column', padding: '1.5rem 0',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.25rem', marginBottom: '1.5rem' }}>
-                <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Ripple</h1>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  aria-label="Close menu"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#555' }}
-                >
-                  ✕
-                </button>
+            <div onClick={() => setSidebarOpen(false)} className={styles.overlay} />
+            <div className={styles.drawer}>
+              <div className={styles.drawerHeader}>
+                <span className={styles.drawerWordmark}>Ripple</span>
+                <button onClick={() => setSidebarOpen(false)} aria-label="Close menu" className={styles.closeButton}>✕</button>
               </div>
               <NavLinks user={user} orgSlug={orgSlug} orgId={orgId} onClose={() => setSidebarOpen(false)} />
               {userSection}
@@ -337,26 +322,19 @@ function Shell({ user, onLogout, orgSlug, orgId, children, notificationOrgSlug }
           </>
         )}
 
-        <main style={{ flex: 1, padding: '1.25rem 1rem', overflowY: 'auto' }}>
-          {children}
-        </main>
+        <main className={styles.mobileMain}>{children}</main>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <nav style={{
-        width: 220, flexShrink: 0, borderRight: '1px solid #ddd',
-        background: '#f8f8f8', display: 'flex', flexDirection: 'column', padding: '1.5rem 0',
-      }}>
-        <h1 style={{ margin: '0 0 1.5rem', padding: '0 1.25rem', fontSize: '1.25rem' }}>Ripple</h1>
+    <div className={styles.shell}>
+      <aside className={styles.sidebar}>
+        <span className={styles.wordmark}>Ripple</span>
         <NavLinks user={user} orgSlug={orgSlug} orgId={orgId} />
         {userSection}
-      </nav>
-      <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        {children}
-      </main>
+      </aside>
+      <main className={styles.main}>{children}</main>
     </div>
   );
 }
@@ -398,7 +376,7 @@ function OrgLayout() {
   const [user, setUser] = useState<User | null>(getStoredUser);
   const { slug } = useParams({ from: '/orgs/$slug' });
   const { data: allOrgs } = useLiveQuery(organisationsCollection);
-  const org = (allOrgs ?? []).find((o) => (o as Organisation).slug === slug) as Organisation | undefined ?? null;
+  const org = (allOrgs ?? []).find((o: unknown) => (o as Organisation).slug === slug) as Organisation | undefined ?? null;
   const isLoading = !allOrgs;
 
   async function handleLogin(u: User) {
@@ -412,7 +390,6 @@ function OrgLayout() {
     setUser(null);
   }
 
-  // Auth gate — org routes require authentication
   if (!user) {
     return (
       <UserContext.Provider value={null}>
@@ -425,7 +402,7 @@ function OrgLayout() {
     return (
       <UserContext.Provider value={user}>
         <Shell user={user} onLogout={handleLogout} orgSlug={slug}>
-          <p style={{ color: '#aaa', fontSize: 14 }}>Loading…</p>
+          <p style={{ color: 'var(--color-fg-subtle)', fontSize: 'var(--text-base)' }}>Loading…</p>
         </Shell>
       </UserContext.Provider>
     );
@@ -435,7 +412,7 @@ function OrgLayout() {
     return (
       <UserContext.Provider value={user}>
         <Shell user={user} onLogout={handleLogout}>
-          <p style={{ fontSize: 14, color: '#d94040' }}>Organisation "{slug}" not found.</p>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-error)' }}>Organisation "{slug}" not found.</p>
         </Shell>
       </UserContext.Provider>
     );
@@ -473,16 +450,16 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
-const joinRoute = createRoute({
-  getParentRoute: () => orgLayout,
-  path: '/join',
-  component: JoinPage,
-});
-
 const orgLayout = createRoute({
   getParentRoute: () => rootRoute,
   path: '/orgs/$slug',
   component: OrgLayout,
+});
+
+const joinRoute = createRoute({
+  getParentRoute: () => orgLayout,
+  path: '/join',
+  component: JoinPage,
 });
 
 const orgIndexRoute = createRoute({

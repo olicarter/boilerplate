@@ -138,7 +138,7 @@ export function NotificationBell({ orgSlug }: { orgSlug?: string }) {
         onClick={toggleOpen}
         aria-label={`Notifications${count > 0 ? ` (${count} unread)` : ''}`}
         data-testid="notification-bell"
-        style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '0.25rem', lineHeight: 1, color: '#555' }}
+        style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '2px', lineHeight: 1, color: 'var(--color-sidebar-fg-muted)', transition: 'color var(--transition-fast)' }}
       >
         🔔
         {count > 0 && (

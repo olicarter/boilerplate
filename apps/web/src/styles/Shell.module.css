@@ -1,0 +1,203 @@
+/* Desktop shell */
+.shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--color-sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) 0 var(--space-4);
+  overflow-y: auto;
+}
+
+.wordmark {
+  padding: 0 var(--space-4) var(--space-5);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-transform: uppercase;
+  display: block;
+  text-decoration: none;
+}
+
+.nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 var(--space-2);
+}
+
+.navLink {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  color: var(--color-sidebar-fg);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  letter-spacing: -0.01em;
+}
+
+.navLink:hover {
+  background: var(--color-sidebar-hover);
+  color: #fff;
+}
+
+.navLinkActive {
+  background: var(--color-sidebar-active-bg);
+  color: var(--color-sidebar-active-fg);
+  font-weight: var(--weight-medium);
+}
+
+.userSection {
+  padding: var(--space-4) var(--space-4) 0;
+  border-top: 1px solid var(--color-sidebar-border);
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.userName {
+  font-size: var(--text-sm);
+  color: var(--color-sidebar-fg);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signOut {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-sidebar-fg-muted);
+  padding: 0;
+  transition: color var(--transition-fast);
+  -webkit-font-smoothing: antialiased;
+  align-self: flex-start;
+}
+
+.signOut:hover { color: var(--color-sidebar-fg); }
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-8);
+  background: var(--color-bg);
+}
+
+/* Mobile shell */
+.mobileShell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--header-height);
+  padding: 0 var(--space-4);
+  background: var(--color-sidebar-bg);
+  flex-shrink: 0;
+}
+
+.mobileWordmark {
+  flex: 1;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-sidebar-fg);
+  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  font-size: 18px;
+  transition: color var(--transition-fast);
+}
+
+.menuButton:hover { color: #fff; }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 10;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  z-index: 11;
+  background: var(--color-sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) 0 var(--space-4);
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4) var(--space-5);
+}
+
+.drawerWordmark {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-sidebar-fg-muted);
+  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  line-height: 1;
+  transition: color var(--transition-fast);
+}
+
+.closeButton:hover { color: var(--color-sidebar-fg); }
+
+.mobileMain {
+  flex: 1;
+  padding: var(--space-5) var(--space-4);
+  overflow-y: auto;
+  background: var(--color-bg);
+}
