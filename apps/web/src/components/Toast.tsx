@@ -15,28 +15,27 @@ export function useToast(): AddToast {
   return useContext(ToastContext);
 }
 
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
-  const colors = {
-    success: { bg: '#1a1a1a', border: '#333', accent: '#2d9a4e' },
-    error:   { bg: '#1a1a1a', border: '#333', accent: '#d94040' },
-    info:    { bg: '#1a1a1a', border: '#333', accent: '#555' },
-  };
-  const { bg, border, accent } = colors[toast.type];
+const ACCENT: Record<Toast['type'], string> = {
+  success: 'var(--color-success)',
+  error:   'var(--color-error)',
+  info:    'var(--color-fg-muted)',
+};
 
+function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '0.75rem',
-        background: bg,
-        border: `1px solid ${border}`,
-        borderLeft: `3px solid ${accent}`,
-        borderRadius: 6,
+        background: 'var(--color-sidebar-bg)',
+        border: '1px solid var(--color-sidebar-border)',
+        borderLeft: `3px solid ${ACCENT[toast.type]}`,
+        borderRadius: 'var(--radius-sm)',
         padding: '0.6rem 0.75rem',
         color: '#fff',
-        fontSize: 13,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        fontSize: 'var(--text-sm)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
         minWidth: 220,
         maxWidth: 360,
         cursor: 'default',
@@ -46,7 +45,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       <span style={{ flex: 1 }}>{toast.message}</span>
       <button
         onClick={onDismiss}
-        style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1 }}
+        style={{ background: 'none', border: 'none', color: 'var(--color-sidebar-fg-muted)', cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1 }}
       >
         ✕
       </button>

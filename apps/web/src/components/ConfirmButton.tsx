@@ -14,22 +14,22 @@ export function ConfirmButton({ label, confirmLabel = 'Yes', onConfirm, disabled
 
   if (confirming) {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-        <span style={{ fontSize: 12, color: '#666' }}>Are you sure?</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-fg-muted)' }}>Are you sure?</span>
         <button
           type="button"
           onClick={async () => {
             setConfirming(false);
             await onConfirm();
           }}
-          style={{ fontSize: 12, padding: '0.2rem 0.6rem', cursor: 'pointer', ...confirmStyle }}
+          style={{ fontSize: 'var(--text-xs)', padding: '0 var(--space-2)', height: '24px', cursor: 'pointer', ...confirmStyle }}
         >
           {confirmLabel}
         </button>
         <button
           type="button"
           onClick={() => setConfirming(false)}
-          style={{ fontSize: 12, padding: '0.2rem 0.6rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}
+          style={{ fontSize: 'var(--text-xs)', padding: '0 var(--space-2)', height: '24px', cursor: 'pointer', background: 'none', border: 'var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-fg-muted)' }}
         >
           Cancel
         </button>
