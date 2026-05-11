@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, type AuditLogEntry, type Membership, type User } from '../api';
+import { orgsApi, type AuditLogEntry, type Membership, type User, type Organisation } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 
@@ -66,6 +66,15 @@ export function AdminPage() {
 
   const [transferToId, setTransferToId] = useState('');
   const [transferring, setTransferring] = useState(false);
+
+  type ProposalTemplate = Organisation['proposal_templates'][number];
+  const orgTemplates: ProposalTemplate[] = (org as { proposal_templates?: ProposalTemplate[] }).proposal_templates ?? [];
+  const [templates, setTemplates] = useState<ProposalTemplate[]>(orgTemplates);
+  const [newTmplName, setNewTmplName] = useState('');
+  const [newTmplDescription, setNewTmplDescription] = useState('');
+  const [newTmplType, setNewTmplType] = useState<'standard' | 'discussion' | 'multiple_choice'>('standard');
+  const [newTmplThreshold, setNewTmplThreshold] = useState<number>(50);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   const [deleting, setDeleting] = useState(false);
 
@@ -244,6 +253,43 @@ export function AdminPage() {
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed to transfer ownership', 'error');
       setTransferring(false);
+    }
+  }
+
+  async function addTemplate() {
+    const name = newTmplName.trim();
+    if (!name) return;
+    setSavingTemplate(true);
+    try {
+      const updated = [...templates, {
+        id: crypto.randomUUID(),
+        name,
+        description: newTmplDescription.trim(),
+        proposal_type: newTmplType,
+        threshold: newTmplThreshold,
+      }];
+      await orgsApi.update(org.slug, { proposal_templates: updated });
+      setTemplates(updated);
+      setNewTmplName('');
+      setNewTmplDescription('');
+      setNewTmplType('standard');
+      setNewTmplThreshold(50);
+      addToast('Template added', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to add template', 'error');
+    } finally {
+      setSavingTemplate(false);
+    }
+  }
+
+  async function removeTemplate(id: string) {
+    const updated = templates.filter((t) => t.id !== id);
+    try {
+      await orgsApi.update(org.slug, { proposal_templates: updated });
+      setTemplates(updated);
+      addToast('Template removed', 'info');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to remove template', 'error');
     }
   }
 
@@ -599,6 +645,86 @@ export function AdminPage() {
           </div>
         </section>
       )}
+
+      {/* Proposal templates */}
+      <section style={{ marginBottom: '2.5rem' }}>
+        <h3 style={sectionHeading}>Proposal templates</h3>
+        <p style={{ margin: '0.25rem 0 0.75rem', fontSize: 13, color: '#888' }}>
+          Templates pre-fill the new proposal form. Members see a "Use template" button when templates exist.
+        </p>
+        {templates.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+            {templates.map((t) => (
+              <div
+                key={t.id}
+                data-testid="template-row"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', border: '1px solid #ddd', borderRadius: 6, background: '#fafafa' }}
+              >
+                <div>
+                  <span style={{ fontWeight: 500, fontSize: 14 }}>{t.name}</span>
+                  <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888' }}>
+                    {t.proposal_type === 'standard' ? 'Vote' : t.proposal_type === 'discussion' ? 'Discussion' : 'Multiple choice'} · {t.threshold}% threshold
+                  </span>
+                </div>
+                <button
+                  onClick={() => removeTemplate(t.id)}
+                  style={{ fontSize: 12, color: '#d94040', border: '1px solid #f5c5c5', background: 'none', borderRadius: 4, padding: '0.2rem 0.6rem', cursor: 'pointer' }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 420 }}>
+          <input
+            type="text"
+            placeholder="Template name"
+            value={newTmplName}
+            onChange={(e) => setNewTmplName(e.target.value)}
+            data-testid="template-name-input"
+            style={{ padding: '0.4rem 0.6rem', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+          />
+          <input
+            type="text"
+            placeholder="Description (optional)"
+            value={newTmplDescription}
+            onChange={(e) => setNewTmplDescription(e.target.value)}
+            style={{ padding: '0.4rem 0.6rem', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+          />
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <select
+              value={newTmplType}
+              onChange={(e) => setNewTmplType(e.target.value as 'standard' | 'discussion' | 'multiple_choice')}
+              style={{ flex: 1, padding: '0.35rem', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+            >
+              <option value="standard">Vote</option>
+              <option value="discussion">Discussion</option>
+              <option value="multiple_choice">Multiple choice</option>
+            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label style={{ fontSize: 13 }}>Threshold</label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={newTmplThreshold}
+                onChange={(e) => setNewTmplThreshold(Number(e.target.value))}
+                style={{ width: 60, padding: '0.35rem', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+              />
+              <span style={{ fontSize: 13 }}>%</span>
+            </div>
+          </div>
+          <button
+            onClick={addTemplate}
+            disabled={savingTemplate || !newTmplName.trim()}
+            data-testid="add-template-btn"
+            style={{ alignSelf: 'flex-start', padding: '0.4rem 1rem', fontSize: 13, cursor: 'pointer' }}
+          >
+            {savingTemplate ? 'Adding…' : '+ Add template'}
+          </button>
+        </div>
+      </section>
 
       {/* Audit log */}
       <section style={{ marginBottom: '2.5rem' }}>

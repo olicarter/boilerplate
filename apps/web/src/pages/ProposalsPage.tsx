@@ -264,7 +264,32 @@ export function ProposalsPage() {
             background: '#fafafa',
           }}
         >
-          <h3 style={{ margin: '0 0 1rem', fontSize: 15 }}>New proposal</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0, fontSize: 15 }}>New proposal</h3>
+            {((org as { proposal_templates?: unknown[] }).proposal_templates ?? []).length > 0 && (
+              <select
+                data-testid="use-template-select"
+                defaultValue=""
+                onChange={(e) => {
+                  const tmplId = e.target.value;
+                  if (!tmplId) return;
+                  const templates = (org as { proposal_templates?: Array<{ id: string; name: string; description: string; proposal_type: 'standard' | 'discussion' | 'multiple_choice'; threshold: number }> }).proposal_templates ?? [];
+                  const tmpl = templates.find((t) => t.id === tmplId);
+                  if (!tmpl) return;
+                  setDescription(tmpl.description);
+                  setProposalType(tmpl.proposal_type);
+                  setThreshold(tmpl.threshold);
+                  e.target.value = '';
+                }}
+                style={{ fontSize: 12, padding: '0.25rem 0.5rem', border: '1px solid #ddd', borderRadius: 4, color: '#555' }}
+              >
+                <option value="">Use template…</option>
+                {((org as { proposal_templates?: Array<{ id: string; name: string }> }).proposal_templates ?? []).map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
           <div style={{ marginBottom: '0.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <label htmlFor="new-proposal-title" style={{ fontSize: 13 }}>Title</label>

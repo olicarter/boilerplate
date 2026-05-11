@@ -47,6 +47,15 @@ export class Organisation {
   @Column({ name: 'require_member_approval', type: 'boolean', default: false })
   require_member_approval!: boolean;
 
+  @Column({ name: 'proposal_templates', type: 'jsonb', default: [] })
+  proposal_templates!: Array<{
+    id: string;
+    name: string;
+    description: string;
+    proposal_type: 'standard' | 'discussion' | 'multiple_choice';
+    threshold: number;
+  }>;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }
