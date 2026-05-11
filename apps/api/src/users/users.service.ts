@@ -30,7 +30,7 @@ export class UsersService {
     });
   }
 
-  async update(id: string, data: Partial<Pick<User, 'name' | 'email'>>): Promise<{ item: User; txid: number }> {
+  async update(id: string, data: Partial<Pick<User, 'name' | 'email' | 'bio'>>): Promise<{ item: User; txid: number }> {
     if (data.name !== undefined) {
       const name = data.name.trim();
       if (!name) throw new BadRequestException('Name is required');

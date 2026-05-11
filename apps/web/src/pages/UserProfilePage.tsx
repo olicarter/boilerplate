@@ -62,6 +62,9 @@ export function UserProfilePage() {
           <p style={{ margin: '0.2rem 0 0', fontSize: 12, color: '#aaa' }}>
             Member since {new Date(user.created_at).toLocaleDateString()}
           </p>
+          {user.bio && (
+            <p data-testid="user-bio" style={{ margin: '0.5rem 0 0', fontSize: 13, color: '#555' }}>{user.bio as string}</p>
+          )}
         </div>
       </div>
 

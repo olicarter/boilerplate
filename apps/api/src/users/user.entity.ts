@@ -16,4 +16,7 @@ export class User {
 
   @Column({ name: 'notification_preferences', type: 'jsonb', default: {} })
   notification_preferences!: Record<string, boolean>;
+
+  @Column({ type: 'text', nullable: true })
+  bio!: string | null;
 }

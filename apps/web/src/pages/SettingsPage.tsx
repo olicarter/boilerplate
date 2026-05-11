@@ -22,6 +22,8 @@ export function SettingsPage() {
 
   const [name, setName] = useState(currentUser?.name ?? '');
   const [savingName, setSavingName] = useState(false);
+  const [bio, setBio] = useState(currentUser?.bio ?? '');
+  const [savingBio, setSavingBio] = useState(false);
 
   const [passkeys, setPasskeys] = useState<Passkey[] | null>(null);
   const [addingPasskey, setAddingPasskey] = useState(false);
@@ -57,7 +59,8 @@ export function SettingsPage() {
 
   useEffect(() => {
     setName(currentUser?.name ?? '');
-  }, [currentUser?.name]);
+    setBio((currentUser?.bio as string) ?? '');
+  }, [currentUser?.name, currentUser?.bio]);
 
   if (!currentUser) {
     return <p style={{ fontSize: 14, color: '#999' }}>Sign in to access settings.</p>;
@@ -75,6 +78,20 @@ export function SettingsPage() {
       addToast('Failed to update name', 'error');
     } finally {
       setSavingName(false);
+    }
+  }
+
+  async function handleSaveBio(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = bio.trim();
+    setSavingBio(true);
+    try {
+      await usersApi.update(currentUser!.id, { bio: trimmed || null });
+      addToast('Bio updated', 'success');
+    } catch {
+      addToast('Failed to update bio', 'error');
+    } finally {
+      setSavingBio(false);
     }
   }
 
@@ -159,6 +176,32 @@ export function SettingsPage() {
           </button>
         </form>
         <p style={{ margin: '0.75rem 0 0', fontSize: 13, color: '#888' }}>{currentUser.email}</p>
+        <form onSubmit={handleSaveBio} style={{ marginTop: '1rem' }}>
+          <label htmlFor="settings-bio" style={{ display: 'block', fontSize: 13, color: '#666', marginBottom: 4 }}>
+            Bio <span style={{ color: '#aaa' }}>(optional)</span>
+          </label>
+          <textarea
+            id="settings-bio"
+            data-testid="bio-input"
+            value={bio}
+            onChange={(e) => setBio(e.target.value.slice(0, 300))}
+            rows={3}
+            maxLength={300}
+            placeholder="Tell other members a bit about yourself…"
+            style={{ width: '100%', padding: '0.45rem 0.6rem', boxSizing: 'border-box', fontSize: 14, border: '1px solid #ccc', borderRadius: 4, resize: 'vertical' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
+            <span style={{ fontSize: 12, color: '#aaa' }}>{bio.length}/300</span>
+            <button
+              type="submit"
+              data-testid="save-bio-btn"
+              disabled={savingBio || bio.trim() === ((currentUser.bio as string) ?? '')}
+              style={{ padding: '0.35rem 0.9rem', fontSize: 13 }}
+            >
+              {savingBio ? 'Saving…' : 'Save bio'}
+            </button>
+          </div>
+        </form>
       </section>
 
       {/* Notification preferences */}

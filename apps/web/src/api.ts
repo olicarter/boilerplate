@@ -35,6 +35,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  bio: string | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -192,7 +193,7 @@ export interface AuditLogEntry {
 export const usersApi = {
   create: (data: { id: string; name: string; email: string }) =>
     request<MutationResult<User>>('/users', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: Partial<Pick<User, 'name' | 'email'>>) =>
+  update: (id: string, data: Partial<Pick<User, 'name' | 'email' | 'bio'>>) =>
     request<MutationResult<User>>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/users/${id}`, { method: 'DELETE' }),
