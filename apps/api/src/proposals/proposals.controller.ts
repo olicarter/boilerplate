@@ -41,7 +41,7 @@ export class ProposalsController {
   @Post()
   @UseGuards(AuthGuard)
   create(
-    @Body() body: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' },
+    @Body() body: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' },
     @Req() req: AuthenticatedRequest,
   ) {
     return this.proposalsService.create({ ...body, author_id: req.user!.id });
@@ -95,5 +95,29 @@ export class ProposalsController {
   @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {
     return this.proposalsService.delete(id);
+  }
+
+  @Get(':id/options')
+  listOptions(@Param('id') id: string) {
+    return this.proposalsService.listOptions(id);
+  }
+
+  @Post(':id/options')
+  @UseGuards(AuthGuard)
+  createOption(
+    @Param('id') id: string,
+    @Body() body: { id: string; text: string; position: number },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.createOption(id, req.user!.id, body);
+  }
+
+  @Delete(':id/options/:optionId')
+  @UseGuards(AuthGuard)
+  deleteOption(
+    @Param('optionId') optionId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.deleteOption(optionId, req.user!.id);
   }
 }

@@ -88,7 +88,7 @@ export interface Proposal {
   title: string;
   description: string;
   status: 'draft' | 'open' | 'closed' | 'withdrawn';
-  proposal_type: 'standard' | 'discussion';
+  proposal_type: 'standard' | 'discussion' | 'multiple_choice';
   threshold: number;
   quorum: number | null;
   quorum_type: 'soft' | 'hard';
@@ -116,7 +116,18 @@ export interface Vote {
   proposal_id: string;
   organisation_id: string;
   user_id: string;
-  choice: 'yes' | 'no' | 'abstain';
+  choice: 'yes' | 'no' | 'abstain' | null;
+  option_id: string | null;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface ProposalOption {
+  id: string;
+  proposal_id: string;
+  organisation_id: string;
+  text: string;
+  position: number;
   created_at: string;
   [key: string]: unknown;
 }
@@ -128,6 +139,7 @@ export interface TallyResult {
   total: number;
   eligible_count: number | null;
   quorum_met: boolean | null;
+  options: Array<{ id: string; text: string; count: number; position: number }>;
 }
 
 export interface DelegationVote {
@@ -223,8 +235,15 @@ export const topicsApi = {
     request<{ txid: number }>(`/topics/${id}`, { method: 'DELETE' }),
 };
 
+export const proposalOptionsApi = {
+  create: (proposalId: string, data: { id: string; text: string; position: number }) =>
+    request<ProposalOption>(`/proposals/${proposalId}/options`, { method: 'POST', body: JSON.stringify(data) }),
+  delete: (proposalId: string, optionId: string) =>
+    request<void>(`/proposals/${proposalId}/options/${optionId}`, { method: 'DELETE' }),
+};
+
 export const proposalsApi = {
-  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' }) =>
+  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
@@ -379,10 +398,10 @@ export const notificationsApi = {
 };
 
 export const votesApi = {
-  create: (data: { id: string; proposal_id: string; user_id: string; choice: Vote['choice'] }) =>
+  create: (data: { id: string; proposal_id: string; user_id: string; choice?: Vote['choice']; option_id?: string | null }) =>
     request<MutationResult<Vote>>('/votes', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, choice: Vote['choice']) =>
-    request<MutationResult<Vote>>(`/votes/${id}`, { method: 'PATCH', body: JSON.stringify({ choice }) }),
+  update: (id: string, data: { choice?: Vote['choice']; option_id?: string | null }) =>
+    request<MutationResult<Vote>>(`/votes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/votes/${id}`, { method: 'DELETE' }),
 };

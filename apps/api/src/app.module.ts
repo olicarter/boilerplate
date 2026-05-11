@@ -31,6 +31,7 @@ import { Veto } from './vetoes/veto.entity';
 import { Endorsement } from './endorsements/endorsement.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/notification.entity';
+import { ProposalOption } from './proposals/proposal-option.entity';
 
 @Module({
   imports: [
@@ -40,7 +41,7 @@ import { Notification } from './notifications/notification.entity';
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
-      entities: [User, Topic, Proposal, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, Argument, AuditLogEntry, Veto, Endorsement, Notification],
+      entities: [User, Topic, Proposal, ProposalOption, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, Argument, AuditLogEntry, Veto, Endorsement, Notification],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,

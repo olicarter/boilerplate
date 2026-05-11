@@ -32,7 +32,8 @@ export class VotesService {
     id: string;
     proposal_id: string;
     user_id: string;
-    choice: VoteChoice;
+    choice?: VoteChoice | null;
+    option_id?: string | null;
   }): Promise<{ item: Vote; txid: number }> {
     const proposal = await this.proposalRepo.findOneBy({ id: data.proposal_id });
     if (!proposal || proposal.status !== 'open') {
@@ -41,16 +42,29 @@ export class VotesService {
     if (proposal.deliberation_ends_at && new Date(proposal.deliberation_ends_at) > new Date()) {
       throw new BadRequestException('This proposal is in the deliberation phase — voting opens after deliberation ends');
     }
+    if (proposal.proposal_type === 'multiple_choice') {
+      if (!data.option_id) throw new BadRequestException('option_id is required for multiple choice proposals');
+    } else {
+      if (!data.choice) throw new BadRequestException('choice is required');
+    }
 
     const result = await this.dataSource.transaction(async (manager) => {
-      const vote = manager.create(Vote, { ...data, organisation_id: proposal.organisation_id });
+      const vote = manager.create(Vote, {
+        id: data.id,
+        proposal_id: data.proposal_id,
+        user_id: data.user_id,
+        choice: data.choice ?? null,
+        option_id: data.option_id ?? null,
+        organisation_id: proposal.organisation_id,
+      });
       const saved = await manager.save(vote);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };
     });
 
-    // Notify users who delegated to this voter for this org (their vote just flowed)
-    await this.notifyDelegators(data.user_id, proposal, data.choice);
+    if (proposal.proposal_type !== 'multiple_choice') {
+      await this.notifyDelegators(data.user_id, proposal, data.choice!);
+    }
 
     return result;
   }
@@ -79,7 +93,7 @@ export class VotesService {
     } catch { /* non-critical */ }
   }
 
-  async update(id: string, data: Pick<Vote, 'choice'>): Promise<{ item: Vote; txid: number }> {
+  async update(id: string, data: { choice?: VoteChoice | null; option_id?: string | null }): Promise<{ item: Vote; txid: number }> {
     const vote = await this.voteRepo.findOneBy({ id });
     if (vote) {
       const proposal = await this.proposalRepo.findOneBy({ id: vote.proposal_id });

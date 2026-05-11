@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -48,11 +48,12 @@ function computeResult(tally: TallyResult, threshold: number, quorumType?: 'soft
 export function ProposalDetailPage() {
   const { id } = useParams({ strict: false }) as { id: string };
   const currentUser = useCurrentUser();
-  const { org, collections: { proposalsCollection, topicsCollection, votesCollection, commentsCollection, commentReactionsCollection, argumentsCollection } } = useOrg();
+  const { org, collections: { proposalsCollection, topicsCollection, votesCollection, commentsCollection, commentReactionsCollection, argumentsCollection, proposalOptionsCollection } } = useOrg();
 
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allVotes } = useLiveQuery(votesCollection);
+  const { data: allProposalOptions } = useLiveQuery(proposalOptionsCollection);
   const { data: allUsers } = useLiveQuery(usersCollection);
   const { data: allComments } = useLiveQuery(commentsCollection);
   const { data: allReactions } = useLiveQuery(commentReactionsCollection);
@@ -181,7 +182,7 @@ export function ProposalDetailPage() {
     }
   }, [id, currentUser?.id, myVote?.id]);
 
-  async function castVote(choice: VoteChoice) {
+  async function castVote(choice: VoteChoice | null, optionId?: string) {
     if (!currentUser) return;
     setVoteError('');
     setVoting(true);
@@ -191,7 +192,8 @@ export function ProposalDetailPage() {
         proposal_id: id,
         organisation_id: org.id,
         user_id: currentUser.id,
-        choice,
+        choice: choice ?? null,
+        option_id: optionId ?? null,
         created_at: new Date().toISOString(),
       });
       await tx.isPersisted.promise;
@@ -207,13 +209,14 @@ export function ProposalDetailPage() {
     }
   }
 
-  async function changeVote(choice: VoteChoice) {
+  async function changeVote(choice: VoteChoice | null, optionId?: string) {
     if (!myVote) return;
     setVoteError('');
     setVoting(true);
     try {
       const tx = votesCollection.update(myVote.id, (draft: Vote) => {
-        draft.choice = choice;
+        draft.choice = choice ?? null;
+        draft.option_id = optionId ?? null;
       });
       await tx.isPersisted.promise;
       await fetchTally();
@@ -250,6 +253,10 @@ export function ProposalDetailPage() {
   const isOpen = proposal.status === 'open';
   const isWithdrawn = proposal.status === 'withdrawn';
   const isDiscussion = proposal.proposal_type === 'discussion';
+  const isMultipleChoice = proposal.proposal_type === 'multiple_choice';
+  const proposalOptions = ((allProposalOptions ?? []) as ProposalOption[])
+    .filter((o) => o.proposal_id === id)
+    .sort((a, b) => a.position - b.position);
   const isDeliberating = isOpen && !!proposal.deliberation_ends_at && new Date(proposal.deliberation_ends_at as string) > new Date();
   const isAuthor = currentUser?.id === proposal.author_id;
   const canEndorse = currentUser && isDraft && !isAuthor && !!myMembership && !myEndorsement;
@@ -630,6 +637,11 @@ export function ProposalDetailPage() {
                   Discussion
                 </span>
               )}
+              {isMultipleChoice && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
+                  Multiple choice
+                </span>
+              )}
             </h2>
             {(isAuthor || isModerator) && (isDraft || isOpen) && (
               <button
@@ -986,7 +998,31 @@ export function ProposalDetailPage() {
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Loading tally…</p>
         ) : tally ? (
           <>
-            <VoteTally tally={tally} />
+            {isMultipleChoice ? (
+              <div>
+                {tally.options.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>No options defined.</p>
+                ) : (
+                  tally.options.map((opt) => {
+                    const pct = tally.total > 0 ? Math.round((opt.count / tally.total) * 100) : 0;
+                    return (
+                      <div key={opt.id} style={{ marginBottom: '0.6rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 3 }}>
+                          <span>{opt.text}</span>
+                          <span style={{ color: '#888' }}>{opt.count} vote{opt.count !== 1 ? 's' : ''} ({pct}%)</span>
+                        </div>
+                        <div style={{ height: 6, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: '#3358c4', transition: 'width 0.3s' }} />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>{tally.total} vote{tally.total !== 1 ? 's' : ''} total</p>
+              </div>
+            ) : (
+              <VoteTally tally={tally} />
+            )}
             {tally.quorum_met !== null && tally.eligible_count != null && (
               <p style={{ margin: '0.75rem 0 0', fontSize: 12, color: tally.quorum_met ? '#2d9a4e' : '#b45309' }}>
                 {tally.total} of {tally.eligible_count} member{tally.eligible_count !== 1 ? 's' : ''} participated
@@ -1065,11 +1101,11 @@ export function ProposalDetailPage() {
           ) : myVote && !changingVote ? (
             <div>
               <p style={{ margin: '0 0 0.75rem', fontSize: 14 }}>
-                You voted{' '}
-                <strong style={{ color: choiceColors[myVote.choice as VoteChoice] }}>
-                  {myVote.choice}
-                </strong>
-                .
+                {isMultipleChoice ? (
+                  <>You voted for <strong>{proposalOptions.find((o) => o.id === myVote.option_id)?.text ?? 'unknown option'}</strong>.</>
+                ) : (
+                  <>You voted <strong style={{ color: choiceColors[myVote.choice as VoteChoice] }}>{myVote.choice}</strong>.</>
+                )}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
@@ -1096,6 +1132,38 @@ export function ProposalDetailPage() {
                   Choose a new vote:
                 </p>
               )}
+              {isMultipleChoice ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {proposalOptions.map((opt) => (
+                    <button
+                      key={opt.id}
+                      data-testid={`vote-option-${opt.id}`}
+                      onClick={() => myVote ? changeVote(null, opt.id) : castVote(null, opt.id)}
+                      disabled={voting}
+                      style={{
+                        fontSize: 13,
+                        padding: '0.4rem 1rem',
+                        cursor: 'pointer',
+                        background: myVote?.option_id === opt.id ? '#3358c4' : '#f5f5f5',
+                        color: myVote?.option_id === opt.id ? '#fff' : '#333',
+                        border: '1px solid #ddd',
+                        borderRadius: 4,
+                        textAlign: 'left',
+                      }}
+                    >
+                      {opt.text}
+                    </button>
+                  ))}
+                  {changingVote && (
+                    <button
+                      onClick={() => setChangingVote(false)}
+                      style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', alignSelf: 'flex-start' }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              ) : (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {(['yes', 'no', 'abstain'] as VoteChoice[]).map((choice) => (
                   <button
@@ -1125,6 +1193,7 @@ export function ProposalDetailPage() {
                   </button>
                 )}
               </div>
+              )}
             </div>
           )}
 

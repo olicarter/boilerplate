@@ -1,8 +1,8 @@
 import { electricCollectionOptions } from '@tanstack/electric-db-collection';
 import { createCollection } from '@tanstack/react-db';
 import {
-  usersApi, topicsApi, proposalsApi, delegationsApi, votesApi, commentsApi, orgsApi, argumentsApi,
-  type User, type Organisation, type Membership, type Topic, type Proposal,
+  usersApi, topicsApi, proposalsApi, proposalOptionsApi, delegationsApi, votesApi, commentsApi, orgsApi, argumentsApi,
+  type User, type Organisation, type Membership, type Topic, type Proposal, type ProposalOption,
   type Delegation, type Vote, type Comment, type CommentReaction, type Argument, type Veto,
 } from './api';
 
@@ -157,12 +157,12 @@ export function createOrgCollections(orgId: string) {
       getKey: (row: unknown) => (row as Vote).id,
       onInsert: async ({ transaction }) => {
         const v = transaction.mutations[0].modified as Vote;
-        const result = await votesApi.create({ id: v.id, proposal_id: v.proposal_id, user_id: v.user_id, choice: v.choice });
+        const result = await votesApi.create({ id: v.id, proposal_id: v.proposal_id, user_id: v.user_id, choice: v.choice, option_id: v.option_id });
         return { txid: result.txid };
       },
       onUpdate: async ({ transaction }) => {
         const v = transaction.mutations[0].modified as Vote;
-        const result = await votesApi.update(v.id, v.choice);
+        const result = await votesApi.update(v.id, { choice: v.choice, option_id: v.option_id });
         return { txid: result.txid };
       },
       onDelete: async ({ transaction }) => {
@@ -223,6 +223,24 @@ export function createOrgCollections(orgId: string) {
     }),
   );
 
+  const proposalOptionsCollection = createCollection(
+    electricCollectionOptions<ProposalOption>({
+      id: `proposal_options-${orgId}`,
+      shapeOptions: { url: shapeUrl, params: { table: 'proposal_options', where } },
+      getKey: (row: unknown) => (row as ProposalOption).id,
+      onInsert: async ({ transaction }) => {
+        const o = transaction.mutations[0].modified as ProposalOption;
+        const result = await proposalOptionsApi.create(o.proposal_id, { id: o.id, text: o.text, position: o.position });
+        return { txid: (result as any).txid ?? 0 };
+      },
+      onDelete: async ({ transaction }) => {
+        const o = transaction.mutations[0].original as ProposalOption;
+        await proposalOptionsApi.delete(o.proposal_id, o.id);
+        return { txid: 0 };
+      },
+    }),
+  );
+
   return {
     topicsCollection,
     proposalsCollection,
@@ -231,5 +249,6 @@ export function createOrgCollections(orgId: string) {
     commentsCollection,
     commentReactionsCollection,
     argumentsCollection,
+    proposalOptionsCollection,
   };
 }

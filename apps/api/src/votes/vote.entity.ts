@@ -16,8 +16,11 @@ export class Vote {
   @Column({ name: 'user_id', type: 'uuid' })
   user_id!: string;
 
-  @Column({ type: 'varchar', length: 10 })
-  choice!: VoteChoice;
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  choice!: VoteChoice | null;
+
+  @Column({ name: 'option_id', type: 'uuid', nullable: true })
+  option_id!: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;

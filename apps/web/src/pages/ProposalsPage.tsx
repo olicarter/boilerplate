@@ -7,6 +7,7 @@ import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { EmptyState } from '../components/EmptyState';
+import { proposalOptionsApi } from '../api';
 import type { Topic, Proposal, Vote, User, Comment, Membership } from '../api';
 
 const TITLE_MAX = 200;
@@ -107,7 +108,8 @@ export function ProposalsPage() {
   const [deliberationEndsAt, setDeliberationEndsAt] = useState('');
   const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
   const [quorumType, setQuorumType] = useState<'soft' | 'hard'>('soft');
-  const [proposalType, setProposalType] = useState<'standard' | 'discussion'>('standard');
+  const [proposalType, setProposalType] = useState<'standard' | 'discussion' | 'multiple_choice'>('standard');
+  const [mcOptions, setMcOptions] = useState<string[]>(['', '']);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -156,6 +158,7 @@ export function ProposalsPage() {
     setQuorum(org.default_quorum ?? null);
     setQuorumType('soft');
     setProposalType('standard');
+    setMcOptions(['', '']);
     setShowForm(false);
     setFormError('');
   }
@@ -191,8 +194,17 @@ export function ProposalsPage() {
         return;
       }
 
+      const proposalId = uuid();
+      if (proposalType === 'multiple_choice') {
+        const validOpts = mcOptions.map((o) => o.trim()).filter(Boolean);
+        if (validOpts.length < 2) {
+          setFormError('Multiple choice proposals need at least 2 options.');
+          setSubmitting(false);
+          return;
+        }
+      }
       const proposalTx = proposalsCollection.insert({
-        id: uuid(),
+        id: proposalId,
         organisation_id: org.id,
         topic_id: resolvedTopicId,
         author_id: currentUser.id,
@@ -204,11 +216,17 @@ export function ProposalsPage() {
         quorum,
         quorum_type: quorumType,
         created_at: new Date().toISOString(),
-        closes_at: proposalType === 'discussion' ? null : (closesAt ? new Date(closesAt).toISOString() : null),
-        deliberation_ends_at: proposalType === 'discussion' ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
+        closes_at: (proposalType === 'discussion' || proposalType === 'multiple_choice') ? null : (closesAt ? new Date(closesAt).toISOString() : null),
+        deliberation_ends_at: (proposalType === 'discussion' || proposalType === 'multiple_choice') ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
         closed_at: null,
       } as Proposal);
       await proposalTx.isPersisted.promise;
+      if (proposalType === 'multiple_choice') {
+        const validOpts = mcOptions.map((o) => o.trim()).filter(Boolean);
+        await Promise.all(validOpts.map((text, i) =>
+          proposalOptionsApi.create(proposalId, { id: uuid(), text, position: i }),
+        ));
+      }
 
       addToast(asDraft ? 'Draft saved' : 'Proposal created');
       resetForm();
@@ -315,30 +333,70 @@ export function ProposalsPage() {
           <div style={{ marginBottom: '0.75rem' }}>
             <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Proposal type</label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {(['standard', 'discussion'] as const).map((t) => (
+              {([
+                { value: 'standard', label: 'Vote' },
+                { value: 'multiple_choice', label: 'Multiple choice' },
+                { value: 'discussion', label: 'Discussion only' },
+              ] as const).map(({ value, label }) => (
                 <button
-                  key={t}
+                  key={value}
                   type="button"
-                  data-testid={`proposal-type-${t}`}
-                  onClick={() => setProposalType(t)}
+                  data-testid={`proposal-type-${value}`}
+                  onClick={() => setProposalType(value)}
                   style={{
                     fontSize: 13,
                     padding: '0.3rem 0.9rem',
                     borderRadius: 4,
                     border: '1px solid #ddd',
-                    background: proposalType === t ? '#222' : 'none',
-                    color: proposalType === t ? '#fff' : '#333',
+                    background: proposalType === value ? '#222' : 'none',
+                    color: proposalType === value ? '#fff' : '#333',
                     cursor: 'pointer',
                   }}
                 >
-                  {t === 'standard' ? 'Vote' : 'Discussion only'}
+                  {label}
                 </button>
               ))}
             </div>
             {proposalType === 'discussion' && (
               <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Discussion-only proposals have no formal vote — members comment and deliberate only.</p>
             )}
+            {proposalType === 'multiple_choice' && (
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members pick one option. Add at least 2 options below.</p>
+            )}
           </div>
+          {proposalType === 'multiple_choice' && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Options</label>
+              {mcOptions.map((opt, i) => (
+                <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                  <input
+                    data-testid={`mc-option-${i}`}
+                    type="text"
+                    value={opt}
+                    onChange={(e) => setMcOptions((prev) => prev.map((o, j) => j === i ? e.target.value : o))}
+                    placeholder={`Option ${i + 1}`}
+                    maxLength={500}
+                    style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+                  />
+                  {mcOptions.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setMcOptions((prev) => prev.filter((_, j) => j !== i))}
+                      style={{ fontSize: 13, padding: '0.2rem 0.5rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                    >×</button>
+                  )}
+                </div>
+              ))}
+              {mcOptions.length < 8 && (
+                <button
+                  type="button"
+                  data-testid="mc-add-option"
+                  onClick={() => setMcOptions((prev) => [...prev, ''])}
+                  style={{ fontSize: 12, color: '#3358c4', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}
+                >+ Add option</button>
+              )}
+            </div>
+          )}
           {proposalType === 'standard' && (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
             <div>
               <label htmlFor="new-proposal-deliberation-ends-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
@@ -630,6 +688,11 @@ export function ProposalsPage() {
                         {p.proposal_type === 'discussion' && (
                           <span style={{ ...badge, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
                             Discussion
+                          </span>
+                        )}
+                        {p.proposal_type === 'multiple_choice' && (
+                          <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
+                            Multiple choice
                           </span>
                         )}
                         {isDraft && (

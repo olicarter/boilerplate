@@ -124,7 +124,7 @@ export function UserProfilePage() {
                     )}
                   </div>
                   <span style={{
-                    fontSize: 13, fontWeight: 600, color: choiceColor[v.choice] ?? '#555',
+                    fontSize: 13, fontWeight: 600, color: (v.choice ? choiceColor[v.choice] : undefined) ?? '#555',
                     flexShrink: 0, marginLeft: '1rem', textTransform: 'capitalize',
                   }}>
                     {v.choice}

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Proposal, ProposalStatus } from './proposal.entity';
+import { ProposalOption } from './proposal-option.entity';
 import { Endorsement } from '../endorsements/endorsement.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { Vote } from '../votes/vote.entity';
@@ -24,6 +25,7 @@ export interface TallyResult {
   total: number;
   eligible_count: number | null;
   quorum_met: boolean | null;
+  options: Array<{ id: string; text: string; count: number; position: number }>;
 }
 
 export interface DelegationVote {
@@ -74,7 +76,7 @@ export class ProposalsService {
     quorum?: number | null;
     quorum_type?: 'soft' | 'hard';
     status?: 'open' | 'draft';
-    proposal_type?: 'standard' | 'discussion';
+    proposal_type?: 'standard' | 'discussion' | 'multiple_choice';
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Title is required');
@@ -311,14 +313,66 @@ export class ProposalsService {
     return map;
   }
 
+  async listOptions(proposalId: string): Promise<ProposalOption[]> {
+    return this.dataSource.getRepository(ProposalOption).find({
+      where: { proposal_id: proposalId },
+      order: { position: 'ASC' },
+    });
+  }
+
+  async createOption(proposalId: string, userId: string, data: { id: string; text: string; position: number }): Promise<ProposalOption> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    if (proposal.author_id !== userId && !(await this.canModerate(proposal.organisation_id, userId))) {
+      throw new ForbiddenException('Only the author or moderators can add options');
+    }
+    if (!data.text.trim()) throw new BadRequestException('Option text is required');
+    if (data.text.length > 500) throw new BadRequestException('Option text must be 500 characters or less');
+    const repo = this.dataSource.getRepository(ProposalOption);
+    return repo.save(repo.create({
+      id: data.id || randomUUID(),
+      proposal_id: proposalId,
+      organisation_id: proposal.organisation_id,
+      text: data.text.trim(),
+      position: data.position ?? 0,
+    }));
+  }
+
+  async deleteOption(optionId: string, userId: string): Promise<void> {
+    const option = await this.dataSource.getRepository(ProposalOption).findOneByOrFail({ id: optionId });
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: option.proposal_id });
+    if (proposal.author_id !== userId && !(await this.canModerate(proposal.organisation_id, userId))) {
+      throw new ForbiddenException('Only the author or moderators can remove options');
+    }
+    await this.dataSource.getRepository(ProposalOption).delete(optionId);
+  }
+
   async tally(proposalId: string): Promise<TallyResult> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+
+    if (proposal.proposal_type === 'multiple_choice') {
+      const options = await this.dataSource.getRepository(ProposalOption).find({
+        where: { proposal_id: proposalId },
+        order: { position: 'ASC' },
+      });
+      const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+      const countMap = new Map<string, number>(options.map((o) => [o.id, 0]));
+      for (const v of votes) {
+        if (v.option_id && countMap.has(v.option_id)) {
+          countMap.set(v.option_id, countMap.get(v.option_id)! + 1);
+        }
+      }
+      return {
+        yes: 0, no: 0, abstain: 0, total: votes.length,
+        eligible_count: null, quorum_met: null,
+        options: options.map((o) => ({ id: o.id, text: o.text, count: countMap.get(o.id)!, position: o.position })),
+      };
+    }
 
     const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
     const allDelegations = await this.dataSource.getRepository(Delegation).find({ where: { organisation_id: proposal.organisation_id } });
     const delegations = DelegationsService.activeDelegations(allDelegations);
 
-    const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice]));
+    const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice ?? 'abstain']));
     const delegationMap = this.buildDelegationMap(delegations);
 
     const MAX_DEPTH = 10;
@@ -347,7 +401,7 @@ export class ProposalsService {
     });
     const weightMap = new Map<string, number>(memberships.map((m) => [m.user_id, (m as any).weight ?? 1]));
 
-    const tally: TallyResult = { yes: 0, no: 0, abstain: 0, total: 0, eligible_count: null, quorum_met: null };
+    const tally: TallyResult = { yes: 0, no: 0, abstain: 0, total: 0, eligible_count: null, quorum_met: null, options: [] };
     for (const userId of allUsers) {
       const choice = resolveChoice(userId);
       const weight = weightMap.get(userId) ?? 1;
@@ -378,7 +432,7 @@ export class ProposalsService {
     // User voted directly — no chain to show
     if (votes.find((v) => v.user_id === userId)) return null;
 
-    const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice]));
+    const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice ?? 'abstain']));
     const delegationMap = this.buildDelegationMap(delegations);
 
     // Collect the chain of user IDs
@@ -427,7 +481,7 @@ export class ProposalsService {
     // User voted directly — no banner needed
     if (votes.find((v) => v.user_id === userId)) return null;
 
-    const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice]));
+    const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice ?? 'abstain']));
     const delegationMap = this.buildDelegationMap(delegations);
 
     const MAX_DEPTH = 10;
