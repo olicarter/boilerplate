@@ -5,6 +5,7 @@ import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import type { Proposal, Vote, Comment, User, Membership, Topic } from '../api';
+import styles from './ActivityFeedPage.module.css';
 
 type ActivityEvent =
   | { kind: 'proposal_opened'; ts: string; proposal: Proposal; topic?: Topic }
@@ -83,12 +84,6 @@ export function ActivityFeedPage() {
   }
 
   function renderEvent(event: ActivityEvent, i: number) {
-    const badgeStyle = (bg: string, color: string, border: string): React.CSSProperties => ({
-      display: 'inline-block', padding: '1px 7px', borderRadius: 10,
-      fontSize: 11, fontWeight: 500, background: bg, color, border: `1px solid ${border}`,
-      marginLeft: '0.4rem', flexShrink: 0,
-    });
-
     let icon = '•';
     let content: React.ReactNode;
 
@@ -96,40 +91,44 @@ export function ActivityFeedPage() {
       icon = '📋';
       content = (
         <>
-          <Link to="/orgs/$slug/proposals/$id" params={{ slug, id: event.proposal.id }} style={{ fontWeight: 500, color: 'inherit', textDecoration: 'none' }}>
+          <Link to="/orgs/$slug/proposals/$id" params={{ slug, id: event.proposal.id }} className={styles.eventLink}>
             {event.proposal.title}
           </Link>
           {' '}
-          <span style={badgeStyle('#e6f9ed', '#2d9a4e', '#b3e5c2')}>opened</span>
-          {event.topic && <span style={badgeStyle('#e8f0fe', '#1a56d6', '#c3d6fb')}>{event.topic.name}</span>}
+          <span className={`${styles.badge} ${styles.badgeOpened}`}>opened</span>
+          {event.topic && <span className={`${styles.badge} ${styles.badgeTopic}`}>{event.topic.name}</span>}
         </>
       );
     } else if (event.kind === 'proposal_closed') {
       icon = '🔒';
       content = (
         <>
-          <Link to="/orgs/$slug/proposals/$id" params={{ slug, id: event.proposal.id }} style={{ fontWeight: 500, color: 'inherit', textDecoration: 'none' }}>
+          <Link to="/orgs/$slug/proposals/$id" params={{ slug, id: event.proposal.id }} className={styles.eventLink}>
             {event.proposal.title}
           </Link>
           {' '}
-          <span style={badgeStyle('#f5f5f5', '#888', '#ddd')}>closed</span>
+          <span className={`${styles.badge} ${styles.badgeClosed}`}>closed</span>
         </>
       );
     } else if (event.kind === 'vote_cast') {
+      const choiceClass = event.vote.choice === 'yes'
+        ? styles.voteYes
+        : event.vote.choice === 'no'
+          ? styles.voteNo
+          : styles.voteAbstain;
       icon = '🗳️';
-      const choiceColor: Record<string, string> = { yes: '#2d9a4e', no: '#d94040', abstain: '#888' };
       content = (
         <>
-          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.vote.user_id }} style={{ fontWeight: 500, color: 'inherit', textDecoration: 'none' }}>
+          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.vote.user_id }} className={styles.eventLink}>
             {event.user?.name ?? 'Someone'}
           </Link>
           {' voted '}
           {event.vote.choice ? (
-            <span style={{ fontWeight: 600, color: choiceColor[event.vote.choice] ?? '#555' }}>{event.vote.choice}</span>
+            <span className={choiceClass}>{event.vote.choice}</span>
           ) : 'for an option'}
           {' on '}
           {event.proposal ? (
-            <Link to="/orgs/$slug/proposals/$id" params={{ slug, id: event.proposal.id }} style={{ color: 'inherit', textDecoration: 'none' }}>
+            <Link to="/orgs/$slug/proposals/$id" params={{ slug, id: event.proposal.id }} className={styles.eventLink}>
               {event.proposal.title}
             </Link>
           ) : 'a proposal'}
@@ -139,17 +138,17 @@ export function ActivityFeedPage() {
       icon = '💬';
       content = (
         <>
-          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.comment.author_id }} style={{ fontWeight: 500, color: 'inherit', textDecoration: 'none' }}>
+          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.comment.author_id }} className={styles.eventLink}>
             {event.user?.name ?? 'Someone'}
           </Link>
           {' commented on '}
           {event.proposal ? (
-            <Link to="/orgs/$slug/proposals/$id" params={{ slug, id: event.proposal.id }} style={{ color: 'inherit', textDecoration: 'none' }}>
+            <Link to="/orgs/$slug/proposals/$id" params={{ slug, id: event.proposal.id }} className={styles.eventLink}>
               {event.proposal.title}
             </Link>
           ) : 'a proposal'}
           {event.comment.body && (
-            <span style={{ display: 'block', fontSize: 12, color: '#777', marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 480 }}>
+            <span className={styles.eventComment}>
               "{event.comment.body.slice(0, 120)}{event.comment.body.length > 120 ? '…' : ''}"
             </span>
           )}
@@ -159,7 +158,7 @@ export function ActivityFeedPage() {
       icon = '👤';
       content = (
         <>
-          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.membership.user_id }} style={{ fontWeight: 500, color: 'inherit', textDecoration: 'none' }}>
+          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.membership.user_id }} className={styles.eventLink}>
             {event.user?.name ?? 'Someone'}
           </Link>
           {' joined the organisation'}
@@ -171,34 +170,24 @@ export function ActivityFeedPage() {
       <div
         key={i}
         data-testid={`activity-event-${event.kind}`}
-        style={{
-          display: 'flex',
-          gap: '0.75rem',
-          padding: '0.75rem 0',
-          borderBottom: '1px solid #f0f0f0',
-          alignItems: 'flex-start',
-        }}
+        className={styles.event}
       >
-        <span style={{ fontSize: 18, flexShrink: 0, width: 24, textAlign: 'center' }}>{icon}</span>
-        <div style={{ flex: 1, minWidth: 0, fontSize: 14, color: '#333', lineHeight: 1.5 }}>
-          {content}
-        </div>
-        <span style={{ fontSize: 12, color: '#bbb', flexShrink: 0, whiteSpace: 'nowrap' }}>
-          {timeAgo(event.ts)}
-        </span>
+        <span className={styles.eventIcon}>{icon}</span>
+        <div className={styles.eventBody}>{content}</div>
+        <span className={styles.eventTime}>{timeAgo(event.ts)}</span>
       </div>
     );
   }
 
   if (!currentUser) {
-    return <p style={{ fontSize: 14, color: '#999' }}>Sign in to view activity.</p>;
+    return <p className={styles.signIn}>Sign in to view activity.</p>;
   }
 
   return (
-    <div style={{ maxWidth: 680 }}>
-      <h2 style={{ marginTop: 0, fontSize: '1.25rem', marginBottom: '1.5rem' }}>Activity feed</h2>
+    <div className={styles.page}>
+      <h2 className={styles.heading}>Activity feed</h2>
       {events.length === 0 ? (
-        <p style={{ color: '#999', fontSize: 14 }}>No activity yet. Create a proposal to get started.</p>
+        <p className={styles.empty}>No activity yet. Create a proposal to get started.</p>
       ) : (
         <div>
           {events.map((event, i) => renderEvent(event, i))}

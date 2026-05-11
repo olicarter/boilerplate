@@ -4,6 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
 import type { User, Membership, Delegation } from '../api';
+import styles from './DelegationNetworkPage.module.css';
 
 interface NodePos {
   id: string;
@@ -16,10 +17,10 @@ interface NodePos {
 }
 
 const ROLE_COLOR: Record<string, string> = {
-  admin: '#3358c4',
-  moderator: '#7e22ce',
-  member: '#2d9a4e',
-  observer: '#888',
+  admin: '#0a0a0a',
+  moderator: '#525252',
+  member: '#16a34a',
+  observer: '#a3a3a3',
 };
 
 export function DelegationNetworkPage() {
@@ -83,7 +84,6 @@ export function DelegationNetworkPage() {
         let fx = 0;
         let fy = 0;
 
-        // Repulsion
         for (let j = 0; j < ns.length; j++) {
           if (i === j) continue;
           const dx = ns[i].x - ns[j].x;
@@ -94,7 +94,6 @@ export function DelegationNetworkPage() {
           fy += (dy / dist) * force;
         }
 
-        // Spring attraction for edges
         for (const e of newEdges) {
           let other: NodePos | undefined;
           if (e.from === ns[i].id) other = ns.find((n) => n.id === e.to);
@@ -108,7 +107,6 @@ export function DelegationNetworkPage() {
           fy += (dy / dist) * spring;
         }
 
-        // Center gravity
         fx += (W2 / 2 - ns[i].x) * 0.005;
         fy += (H2 / 2 - ns[i].y) * 0.005;
 
@@ -129,35 +127,28 @@ export function DelegationNetworkPage() {
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
   return (
-    <div style={{ maxWidth: 800 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-        <Link
-          to="/orgs/$slug/delegations"
-          params={{ slug: org.slug }}
-          style={{ fontSize: 13, color: '#888', textDecoration: 'none' }}
-        >
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <Link to="/orgs/$slug/delegations" params={{ slug: org.slug }} className={styles.backLink}>
           ← Delegations
         </Link>
-        <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Delegation network</h2>
+        <h2 className={styles.heading}>Delegation network</h2>
       </div>
 
-      <div style={{ fontSize: 12, color: '#888', marginBottom: '0.75rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className={styles.legend}>
         {Object.entries(ROLE_COLOR).map(([role, color]) => (
-          <span key={role} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block' }} />
+          <span key={role} className={styles.legendItem}>
+            <span className={styles.legendDot} style={{ background: color }} />
             {role}
           </span>
         ))}
-        <span style={{ color: '#aaa' }}>Arrows = delegation direction (from delegator → to delegate)</span>
+        <span className={styles.legendNote}>Arrows = delegation direction (from delegator → to delegate)</span>
       </div>
 
-      <svg
-        ref={svgRef}
-        style={{ width: '100%', height: 420, border: '1px solid #eee', borderRadius: 6, background: '#fafafa', display: 'block', overflow: 'hidden' }}
-      >
+      <svg ref={svgRef} className={styles.svg}>
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L8,3 z" fill="#aaa" />
+            <path d="M0,0 L0,6 L8,3 z" fill="var(--color-border-strong)" />
           </marker>
         </defs>
 
@@ -177,7 +168,7 @@ export function DelegationNetworkPage() {
               y1={from.y}
               x2={ex}
               y2={ey}
-              stroke="#ccc"
+              stroke="var(--color-border-strong)"
               strokeWidth={1.5}
               markerEnd="url(#arrow)"
             />
@@ -197,7 +188,7 @@ export function DelegationNetworkPage() {
               textAnchor="middle"
               dy={26}
               fontSize={10}
-              fill="#444"
+              fill="var(--color-fg-muted)"
               style={{ pointerEvents: 'none', userSelect: 'none' }}
             >
               {n.name.length > 12 ? n.name.slice(0, 11) + '…' : n.name}
@@ -207,17 +198,17 @@ export function DelegationNetworkPage() {
 
         {tooltip && (
           <g transform={`translate(${tooltip.x + 16},${tooltip.y - 8})`}>
-            <rect x={0} y={0} width={tooltip.name.length * 7 + 12} height={22} rx={4} fill="rgba(0,0,0,0.7)" />
+            <rect x={0} y={0} width={tooltip.name.length * 7 + 12} height={22} rx={4} fill="rgba(0,0,0,0.75)" />
             <text x={6} y={15} fontSize={11} fill="#fff">{tooltip.name}</text>
           </g>
         )}
       </svg>
 
       {nodes.length === 0 && (
-        <p style={{ textAlign: 'center', color: '#aaa', fontSize: 13, marginTop: '1rem' }}>No members to display.</p>
+        <p className={styles.emptyHint}>No members to display.</p>
       )}
       {nodes.length > 0 && edges.length === 0 && (
-        <p style={{ textAlign: 'center', color: '#aaa', fontSize: 13, marginTop: '0.75rem' }}>No active delegations in this organisation.</p>
+        <p className={styles.emptyHint}>No active delegations in this organisation.</p>
       )}
     </div>
   );

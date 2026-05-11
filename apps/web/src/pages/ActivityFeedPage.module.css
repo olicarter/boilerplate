@@ -1,0 +1,94 @@
+.page {
+  max-width: 680px;
+}
+
+.heading {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+.signIn {
+  font-size: var(--text-base);
+  color: var(--color-fg-muted);
+}
+
+.empty {
+  font-size: var(--text-base);
+  color: var(--color-fg-subtle);
+}
+
+.event {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border);
+  align-items: flex-start;
+}
+
+.event:last-child { border-bottom: none; }
+
+.eventIcon {
+  font-size: var(--text-lg);
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.eventBody {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-base);
+  color: var(--color-fg);
+  line-height: var(--leading-relaxed);
+}
+
+.eventLink {
+  font-weight: var(--weight-medium);
+  color: inherit;
+  text-decoration: none;
+}
+
+.eventLink:hover { text-decoration: underline; }
+
+.eventTime {
+  font-size: var(--text-xs);
+  color: var(--color-fg-subtle);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.eventComment {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-fg-muted);
+  margin-top: var(--space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 480px;
+}
+
+/* Inline event badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  margin-left: var(--space-1);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.badgeOpened    { background: var(--color-success-bg);  color: var(--color-success);    border-color: var(--color-success-border); }
+.badgeClosed    { background: var(--color-bg-muted);    color: var(--color-fg-muted);   border-color: var(--color-border); }
+.badgeTopic     { background: var(--color-info-bg);     color: var(--color-info);       border-color: var(--color-info-border); }
+
+.voteYes     { font-weight: var(--weight-semibold); color: var(--color-success); }
+.voteNo      { font-weight: var(--weight-semibold); color: var(--color-error); }
+.voteAbstain { font-weight: var(--weight-semibold); color: var(--color-fg-muted); }

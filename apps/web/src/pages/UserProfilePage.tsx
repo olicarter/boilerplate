@@ -4,6 +4,7 @@ import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import type { User, Vote, Delegation, Proposal, Topic, Membership } from '../api';
+import styles from './UserProfilePage.module.css';
 
 export function UserProfilePage() {
   const { id } = useParams({ strict: false }) as { id: string };
@@ -32,121 +33,92 @@ export function UserProfilePage() {
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
-  const choiceColor: Record<string, string> = {
-    yes: '#2d9a4e',
-    no: '#d94040',
-    abstain: '#888',
-  };
+  function choiceClass(choice: string | undefined) {
+    if (choice === 'yes') return styles.voteChoiceYes;
+    if (choice === 'no') return styles.voteChoiceNo;
+    return styles.voteChoiceAbstain;
+  }
 
   if (!user) {
-    return <p style={{ fontSize: 14, color: '#999' }}>Loading…</p>;
+    return <p className={styles.loading}>Loading…</p>;
   }
 
   const isOwnProfile = currentUser?.id === id;
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      {/* Profile header */}
-      <div style={{
-        border: '1px solid #ddd', borderRadius: 6, padding: '1.25rem',
-        marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem',
-      }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: '50%', background: '#e8e8e8',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 20, fontWeight: 600, color: '#666', flexShrink: 0,
-        }}>
+    <div className={styles.page}>
+      <div className={styles.profileCard}>
+        <div className={styles.avatar}>
           {user.name.charAt(0).toUpperCase()}
         </div>
         <div>
-          <p style={{ margin: 0, fontWeight: 600, fontSize: 16 }}>
+          <p className={styles.profileName}>
             {user.name}
-            {isOwnProfile && (
-              <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888', fontWeight: 400 }}>(you)</span>
-            )}
+            {isOwnProfile && <span className={styles.youBadge}>(you)</span>}
           </p>
-          <p style={{ margin: '0.2rem 0 0', fontSize: 13, color: '#666' }}>{user.email}</p>
-          <p style={{ margin: '0.2rem 0 0', fontSize: 12, color: '#aaa' }}>
-            Member since {new Date(user.created_at).toLocaleDateString()}
-          </p>
+          <p className={styles.profileEmail}>{user.email}</p>
+          <p className={styles.profileMeta}>Member since {new Date(user.created_at).toLocaleDateString()}</p>
           {membership && (
-            <p style={{ margin: '0.2rem 0 0', fontSize: 12, color: '#888' }}>
+            <p className={styles.profileRole}>
               {membership.role.charAt(0).toUpperCase() + membership.role.slice(1)}
               {displayWeight !== null && displayWeight !== 1 && (
-                <span style={{ marginLeft: '0.5rem', background: '#e8f0fe', color: '#1a56d6', padding: '1px 6px', borderRadius: 8, fontSize: 11 }}>
-                  weight {displayWeight}
-                </span>
+                <span className={styles.weightBadge}>weight {displayWeight}</span>
               )}
             </p>
           )}
           {user.bio && (
-            <p data-testid="user-bio" style={{ margin: '0.5rem 0 0', fontSize: 13, color: '#555' }}>{user.bio as string}</p>
+            <p data-testid="user-bio" className={styles.profileBio}>{user.bio as string}</p>
           )}
         </div>
       </div>
 
       {isOwnProfile && (
-        <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.25rem' }}>
-          <Link to="/orgs/$slug/delegations" params={{ slug }} style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}>
+        <div className={styles.ownLinks}>
+          <Link to="/orgs/$slug/delegations" params={{ slug }} className={styles.ownLink}>
             Manage your delegations →
           </Link>
-          <Link to="/settings" style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}>
+          <Link to="/settings" className={styles.ownLink}>
             Account settings →
           </Link>
         </div>
       )}
 
-      {/* Votes */}
-      <section style={{ marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
-          Votes ({votes.length})
-        </h3>
+      <section className={styles.section}>
+        <h3 className={styles.sectionHeading}>Votes ({votes.length})</h3>
         {votes.length === 0 ? (
           <div>
-            <p style={{ fontSize: 14, color: '#888', margin: '0 0 0.5rem' }}>No votes cast yet.</p>
+            <p className={styles.empty}>No votes cast yet.</p>
             {isOwnProfile && (
-              <Link to="/orgs/$slug/proposals" params={{ slug }} style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}>
+              <Link to="/orgs/$slug/proposals" params={{ slug }} className={styles.emptyLink}>
                 Browse proposals to get started →
               </Link>
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className={styles.list}>
             {votes.map((v: Vote) => {
               const proposal = proposalMap[v.proposal_id] as Proposal | undefined;
               return (
-                <div
-                  key={v.id}
-                  style={{
-                    border: '1px solid #ddd', borderRadius: 6, padding: '0.6rem 1rem',
-                    fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  }}
-                >
+                <div key={v.id} className={styles.voteRow}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {proposal ? (
                       <Link
                         to="/orgs/$slug/proposals/$id"
                         params={{ slug, id: proposal.id }}
-                        style={{ color: 'inherit', textDecoration: 'none', fontWeight: 500 }}
+                        className={styles.voteLink}
                       >
                         {proposal.title}
                       </Link>
                     ) : (
-                      <span style={{ color: '#aaa' }}>Proposal removed</span>
+                      <span className={styles.removed}>Proposal removed</span>
                     )}
                     {proposal && topicMap[proposal.topic_id] && (
-                      <span style={{
-                        marginLeft: '0.5rem', fontSize: 12, padding: '1px 7px',
-                        borderRadius: 10, background: '#e8f0fe', color: '#1a56d6', border: '1px solid #c3d6fb',
-                      }}>
+                      <span className={styles.topicBadge}>
                         {(topicMap[proposal.topic_id] as Topic).name}
                       </span>
                     )}
                   </div>
-                  <span style={{
-                    fontSize: 13, fontWeight: 600, color: (v.choice ? choiceColor[v.choice] : undefined) ?? '#555',
-                    flexShrink: 0, marginLeft: '1rem', textTransform: 'capitalize',
-                  }}>
+                  <span className={`${styles.voteChoice} ${choiceClass(v.choice)}`}>
                     {v.choice}
                   </span>
                 </div>
@@ -156,50 +128,36 @@ export function UserProfilePage() {
         )}
       </section>
 
-      {/* Delegations */}
-      <section>
-        <h3 style={{ fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
-          Delegations ({outgoing.length})
-        </h3>
+      <section className={styles.section}>
+        <h3 className={styles.sectionHeading}>Delegations ({outgoing.length})</h3>
         {outgoing.length === 0 ? (
           <div>
-            <p style={{ fontSize: 14, color: '#888', margin: '0 0 0.5rem' }}>No delegations set.</p>
+            <p className={styles.empty}>No delegations set.</p>
             {isOwnProfile && (
-              <Link to="/orgs/$slug/delegations" params={{ slug }} style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}>
+              <Link to="/orgs/$slug/delegations" params={{ slug }} className={styles.emptyLink}>
                 Delegate your vote to a trusted member →
               </Link>
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className={styles.list}>
             {outgoing.map((d: Delegation) => {
               const delegate = userMap[d.delegate_id] as User | undefined;
               return (
-                <div
-                  key={d.id}
-                  style={{
-                    border: '1px solid #ddd', borderRadius: 6, padding: '0.6rem 1rem',
-                    fontSize: 14, display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  }}
-                >
+                <div key={d.id} className={styles.delegationRow}>
                   <span>Delegates to </span>
                   {delegate ? (
                     <Link
                       to="/orgs/$slug/users/$id"
                       params={{ slug, id: delegate.id }}
-                      style={{ fontWeight: 500, color: 'inherit' }}
+                      className={styles.delegationLink}
                     >
                       {delegate.name}
                     </Link>
                   ) : (
                     <span style={{ fontWeight: 500 }}>{d.delegate_id}</span>
                   )}
-                  <span style={{
-                    fontSize: 12, padding: '1px 7px', borderRadius: 10,
-                    background: d.topic_id ? '#e8f0fe' : '#f0f0f0',
-                    color: d.topic_id ? '#1a56d6' : '#666',
-                    border: `1px solid ${d.topic_id ? '#c3d6fb' : '#ddd'}`,
-                  }}>
+                  <span className={`${styles.scopeBadge} ${d.topic_id ? styles.scopeTopic : styles.scopeGlobal}`}>
                     {d.topic_id ? ((topicMap[d.topic_id] as Topic)?.name ?? d.topic_id) : 'Global'}
                   </span>
                 </div>
