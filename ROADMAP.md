@@ -119,7 +119,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **Signatures / petition mode** — a proposal can be opened in "petition" mode, collecting expressions of support before a formal vote. Once a signature threshold is met, it automatically transitions to voting.
 
 ### Amendments
-- [ ] **Amendment proposals** — a member can propose an amendment to an open proposal. If the amendment passes (simple majority), the parent proposal description is updated and the vote resets. Creates a clear history.
+- [x] **Amendment proposals** — a member can propose an amendment to an open proposal. If the amendment passes (simple majority), the parent proposal description is updated and the vote resets. Creates a clear history.
 - [x] **Proposal versions** — every edit to a proposal title/description creates a version in `proposal_versions`; users can see the edit history on the proposal detail page.
 - [ ] **Proposal linking** — proposals can be linked as: supersedes / related to / blocks / depends on. Displayed as a relationship section on the detail page.
 

@@ -6,8 +6,8 @@ import { ImpactLevel, Proposal, ProposalStatus } from './proposal.entity';
 import { ProposalOption } from './proposal-option.entity';
 import { ProposalReaction } from './proposal-reaction.entity';
 import { ProposalSignature } from './proposal-signature.entity';
-import { Endorsement } from '../endorsements/endorsement.entity';
 import { ProposalVersion } from './proposal-version.entity';
+import { Endorsement } from '../endorsements/endorsement.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { Organisation } from '../organisations/organisation.entity';
@@ -87,10 +87,12 @@ export class ProposalsService {
     quorum?: number | null;
     quorum_type?: 'soft' | 'hard';
     status?: 'open' | 'draft';
-    proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition';
+    proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition' | 'amendment';
     tags?: string[];
     impact_level?: ImpactLevel | null;
     signature_threshold?: number | null;
+    parent_proposal_id?: string | null;
+    amendment_text?: string | null;
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Title is required');
@@ -107,6 +109,13 @@ export class ProposalsService {
     const actual = ROLE_RANK[membership.role] ?? 0;
     if (actual < required) {
       throw new ForbiddenException(`Only ${org.proposal_creation_role}s and above can create proposals`);
+    }
+
+    if (data.proposal_type === 'amendment') {
+      if (!data.parent_proposal_id) throw new BadRequestException('Amendment requires a parent proposal');
+      if (!data.amendment_text?.trim()) throw new BadRequestException('Amendment text is required');
+      const parent = await this.proposalRepo.findOneBy({ id: data.parent_proposal_id });
+      if (!parent || parent.status !== 'open') throw new BadRequestException('Parent proposal must be open');
     }
 
     const result = await this.dataSource.transaction(async (manager) => {
@@ -252,7 +261,44 @@ export class ProposalsService {
     const result = await this.transition(id, userId, 'open', 'closed', { status: 'closed', closed_at: new Date() }, true);
     this.auditLog.log(result.item.organisation_id, userId, 'proposal.closed', 'proposal', id, { title: result.item.title });
     await this.notifyVoters(id, result.item.organisation_id, userId, result.item.title);
+    if (result.item.proposal_type === 'amendment') {
+      await this.applyAmendmentIfPassed(id).catch(() => {});
+    }
     return result;
+  }
+
+  private async applyAmendmentIfPassed(amendmentId: string): Promise<void> {
+    const amendment = await this.proposalRepo.findOneBy({ id: amendmentId });
+    if (!amendment || amendment.proposal_type !== 'amendment' || !amendment.parent_proposal_id) return;
+
+    const tally = await this.tally(amendmentId);
+    if (tally.yes <= tally.no) return; // simple majority required
+
+    await this.dataSource.transaction(async (manager) => {
+      const parent = await manager.findOneBy(Proposal, { id: amendment.parent_proposal_id! });
+      if (!parent) return;
+
+      // Create a version of the parent before updating
+      const version = manager.create(ProposalVersion, {
+        id: randomUUID(),
+        proposal_id: parent.id,
+        organisation_id: parent.organisation_id,
+        editor_id: amendment.author_id,
+        title: parent.title,
+        description: parent.description,
+        created_at: new Date(),
+      });
+      await manager.save(version);
+
+      // Update parent description with amendment text
+      await manager.update(Proposal, parent.id, { description: amendment.amendment_text! });
+
+      // Reset all votes on the parent
+      await manager.delete(Vote, { proposal_id: parent.id });
+
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return parseInt(row.txid, 10);
+    });
   }
 
   async reopen(id: string, userId: string) {
@@ -291,6 +337,9 @@ export class ProposalsService {
       expired.map(async (p) => {
         await this.proposalRepo.update(p.id, { status: 'closed', closed_at: now });
         await this.notifyVoters(p.id, p.organisation_id, null, p.title);
+        if (p.proposal_type === 'amendment') {
+          await this.applyAmendmentIfPassed(p.id).catch(() => {});
+        }
       }),
     );
     return expired.length;

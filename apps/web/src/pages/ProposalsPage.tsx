@@ -863,6 +863,11 @@ export function ProposalsPage() {
                             Petition
                           </span>
                         )}
+                        {p.proposal_type === 'amendment' && (
+                          <span style={{ ...badge, background: '#fff7ed', color: '#92400e', border: '1px solid #fde68a' }}>
+                            Amendment
+                          </span>
+                        )}
                         {isDraft && (
                           <span style={{ ...badge, background: '#fff8e1', color: '#b45309', border: '1px solid #fde68a' }}>
                             Draft

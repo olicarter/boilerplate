@@ -122,6 +122,10 @@ export function ProposalDetailPage() {
   const [signatures, setSignatures] = useState<ProposalSignature[]>([]);
   const [signatureCount, setSignatureCount] = useState<number>(0);
   const [signing, setSigning] = useState(false);
+  const [showAmendForm, setShowAmendForm] = useState(false);
+  const [amendText, setAmendText] = useState('');
+  const [amendDeadline, setAmendDeadline] = useState('');
+  const [submittingAmend, setSubmittingAmend] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -353,6 +357,13 @@ export function ProposalDetailPage() {
   const isTemperatureCheck = proposal.proposal_type === 'temperature_check';
   const isConsent = proposal.proposal_type === 'consent';
   const isPetition = proposal.proposal_type === 'petition';
+  const isAmendment = proposal.proposal_type === 'amendment';
+  const parentProposal = isAmendment && proposal.parent_proposal_id
+    ? (allProposals ?? []).find((p: Proposal) => p.id === proposal.parent_proposal_id)
+    : null;
+  const pendingAmendments = (allProposals ?? []).filter(
+    (p: Proposal) => p.parent_proposal_id === id && p.proposal_type === 'amendment' && p.status === 'open',
+  );
   const proposalOptions = ((allProposalOptions ?? []) as ProposalOption[])
     .filter((o) => o.proposal_id === id)
     .sort((a, b) => a.position - b.position);
@@ -525,6 +536,34 @@ export function ProposalDetailPage() {
       addToast('Failed to react', 'error');
     } finally {
       setReactingEmoji(null);
+    }
+  }
+
+  async function handleSubmitAmendment() {
+    if (!currentUser || !amendText.trim() || submittingAmend) return;
+    setSubmittingAmend(true);
+    try {
+      await proposalsApi.create({
+        id: uuid(),
+        organisation_id: org.id,
+        topic_id: proposal.topic_id,
+        title: `Amendment to: ${proposal.title}`,
+        description: `Proposed amendment to replace the description of "${proposal.title}"`,
+        proposal_type: 'amendment',
+        parent_proposal_id: id,
+        amendment_text: amendText.trim(),
+        closes_at: amendDeadline ? new Date(amendDeadline).toISOString() : null,
+        threshold: 50,
+        status: 'open',
+      });
+      setShowAmendForm(false);
+      setAmendText('');
+      setAmendDeadline('');
+      addToast('Amendment proposed', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to propose amendment', 'error');
+    } finally {
+      setSubmittingAmend(false);
     }
   }
 
@@ -901,6 +940,16 @@ export function ProposalDetailPage() {
                   Consent
                 </span>
               )}
+              {isPetition && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', verticalAlign: 'middle' }}>
+                  Petition
+                </span>
+              )}
+              {isAmendment && (
+                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#fff7ed', color: '#92400e', border: '1px solid #fde68a', verticalAlign: 'middle' }}>
+                  Amendment
+                </span>
+              )}
               {proposal.impact_level && (() => {
                 const colors: Record<string, { bg: string; color: string; border: string }> = {
                   low: { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
@@ -931,6 +980,19 @@ export function ProposalDetailPage() {
               {proposal.tags.map((tag: string) => (
                 <span key={tag} data-testid="proposal-tag" style={{ fontSize: 12, padding: '0.15rem 0.5rem', borderRadius: 12, background: '#e8edf7', color: '#3358c4' }}>{tag}</span>
               ))}
+            </div>
+          )}
+          {isAmendment && parentProposal && (
+            <div style={{ fontSize: 13, color: '#92400e', background: '#fff7ed', border: '1px solid #fde68a', borderRadius: 4, padding: '0.4rem 0.75rem', marginBottom: '0.75rem' }}>
+              Amendment to: <Link to="/orgs/$slug/proposals/$id" params={{ slug: org.slug, id: parentProposal.id }} style={{ color: '#92400e', fontWeight: 500 }}>{parentProposal.title}</Link>
+            </div>
+          )}
+          {isAmendment && proposal.amendment_text && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <p style={{ margin: '0 0 0.3rem', fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Proposed new description</p>
+              <div style={{ border: '1px solid #fde68a', borderRadius: 4, padding: '0.6rem 0.75rem', background: '#fffbeb' }}>
+                <MarkdownContent content={proposal.amendment_text} />
+              </div>
             </div>
           )}
           {proposal.description && (
@@ -2063,6 +2125,81 @@ export function ProposalDetailPage() {
           </form>
         )}
       </div>
+
+      {/* Amendments */}
+      {!isAmendment && isOpen && (
+        <div style={{ marginTop: '2rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: pendingAmendments.length > 0 || showAmendForm ? '0.75rem' : 0 }}>
+            <h3 style={{ margin: 0, fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Amendments {pendingAmendments.length > 0 && `(${pendingAmendments.length})`}
+            </h3>
+            {currentUser && myMembership && !showAmendForm && (
+              <button
+                type="button"
+                onClick={() => { setShowAmendForm(true); setAmendText(proposal.description || ''); }}
+                style={{ fontSize: 13, padding: '0.25rem 0.75rem', cursor: 'pointer', border: '1px solid #ddd', borderRadius: 4, background: 'none', color: '#555' }}
+              >
+                Propose amendment
+              </button>
+            )}
+          </div>
+          {pendingAmendments.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+              {pendingAmendments.map((a: Proposal) => (
+                <div key={a.id} style={{ border: '1px solid #fde68a', borderRadius: 6, padding: '0.6rem 1rem', background: '#fffbeb', fontSize: 13 }}>
+                  <Link to="/orgs/$slug/proposals/$id" params={{ slug: org.slug, id: a.id }} style={{ fontWeight: 500, color: '#92400e', textDecoration: 'none' }}>
+                    {a.title}
+                  </Link>
+                  <span style={{ marginLeft: '0.5rem', color: '#aaa', fontSize: 12 }}>
+                    · proposed by {(allUsers ?? []).find((u: User) => u.id === a.author_id)?.name ?? 'unknown'}
+                  </span>
+                  {a.closes_at && (
+                    <span style={{ marginLeft: '0.5rem', color: '#aaa', fontSize: 12 }}>
+                      · vote closes {new Date(a.closes_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {showAmendForm && (
+            <div style={{ border: '1px solid #fde68a', borderRadius: 6, padding: '1rem 1.25rem', background: '#fffbeb', marginBottom: '1rem' }}>
+              <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#92400e' }}>Proposed new description (members will vote on this amendment):</p>
+              <textarea
+                value={amendText}
+                onChange={(e) => setAmendText(e.target.value)}
+                rows={6}
+                style={{ width: '100%', padding: '0.5rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical', marginBottom: '0.5rem' }}
+                placeholder="Write the proposed new description..."
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <label style={{ fontSize: 13, color: '#555' }}>Vote deadline:</label>
+                <input
+                  type="datetime-local"
+                  value={amendDeadline}
+                  onChange={(e) => setAmendDeadline(e.target.value)}
+                  style={{ padding: '0.3rem 0.5rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+                />
+                <button
+                  type="button"
+                  onClick={handleSubmitAmendment}
+                  disabled={submittingAmend || !amendText.trim()}
+                  style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: '#92400e', color: '#fff', border: 'none', borderRadius: 4 }}
+                >
+                  {submittingAmend ? 'Submitting…' : 'Submit amendment'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAmendForm(false)}
+                  style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none', borderRadius: 4, color: '#555' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Comments */}
       <div style={{ marginTop: '2.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>

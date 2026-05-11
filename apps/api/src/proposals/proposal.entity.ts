@@ -1,7 +1,7 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
 
 export type ProposalStatus = 'draft' | 'open' | 'closed' | 'withdrawn';
-export type ProposalType = 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition';
+export type ProposalType = 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition' | 'amendment';
 export type ImpactLevel = 'low' | 'medium' | 'high' | 'constitutional';
 
 @Entity('proposals')
@@ -65,4 +65,10 @@ export class Proposal {
 
   @Column({ name: 'signature_threshold', type: 'integer', nullable: true, default: null })
   signature_threshold!: number | null;
+
+  @Column({ name: 'parent_proposal_id', type: 'uuid', nullable: true, default: null })
+  parent_proposal_id!: string | null;
+
+  @Column({ name: 'amendment_text', type: 'text', nullable: true, default: null })
+  amendment_text!: string | null;
 }
