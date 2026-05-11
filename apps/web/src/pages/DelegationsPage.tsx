@@ -9,7 +9,9 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { EmptyState } from '../components/EmptyState';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
+import { Button } from '../components/ui';
 import type { User, Delegation, Topic } from '../api';
+import styles from './DelegationsPage.module.css';
 
 export function DelegationsPage() {
   const currentUser = useCurrentUser();
@@ -31,11 +33,9 @@ export function DelegationsPage() {
 
   if (!currentUser) {
     return (
-      <div style={{ maxWidth: 600 }}>
-        <h2 style={{ margin: '0 0 1.5rem' }}>Delegations</h2>
-        <p style={{ fontSize: 14, color: '#666' }}>
-          Please sign in to manage your delegations.
-        </p>
+      <div className={styles.page}>
+        <h2 className={styles.heading}>Delegations</h2>
+        <p className={styles.signIn}>Please sign in to manage your delegations.</p>
       </div>
     );
   }
@@ -50,7 +50,6 @@ export function DelegationsPage() {
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
-  // Compute allocation totals per scope for outgoing delegations
   const allocationByScopeKey = (outgoing as Delegation[]).reduce((acc: Record<string, number>, d: Delegation) => {
     const key = d.topic_id ?? '__global__';
     acc[key] = (acc[key] ?? 0) + (Number(d.weight_fraction) || 1);
@@ -77,7 +76,6 @@ export function DelegationsPage() {
     const resolvedTopicId = scopeTopicId === '__global__' ? null : scopeTopicId;
     const fraction = Math.min(100, Math.max(1, parseInt(weightPercent, 10) || 100)) / 100;
 
-    // Check for exact duplicate (same delegate + same topic)
     const duplicate = outgoing.find((d: Delegation) => d.topic_id === resolvedTopicId && d.delegate_id === selectedDelegate.id);
     if (duplicate) {
       setFormError('You already have a delegation to this person for that scope.');
@@ -122,23 +120,20 @@ export function DelegationsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <h2 style={{ margin: 0 }}>Delegations</h2>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h2 className={styles.heading}>Delegations</h2>
         <Link
           to="/orgs/$slug/delegations/network"
           params={{ slug: org.slug }}
-          style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}
+          className={styles.networkLink}
         >
           View network graph →
         </Link>
       </div>
 
-      {/* Your outgoing delegations */}
-      <section style={{ marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
-          You are delegating to
-        </h3>
+      <section className={styles.section}>
+        <h3 className={styles.sectionHeading}>You are delegating to</h3>
         {outgoing.length === 0 ? (
           <EmptyState
             variant="delegations"
@@ -146,7 +141,7 @@ export function DelegationsPage() {
             description="Delegate your vote to someone you trust on all topics or a specific one."
           />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className={styles.list}>
             {outgoing.map((d: Delegation) => {
               const delegate = userMap[d.delegate_id];
               const expired = d.expires_at ? new Date(d.expires_at) <= new Date() : false;
@@ -158,60 +153,31 @@ export function DelegationsPage() {
               const scopeKey = d.topic_id ?? '__global__';
               const totalAlloc = allocationByScopeKey[scopeKey] ?? 1;
               const overAllocated = totalAlloc > 1.001;
+              const rowClass = `${styles.delegationRow} ${expired ? styles.delegationRowExpired : ''} ${overAllocated ? styles.delegationRowOverAlloc : ''}`;
               return (
-                <div
-                  key={d.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    border: `1px solid ${expired ? '#f5c0c0' : overAllocated ? '#f5d0a0' : '#ddd'}`,
-                    borderRadius: 6,
-                    padding: '0.6rem 1rem',
-                    fontSize: 14,
-                    opacity: expired ? 0.7 : 1,
-                  }}
-                >
-                  <div>
-                    <span style={{ fontWeight: 500 }}>{delegate?.name ?? d.delegate_id}</span>
-                    <span style={{ color: '#888', fontSize: 13, marginLeft: '0.5rem' }}>
-                      {delegate?.email}
-                    </span>
-                    <span
-                      style={{
-                        marginLeft: '0.75rem',
-                        fontSize: 12,
-                        padding: '1px 7px',
-                        borderRadius: 10,
-                        background: d.topic_id ? '#e8f0fe' : '#f0f0f0',
-                        color: d.topic_id ? '#1a56d6' : '#666',
-                        border: `1px solid ${d.topic_id ? '#c3d6fb' : '#ddd'}`,
-                      }}
-                    >
+                <div key={d.id} className={rowClass}>
+                  <div className={styles.delegationInfo}>
+                    <span className={styles.delegateName}>{delegate?.name ?? d.delegate_id}</span>
+                    {delegate?.email && <span className={styles.delegateEmail}>{delegate.email}</span>}
+                    <span className={`${styles.scopeBadge} ${d.topic_id ? styles.scopeTopic : styles.scopeGlobal}`}>
                       {scopeLabel(d.topic_id)}
                     </span>
-                    {pct !== 100 && (
-                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#555', fontWeight: 500 }}>{pct}%</span>
-                    )}
+                    {pct !== 100 && <span className={styles.weightPct}>{pct}%</span>}
                     {overAllocated && (
-                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#b06000' }}>· over-allocated ({Math.round(totalAlloc * 100)}% total — will be normalised)</span>
+                      <span className={styles.overAlloc}>· over-allocated ({Math.round(totalAlloc * 100)}% total — will be normalised)</span>
                     )}
-                    {expired && (
-                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#d94040' }}>Expired</span>
-                    )}
-                    {!expired && expiresDate && (
-                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888' }}>· expires {expiresDate}</span>
-                    )}
+                    {expired && <span className={styles.expired}>Expired</span>}
+                    {!expired && expiresDate && <span className={styles.expiresDate}>· expires {expiresDate}</span>}
                     {d.fallback_abstain_hours != null && (
-                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888' }}>· voids if delegate doesn't vote within {d.fallback_abstain_hours}h of deadline</span>
+                      <span className={styles.fallback}>· voids if delegate doesn't vote within {d.fallback_abstain_hours}h of deadline</span>
                     )}
                   </div>
                   <ConfirmButton
                     label="Remove"
                     confirmLabel="Yes, remove"
                     onConfirm={() => handleRemove(d.id)}
-                    style={{ fontSize: 12, color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4, padding: '0.25rem 0.6rem', cursor: 'pointer' }}
-                    confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                    style={{ fontSize: 'var(--text-xs)', padding: '0 var(--space-2)', height: '26px', color: 'var(--color-error)', border: '1px solid var(--color-error)', background: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                    confirmStyle={{ color: 'var(--color-error)', border: '1px solid var(--color-error)', background: 'none', borderRadius: 'var(--radius-sm)' }}
                   />
                 </div>
               );
@@ -220,90 +186,53 @@ export function DelegationsPage() {
         )}
       </section>
 
-      {/* Add new delegation */}
-      <section style={{ marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
-          Add delegation
-        </h3>
-        <form
-          onSubmit={handleAdd}
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: 6,
-            padding: '1.25rem',
-            background: '#fafafa',
-          }}
-        >
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Delegate to</label>
+      <section className={styles.section}>
+        <h3 className={styles.sectionHeading}>Add delegation</h3>
+        <form className={styles.form} onSubmit={handleAdd}>
+          <div className={styles.formField}>
+            <label className={styles.formLabel}>Delegate to</label>
             {selectedDelegate ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  border: '1px solid #ddd',
-                  borderRadius: 4,
-                  padding: '0.4rem 0.75rem',
-                  fontSize: 14,
-                  background: '#fff',
-                }}
-              >
+              <div className={styles.selectedDelegate}>
                 <span>
-                  <strong>{selectedDelegate.name}</strong>
-                  <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: 13 }}>
-                    {selectedDelegate.email}
-                  </span>
+                  <span className={styles.selectedDelegateName}>{selectedDelegate.name}</span>
+                  <span className={styles.selectedDelegateEmail}>{selectedDelegate.email}</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedDelegate(null)}
-                  style={{ fontSize: 12, border: 'none', background: 'none', cursor: 'pointer', color: '#888' }}
-                >
-                  ✕
-                </button>
+                <button type="button" onClick={() => setSelectedDelegate(null)} className={styles.clearBtn}>✕</button>
               </div>
             ) : (
-              <UserSearch
-                onSelect={setSelectedDelegate}
-                excludeId={currentUser.id}
-              />
+              <UserSearch onSelect={setSelectedDelegate} excludeId={currentUser.id} />
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div className={styles.formGrid}>
             <div>
-              <label htmlFor="delegation-scope" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Scope</label>
+              <label htmlFor="delegation-scope" className={styles.formLabel}>Scope</label>
               <select
                 id="delegation-scope"
                 value={scopeTopicId}
                 onChange={(e) => setScopeTopicId(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+                className={styles.formSelect}
               >
                 <option value="__global__">Global (all topics)</option>
                 {(allTopics ?? []).map((t: Topic) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
+                  <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label htmlFor="delegation-expires-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-                Expires <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span>
+              <label htmlFor="delegation-expires-at" className={styles.formLabel}>
+                Expires <span className={styles.formLabelNote}>(optional)</span>
               </label>
               <input
                 id="delegation-expires-at"
                 type="datetime-local"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+                className={styles.formInput}
               />
             </div>
             <div>
-              <label htmlFor="delegation-weight" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-                Weight %
-              </label>
+              <label htmlFor="delegation-weight" className={styles.formLabel}>Weight %</label>
               <input
                 id="delegation-weight"
                 type="number"
@@ -311,15 +240,16 @@ export function DelegationsPage() {
                 max={100}
                 value={weightPercent}
                 onChange={(e) => setWeightPercent(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+                className={styles.formInput}
               />
             </div>
           </div>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="delegation-fallback" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-              Conditional <span style={{ color: '#aaa', fontWeight: 400 }}>(optional — void if delegate hasn't voted within N hours of deadline)</span>
+
+          <div className={styles.formField}>
+            <label htmlFor="delegation-fallback" className={styles.formLabel}>
+              Conditional <span className={styles.formLabelNote}>(optional — void if delegate hasn't voted within N hours of deadline)</span>
             </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className={styles.fallbackRow}>
               <input
                 id="delegation-fallback"
                 type="number"
@@ -328,72 +258,38 @@ export function DelegationsPage() {
                 value={fallbackHours}
                 onChange={(e) => setFallbackHours(e.target.value)}
                 placeholder="e.g. 48"
-                style={{ width: 80, padding: '0.4rem 0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+                className={styles.formInput}
+                style={{ width: 80 }}
               />
-              <span style={{ fontSize: 13, color: '#666' }}>hours before deadline</span>
+              <span className={styles.fallbackHint}>hours before deadline</span>
             </div>
           </div>
 
-          {formError && (
-            <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{formError}</p>
-          )}
+          {formError && <p className={styles.formError}>{formError}</p>}
 
-          <button
-            type="submit"
-            disabled={submitting || !selectedDelegate}
-            style={{ fontSize: 13, padding: '0.4rem 1.25rem', cursor: 'pointer' }}
-          >
+          <Button type="submit" disabled={submitting || !selectedDelegate} size="sm">
             {submitting ? 'Adding…' : 'Add delegation'}
-          </button>
+          </Button>
         </form>
       </section>
 
-      {/* Delegated to you */}
-      <section>
-        <h3 style={{ fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
-          Delegated to you
-        </h3>
+      <section className={styles.section}>
+        <h3 className={styles.sectionHeading}>Delegated to you</h3>
         {incoming.length === 0 ? (
-          <EmptyState
-            variant="delegations"
-            title="Nobody has delegated to you yet"
-          />
+          <EmptyState variant="delegations" title="Nobody has delegated to you yet" />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className={styles.list}>
             {incoming.map((d: Delegation) => {
               const delegator = userMap[d.delegator_id];
               return (
-                <div
-                  key={d.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    border: '1px solid #ddd',
-                    borderRadius: 6,
-                    padding: '0.6rem 1rem',
-                    fontSize: 14,
-                  }}
-                >
-                  <span>
-                    <span style={{ fontWeight: 500 }}>{delegator?.name ?? d.delegator_id}</span>
-                    <span style={{ color: '#888', fontSize: 13, marginLeft: '0.5rem' }}>
-                      {delegator?.email}
-                    </span>
-                    <span
-                      style={{
-                        marginLeft: '0.75rem',
-                        fontSize: 12,
-                        padding: '1px 7px',
-                        borderRadius: 10,
-                        background: d.topic_id ? '#e8f0fe' : '#f0f0f0',
-                        color: d.topic_id ? '#1a56d6' : '#666',
-                        border: `1px solid ${d.topic_id ? '#c3d6fb' : '#ddd'}`,
-                      }}
-                    >
+                <div key={d.id} className={styles.delegationRow}>
+                  <div className={styles.delegationInfo}>
+                    <span className={styles.delegateName}>{delegator?.name ?? d.delegator_id}</span>
+                    {delegator?.email && <span className={styles.delegateEmail}>{delegator.email}</span>}
+                    <span className={`${styles.scopeBadge} ${d.topic_id ? styles.scopeTopic : styles.scopeGlobal}`}>
                       {scopeLabel(d.topic_id)}
                     </span>
-                  </span>
+                  </div>
                 </div>
               );
             })}

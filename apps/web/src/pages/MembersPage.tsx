@@ -8,6 +8,8 @@ import { useOrg } from '../OrgContext';
 import { useToast } from '../components/Toast';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { UserSearch } from '../components/UserSearch';
+import { Button } from '../components/ui';
+import styles from './MembersPage.module.css';
 
 const ROLE_ORDER: Membership['role'][] = ['admin', 'moderator', 'member', 'observer'];
 
@@ -139,44 +141,42 @@ export function MembersPage() {
   const memberIds = new Set(orgMembers.map((m: Membership) => m.user_id));
 
   return (
-    <div style={{ maxWidth: 640 }}>
-      <h2 style={{ marginTop: 0, fontSize: '1.25rem' }}>Members</h2>
+    <div className={styles.page}>
+      <h2 className={styles.heading}>Members</h2>
 
       {isAdmin && (
-        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1rem 1.25rem', marginBottom: '1rem', background: '#fafafa' }}>
-          <h3 style={{ margin: '0 0 0.75rem', fontSize: 13, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Invite link</h3>
+        <div className={styles.panel}>
+          <h3 className={styles.panelTitle}>Invite link</h3>
           {inviteUrl ? (
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className={styles.inviteRow}>
               <input
                 readOnly
                 value={inviteUrl}
-                style={{ flex: '1 1 200px', fontSize: 12, padding: '0.4rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, background: '#fff', color: '#333', fontFamily: 'monospace' }}
+                className={styles.inviteInput}
                 onClick={(e) => (e.target as HTMLInputElement).select()}
               />
-              <button onClick={handleCopyLink} style={{ fontSize: 13, padding: '0.4rem 0.8rem' }}>
-                Copy
-              </button>
+              <Button size="sm" onClick={handleCopyLink}>Copy</Button>
               <ConfirmButton
                 label={revokingToken ? 'Revoking…' : 'Revoke'}
                 confirmLabel="Yes, revoke"
                 onConfirm={handleRevokeToken}
-                style={{ fontSize: 13, padding: '0.4rem 0.8rem', color: '#d94040', border: '1px solid #f5c5c5', background: 'none', borderRadius: 4 }}
-                confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                style={{ fontSize: 'var(--text-sm)', padding: '0 var(--space-3)', height: '28px', color: 'var(--color-error)', border: '1px solid var(--color-error-border)', background: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                confirmStyle={{ color: 'var(--color-error)', border: '1px solid var(--color-error)', background: 'none', borderRadius: 'var(--radius-sm)' }}
               />
             </div>
           ) : (
-            <button onClick={handleGenerateToken} disabled={generatingToken} style={{ fontSize: 13, padding: '0.4rem 0.9rem' }}>
+            <Button size="sm" onClick={handleGenerateToken} disabled={generatingToken}>
               {generatingToken ? 'Generating…' : 'Generate invite link'}
-            </button>
+            </Button>
           )}
         </div>
       )}
 
       {isAdmin && (
-        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1rem 1.25rem', marginBottom: '1.5rem', background: '#fafafa' }}>
-          <h3 style={{ margin: '0 0 0.75rem', fontSize: 13, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Add member</h3>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 200px' }}>
+        <div className={styles.panel}>
+          <h3 className={styles.panelTitle}>Add member</h3>
+          <div className={styles.addRow}>
+            <div className={styles.addSearchWrap}>
               <UserSearch
                 users={(allUsers ?? []).filter((u: User) => !memberIds.has(u.id))}
                 onSelect={(user: User) => setAddingUserId(user.id)}
@@ -186,68 +186,59 @@ export function MembersPage() {
             <select
               value={addRole}
               onChange={(e) => setAddRole(e.target.value as Membership['role'])}
-              style={{ padding: '0.45rem 0.6rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.roleSelect}
             >
               {ROLE_ORDER.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
-            <button
-              onClick={handleAdd}
-              disabled={!addingUserId || adding}
-              style={{ fontSize: 13, padding: '0.45rem 0.9rem' }}
-            >
+            <Button size="sm" onClick={handleAdd} disabled={!addingUserId || adding}>
               {adding ? 'Adding…' : 'Add'}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className={styles.memberList}>
         {orgMembers
           .sort((a: Membership, b: Membership) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
           .map((m: Membership) => {
             const user = usersById.get(m.user_id);
             const isMe = m.user_id === currentUser?.id;
             return (
-              <div
-                key={m.id}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '0.75rem 1rem', border: '1px solid #eee', borderRadius: 6, background: '#fff',
-                }}
-              >
+              <div key={m.id} className={styles.memberRow}>
                 <div>
                   <Link
                     to="/orgs/$slug/users/$id"
                     params={{ slug: org.slug, id: m.user_id }}
-                    style={{ fontSize: 14, fontWeight: 500, textDecoration: 'none', color: '#333' }}
+                    className={styles.memberName}
                   >
                     {user?.name ?? m.user_id}
                   </Link>
-                  {isMe && <span style={{ marginLeft: '0.5rem', fontSize: 11, color: '#aaa' }}>(you)</span>}
-                  <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>
+                  {isMe && <span className={styles.youLabel}>(you)</span>}
+                  <div className={styles.memberMeta}>
                     {user?.email} · joined {new Date(m.joined_at).toLocaleDateString()}
                     {eligibleProposalCount > 0 && (() => {
                       const voted = votesByUser.get(m.user_id)?.size ?? 0;
                       const pct = Math.round((voted / eligibleProposalCount) * 100);
-                      return <span style={{ marginLeft: '0.5rem', color: pct >= 70 ? '#2d9a4e' : pct >= 30 ? '#888' : '#b45309' }}>· {pct}% participation</span>;
+                      const cls = pct >= 70 ? styles.participationGood : pct >= 30 ? styles.participationMid : styles.participationLow;
+                      return <span className={cls}> · {pct}% participation</span>;
                     })()}
                     {(() => {
                       const carried = delegationWeights.get(m.user_id);
                       const ownWeight = (m as { weight?: number }).weight ?? 1;
                       if (carried !== undefined && carried > ownWeight) {
-                        return <span style={{ marginLeft: '0.5rem', color: '#1a56d6' }}>· carries {carried} votes</span>;
+                        return <span className={styles.carriedVotes}> · carries {carried} votes</span>;
                       }
                       return null;
                     })()}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div className={styles.memberActions}>
                   {isAdmin && !isMe ? (
                     <>
                       <select
                         value={m.role}
                         onChange={(e) => handleRoleChange(m.user_id, e.target.value as Membership['role'])}
-                        style={{ fontSize: 12, padding: '0.2rem 0.4rem', border: '1px solid #ddd', borderRadius: 4 }}
+                        className={styles.roleSelect}
                       >
                         {ROLE_ORDER.map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
@@ -259,28 +250,24 @@ export function MembersPage() {
                         title="Vote weight"
                         aria-label="Vote weight"
                         onBlur={(e) => handleWeightChange(m.user_id, parseInt(e.target.value, 10))}
-                        style={{ width: 52, fontSize: 12, padding: '0.2rem 0.4rem', border: '1px solid #ddd', borderRadius: 4, textAlign: 'center' }}
+                        className={styles.weightInput}
                         data-testid="member-weight-input"
                       />
                       <ConfirmButton
                         label="Remove"
                         confirmLabel="Yes, remove"
                         onConfirm={() => handleRemove(m.user_id)}
-                        style={{ fontSize: 12, padding: '0.2rem 0.6rem', color: '#d94040', border: '1px solid #f5c5c5', background: 'none', borderRadius: 4 }}
-                        confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                        style={{ fontSize: 'var(--text-xs)', padding: '0 var(--space-2)', height: '26px', color: 'var(--color-error)', border: '1px solid var(--color-error-border)', background: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                        confirmStyle={{ color: 'var(--color-error)', border: '1px solid var(--color-error)', background: 'none', borderRadius: 'var(--radius-sm)' }}
                       />
                     </>
                   ) : (
                     <>
-                      <span style={{
-                        fontSize: 11, padding: '0.2rem 0.6rem', borderRadius: 12,
-                        background: m.role === 'admin' ? '#e8f0ff' : '#f0f0f0',
-                        color: m.role === 'admin' ? '#3358c4' : '#666',
-                      }}>
+                      <span className={`${styles.roleBadge} ${m.role === 'admin' ? styles.roleBadgeAdmin : styles.roleBadgeOther}`}>
                         {m.role}
                       </span>
                       {(m.weight ?? 1) > 1 && (
-                        <span title={`Vote weight: ${m.weight}`} style={{ fontSize: 11, padding: '0.2rem 0.5rem', borderRadius: 12, background: '#fff8e1', color: '#8a6d00', border: '1px solid #ffe082' }}>
+                        <span title={`Vote weight: ${m.weight}`} className={styles.weightBadge}>
                           ×{m.weight}
                         </span>
                       )}
@@ -289,8 +276,8 @@ export function MembersPage() {
                           label="Leave"
                           confirmLabel="Yes, leave"
                           onConfirm={handleLeave}
-                          style={{ fontSize: 12, padding: '0.2rem 0.6rem', color: '#d94040', border: '1px solid #f5c5c5', background: 'none', borderRadius: 4 }}
-                          confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
+                          style={{ fontSize: 'var(--text-xs)', padding: '0 var(--space-2)', height: '26px', color: 'var(--color-error)', border: '1px solid var(--color-error-border)', background: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                          confirmStyle={{ color: 'var(--color-error)', border: '1px solid var(--color-error)', background: 'none', borderRadius: 'var(--radius-sm)' }}
                         />
                       )}
                     </>
