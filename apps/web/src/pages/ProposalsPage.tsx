@@ -7,19 +7,13 @@ import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { EmptyState } from '../components/EmptyState';
+import { Button } from '../components/ui';
 import { proposalOptionsApi } from '../api';
 import type { Topic, Proposal, Vote, User, Comment, Membership } from '../api';
+import styles from './ProposalsPage.module.css';
 
 const TITLE_MAX = 200;
 const DESC_MAX = 10000;
-
-const badge: React.CSSProperties = {
-  display: 'inline-block',
-  padding: '2px 8px',
-  borderRadius: 12,
-  fontSize: 12,
-  fontWeight: 500,
-};
 
 function toLocalDatetimeString(date: Date): string {
   const offset = date.getTimezoneOffset();
@@ -44,21 +38,39 @@ function computeResult(yes: number, no: number, threshold: number): 'passed' | '
 
 function ProposalSkeleton() {
   return (
-    <div style={{
-      border: '1px solid #eee',
-      borderRadius: 6,
-      padding: '1rem 1.25rem',
-      background: '#fafafa',
-      animation: 'skeleton-pulse 1.5s ease-in-out infinite',
-    }}>
-      <div style={{ width: '55%', height: 15, background: '#e4e4e4', borderRadius: 4, marginBottom: '0.5rem' }} />
-      <div style={{ width: '85%', height: 12, background: '#e4e4e4', borderRadius: 4, marginBottom: '0.4rem' }} />
-      <div style={{ width: '30%', height: 12, background: '#e4e4e4', borderRadius: 4 }} />
+    <div className={styles.skeleton}>
+      <div className={styles.skeletonLine} style={{ width: '55%', height: 14, marginBottom: 8 }} />
+      <div className={styles.skeletonLine} style={{ width: '85%', height: 11, marginBottom: 6 }} />
+      <div className={styles.skeletonLine} style={{ width: '30%', height: 11 }} />
     </div>
   );
 }
 
 const ROLE_RANK: Record<string, number> = { member: 1, moderator: 2, admin: 3 };
+
+const PROPOSAL_TYPE_LABELS: Record<string, string> = {
+  standard: 'Vote',
+  discussion: 'Discussion',
+  multiple_choice: 'Multiple choice',
+  temperature_check: 'Temp check',
+  consent: 'Consent',
+  approval: 'Approval',
+  score_voting: 'Score',
+  ranked_choice: 'Ranked choice',
+  petition: 'Petition',
+  amendment: 'Amendment',
+};
+
+const PROPOSAL_TYPE_HINTS: Partial<Record<string, string>> = {
+  discussion: 'No formal vote — members comment and deliberate only.',
+  multiple_choice: 'Members pick one option. Add at least 2 options below.',
+  approval: 'Members approve as many options as they like. Most-approved wins.',
+  score_voting: 'Members rate each option 0–5. Highest mean score wins.',
+  ranked_choice: 'Members rank options in order of preference. Instant-runoff determines the winner.',
+  temperature_check: 'Non-binding straw poll to gauge sentiment before a formal vote.',
+  consent: 'Passes unless someone raises a paramount objection. Good for consensus-oriented groups.',
+  petition: 'Collects signatures. Automatically transitions to a standard vote when threshold is reached.',
+};
 
 export function ProposalsPage() {
   const currentUser = useCurrentUser();
@@ -256,32 +268,20 @@ export function ProposalsPage() {
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-        <h2 style={{ margin: 0 }}>Proposals</h2>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h1 className={styles.heading}>Proposals</h1>
         {canCreateProposal && (
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            style={{ fontSize: 13, padding: '0.4rem 1rem', cursor: 'pointer' }}
-          >
+          <Button size="sm" onClick={() => setShowForm((v) => !v)}>
             {showForm ? 'Cancel' : '+ New proposal'}
-          </button>
+          </Button>
         )}
       </div>
 
       {showForm && canCreateProposal && (
-        <form
-          onSubmit={(e) => { e.preventDefault(); handleCreate(false); }}
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: 6,
-            padding: '1.25rem',
-            marginBottom: '1.5rem',
-            background: '#fafafa',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: 15 }}>New proposal</h3>
+        <form onSubmit={(e) => { e.preventDefault(); handleCreate(false); }} className={styles.form}>
+          <div className={styles.formHeader}>
+            <span className={styles.formTitle}>New proposal</span>
             {((org as { proposal_templates?: unknown[] }).proposal_templates ?? []).length > 0 && (
               <select
                 data-testid="use-template-select"
@@ -297,7 +297,8 @@ export function ProposalsPage() {
                   setThreshold(tmpl.threshold);
                   e.target.value = '';
                 }}
-                style={{ fontSize: 12, padding: '0.25rem 0.5rem', border: '1px solid #ddd', borderRadius: 4, color: '#555' }}
+                className={styles.formSelect}
+                style={{ width: 'auto' }}
               >
                 <option value="">Use template…</option>
                 {((org as { proposal_templates?: Array<{ id: string; name: string }> }).proposal_templates ?? []).map((t) => (
@@ -306,11 +307,12 @@ export function ProposalsPage() {
               </select>
             )}
           </div>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <label htmlFor="new-proposal-title" style={{ fontSize: 13 }}>Title</label>
+
+          <div className={styles.formField} style={{ marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <label htmlFor="new-proposal-title" className={styles.formLabel}>Title</label>
               {title.length > TITLE_MAX - 40 && (
-                <span style={{ fontSize: 11, color: title.length >= TITLE_MAX ? '#d94040' : '#aaa' }}>
+                <span className={`${styles.charCount} ${title.length >= TITLE_MAX ? styles.charCountError : styles.charCountWarning}`}>
                   {TITLE_MAX - title.length} left
                 </span>
               )}
@@ -322,16 +324,17 @@ export function ProposalsPage() {
               onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
               required
               maxLength={TITLE_MAX}
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.formInput}
             />
           </div>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <label htmlFor="new-proposal-description" style={{ fontSize: 13 }}>
-                Description <span style={{ color: '#aaa', fontWeight: 400 }}>(Markdown supported)</span>
+
+          <div className={styles.formField} style={{ marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <label htmlFor="new-proposal-description" className={styles.formLabel}>
+                Description <span className={styles.formLabelNote}>(Markdown supported)</span>
               </label>
               {description.length > DESC_MAX - 500 && (
-                <span style={{ fontSize: 11, color: description.length >= DESC_MAX ? '#d94040' : '#aaa' }}>
+                <span className={`${styles.charCount} ${description.length >= DESC_MAX ? styles.charCountError : styles.charCountWarning}`}>
                   {DESC_MAX - description.length} left
                 </span>
               )}
@@ -342,17 +345,18 @@ export function ProposalsPage() {
               onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
               rows={3}
               maxLength={DESC_MAX}
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
+              className={styles.formTextarea}
             />
           </div>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="new-proposal-topic" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Topic</label>
+
+          <div className={styles.formField} style={{ marginBottom: 'var(--space-3)' }}>
+            <label htmlFor="new-proposal-topic" className={styles.formLabel}>Topic</label>
             <select
               id="new-proposal-topic"
               value={topicId}
               onChange={(e) => setTopicId(e.target.value)}
               required
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.formSelect}
             >
               <option value="">Select a topic…</option>
               {(allTopics ?? []).map((t: Topic) => (
@@ -361,80 +365,47 @@ export function ProposalsPage() {
               {canCreateTopic && <option value="__new__">＋ New topic…</option>}
             </select>
           </div>
+
           {topicId === '__new__' && (
-            <div style={{ marginBottom: '0.75rem' }}>
-              <label htmlFor="new-topic-name" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>New topic name</label>
+            <div className={styles.formField} style={{ marginBottom: 'var(--space-3)' }}>
+              <label htmlFor="new-topic-name" className={styles.formLabel}>New topic name</label>
               <input
                 id="new-topic-name"
                 type="text"
                 value={newTopicName}
                 onChange={(e) => setNewTopicName(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+                className={styles.formInput}
               />
             </div>
           )}
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Proposal type</label>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+
+          <div className={styles.formField} style={{ marginBottom: 'var(--space-4)' }}>
+            <span className={styles.formLabel}>Proposal type</span>
+            <div className={styles.typePills}>
               {([
-                { value: 'standard', label: 'Vote' },
-                { value: 'multiple_choice', label: 'Multiple choice' },
-                { value: 'approval', label: 'Approval' },
-                { value: 'score_voting', label: 'Score' },
-                { value: 'ranked_choice', label: 'Ranked choice' },
-                { value: 'temperature_check', label: 'Temperature check' },
-                { value: 'consent', label: 'Consent' },
-                { value: 'petition', label: 'Petition' },
-                { value: 'discussion', label: 'Discussion only' },
-              ] as const).map(({ value, label }) => (
+                'standard', 'multiple_choice', 'approval', 'score_voting',
+                'ranked_choice', 'temperature_check', 'consent', 'petition', 'discussion',
+              ] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
                   data-testid={`proposal-type-${value}`}
                   onClick={() => setProposalType(value)}
-                  style={{
-                    fontSize: 13,
-                    padding: '0.3rem 0.9rem',
-                    borderRadius: 4,
-                    border: '1px solid #ddd',
-                    background: proposalType === value ? '#222' : 'none',
-                    color: proposalType === value ? '#fff' : '#333',
-                    cursor: 'pointer',
-                  }}
+                  className={`${styles.typePill} ${proposalType === value ? styles.typePillActive : ''}`}
                 >
-                  {label}
+                  {PROPOSAL_TYPE_LABELS[value]}
                 </button>
               ))}
             </div>
-            {proposalType === 'discussion' && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Discussion-only proposals have no formal vote — members comment and deliberate only.</p>
-            )}
-            {proposalType === 'multiple_choice' && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members pick one option. Add at least 2 options below.</p>
-            )}
-            {proposalType === 'approval' && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members approve as many options as they like. The most-approved option wins.</p>
-            )}
-            {proposalType === 'score_voting' && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members rate each option 0–5. The highest mean score wins.</p>
-            )}
-            {proposalType === 'ranked_choice' && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Members rank options in order of preference. Instant-runoff voting determines the winner.</p>
-            )}
-            {proposalType === 'temperature_check' && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>A non-binding straw poll to gauge sentiment before a formal vote. Results are advisory only.</p>
-            )}
-            {proposalType === 'consent' && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Passes unless someone raises a paramount objection (Block). Good for consensus-oriented groups.</p>
-            )}
-            {proposalType === 'petition' && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Collects signatures. Once the threshold is reached, it automatically transitions to a standard vote.</p>
+            {PROPOSAL_TYPE_HINTS[proposalType] && (
+              <p className={styles.formHint}>{PROPOSAL_TYPE_HINTS[proposalType]}</p>
             )}
           </div>
+
           {proposalType === 'petition' && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label htmlFor="signature-threshold" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-                Signature threshold <span style={{ color: '#888', fontWeight: 400 }}>(transitions to vote when reached)</span>
+            <div className={styles.formField} style={{ marginBottom: 'var(--space-4)' }}>
+              <label htmlFor="signature-threshold" className={styles.formLabel}>
+                Signature threshold <span className={styles.formLabelNote}>(transitions to vote when reached)</span>
               </label>
               <input
                 id="signature-threshold"
@@ -443,15 +414,17 @@ export function ProposalsPage() {
                 value={signatureThreshold}
                 onChange={(e) => setSignatureThreshold(e.target.value)}
                 placeholder="e.g. 10"
-                style={{ width: 100, padding: '0.4rem 0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+                className={styles.formInput}
+                style={{ width: 100 }}
               />
             </div>
           )}
-          {(['multiple_choice', 'approval', 'score_voting', 'ranked_choice'] as const).includes(proposalType as any) && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Options</label>
+
+          {(['multiple_choice', 'approval', 'score_voting', 'ranked_choice'] as const).includes(proposalType as never) && (
+            <div className={styles.formField} style={{ marginBottom: 'var(--space-4)' }}>
+              <span className={styles.formLabel}>Options</span>
               {mcOptions.map((opt, i) => (
-                <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                <div key={i} className={styles.optionRow}>
                   <input
                     data-testid={`mc-option-${i}`}
                     type="text"
@@ -459,14 +432,15 @@ export function ProposalsPage() {
                     onChange={(e) => setMcOptions((prev) => prev.map((o, j) => j === i ? e.target.value : o))}
                     placeholder={`Option ${i + 1}`}
                     maxLength={500}
-                    style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+                    className={styles.formInput}
                   />
                   {mcOptions.length > 2 && (
-                    <button
+                    <Button
                       type="button"
+                      variant="danger"
+                      size="sm"
                       onClick={() => setMcOptions((prev) => prev.filter((_, j) => j !== i))}
-                      style={{ fontSize: 13, padding: '0.2rem 0.5rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
-                    >×</button>
+                    >×</Button>
                   )}
                 </div>
               ))}
@@ -475,167 +449,159 @@ export function ProposalsPage() {
                   type="button"
                   data-testid="mc-add-option"
                   onClick={() => setMcOptions((prev) => [...prev, ''])}
-                  style={{ fontSize: 12, color: '#3358c4', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}
+                  style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 'var(--space-1)', fontFamily: 'var(--font-sans)' }}
                 >+ Add option</button>
               )}
             </div>
           )}
-          {proposalType !== 'discussion' && (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-            <div>
-              <label htmlFor="new-proposal-deliberation-ends-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-                Deliberation ends <span style={{ color: '#aaa' }}>(optional)</span>
-              </label>
-              <input
-                id="new-proposal-deliberation-ends-at"
-                type="datetime-local"
-                value={deliberationEndsAt}
-                onChange={(e) => setDeliberationEndsAt(e.target.value)}
-                min={toLocalDatetimeString(new Date())}
-                style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
-              />
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#aaa' }}>Discussion only until this time; voting opens after.</p>
-            </div>
-            <div>
-              <label htmlFor="new-proposal-closes-at" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-                Voting deadline <span style={{ color: '#aaa' }}>(optional)</span>
-              </label>
-              <input
-                id="new-proposal-closes-at"
-                type="datetime-local"
-                value={closesAt}
-                onChange={(e) => setClosesAt(e.target.value)}
-                min={deliberationEndsAt || toLocalDatetimeString(new Date())}
-                style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
-              />
-            </div>
-            <div>
-              <label htmlFor="new-proposal-threshold" style={{ display: 'block', fontSize: 13, marginBottom: 6 }}>Passing threshold</label>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                {THRESHOLD_PRESETS.map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => setThreshold(p.value)}
-                    style={{
-                      fontSize: 13,
-                      padding: '0.3rem 0.75rem',
-                      borderRadius: 4,
-                      border: '1px solid #ddd',
-                      background: threshold === p.value ? '#222' : 'none',
-                      color: threshold === p.value ? '#fff' : '#333',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {p.label} ({p.value}%)
-                  </button>
-                ))}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+
+          {proposalType !== 'discussion' && (
+            <>
+              <div className={styles.formGrid} style={{ marginBottom: 'var(--space-4)' }}>
+                <div className={styles.formField}>
+                  <label htmlFor="new-proposal-deliberation-ends-at" className={styles.formLabel}>
+                    Deliberation ends <span className={styles.formLabelNote}>(optional)</span>
+                  </label>
                   <input
-                    id="new-proposal-threshold"
-                    type="number"
-                    value={threshold}
-                    onChange={(e) => setThreshold(Math.min(100, Math.max(1, parseInt(e.target.value) || 50)))}
-                    min={1}
-                    max={100}
-                    style={{ width: 70, padding: '0.3rem 0.5rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+                    id="new-proposal-deliberation-ends-at"
+                    type="datetime-local"
+                    value={deliberationEndsAt}
+                    onChange={(e) => setDeliberationEndsAt(e.target.value)}
+                    min={toLocalDatetimeString(new Date())}
+                    className={styles.formInput}
                   />
-                  <span style={{ fontSize: 13, color: '#555' }}>% yes</span>
+                  <p className={styles.formHint}>Discussion only until this time.</p>
+                </div>
+                <div className={styles.formField}>
+                  <label htmlFor="new-proposal-closes-at" className={styles.formLabel}>
+                    Voting deadline <span className={styles.formLabelNote}>(optional)</span>
+                  </label>
+                  <input
+                    id="new-proposal-closes-at"
+                    type="datetime-local"
+                    value={closesAt}
+                    onChange={(e) => setClosesAt(e.target.value)}
+                    min={deliberationEndsAt || toLocalDatetimeString(new Date())}
+                    className={styles.formInput}
+                  />
+                </div>
+                <div className={styles.formField}>
+                  <label htmlFor="new-proposal-threshold" className={styles.formLabel}>Passing threshold</label>
+                  <div className={styles.presetPills}>
+                    {THRESHOLD_PRESETS.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        onClick={() => setThreshold(p.value)}
+                        className={`${styles.presetPill} ${threshold === p.value ? styles.presetPillActive : ''}`}
+                      >
+                        {p.label} ({p.value}%)
+                      </button>
+                    ))}
+                    <div className={styles.thresholdRow}>
+                      <input
+                        id="new-proposal-threshold"
+                        type="number"
+                        value={threshold}
+                        onChange={(e) => setThreshold(Math.min(100, Math.max(1, parseInt(e.target.value) || 50)))}
+                        min={1}
+                        max={100}
+                        className={styles.thresholdInput}
+                      />
+                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>% yes</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label htmlFor="new-proposal-quorum" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-              Quorum <span style={{ color: '#aaa' }}>(optional — % of members who must participate)</span>
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <input
-                  id="new-proposal-quorum"
-                  type="number"
-                  value={quorum ?? ''}
-                  onChange={(e) => setQuorum(e.target.value === '' ? null : Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
-                  min={1}
-                  max={100}
-                  placeholder="e.g. 50"
-                  style={{ width: 90, padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
-                />
-                <span style={{ fontSize: 14, color: '#555' }}>%</span>
+
+              <div className={styles.formField} style={{ marginBottom: 'var(--space-4)' }}>
+                <label htmlFor="new-proposal-quorum" className={styles.formLabel}>
+                  Quorum <span className={styles.formLabelNote}>(optional — % of members who must participate)</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <input
+                      id="new-proposal-quorum"
+                      type="number"
+                      value={quorum ?? ''}
+                      onChange={(e) => setQuorum(e.target.value === '' ? null : Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+                      min={1}
+                      max={100}
+                      placeholder="e.g. 50"
+                      className={styles.formInput}
+                      style={{ width: 80 }}
+                    />
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>%</span>
+                  </div>
+                  {quorum !== null && (
+                    <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
+                      {(['soft', 'hard'] as const).map((qt) => (
+                        <label key={qt} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', cursor: 'pointer', color: 'var(--color-fg-muted)' }}>
+                          <input type="radio" name="quorum_type" value={qt} checked={quorumType === qt} onChange={() => setQuorumType(qt)} />
+                          {qt === 'soft' ? 'Soft (advisory)' : 'Hard (auto-fail)'}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
+
               {quorum !== null && (
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  {(['soft', 'hard'] as const).map((qt) => (
-                    <label key={qt} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: 13, cursor: 'pointer' }}>
-                      <input type="radio" name="quorum_type" value={qt} checked={quorumType === qt} onChange={() => setQuorumType(qt)} />
-                      {qt === 'soft' ? 'Soft (advisory)' : 'Hard (auto-fail)'}
-                    </label>
-                  ))}
+                <div className={styles.formField} style={{ marginBottom: 'var(--space-4)' }}>
+                  <span className={styles.formLabel}>
+                    Impact level <span className={styles.formLabelNote}>(optional — scales quorum requirement)</span>
+                  </span>
+                  <div className={styles.typePills}>
+                    {([null, 'low', 'medium', 'high', 'constitutional'] as const).map((level) => {
+                      const multipliers: Record<string, string> = { low: '×0.5', medium: '×1.0', high: '×1.5', constitutional: '×2.0' };
+                      return (
+                        <button
+                          key={level ?? 'none'}
+                          type="button"
+                          onClick={() => setImpactLevel(level)}
+                          className={`${styles.typePill} ${impactLevel === level ? styles.typePillActive : ''}`}
+                        >
+                          {level === null ? 'None' : `${level.charAt(0).toUpperCase() + level.slice(1)} (${multipliers[level]})`}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-            </div>
-          </div>
-          {quorum !== null && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-                Impact level <span style={{ color: '#aaa' }}>(optional — scales quorum requirement)</span>
-              </label>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {([null, 'low', 'medium', 'high', 'constitutional'] as const).map((level) => {
-                  const multipliers: Record<string, string> = { low: '×0.5', medium: '×1.0', high: '×1.5', constitutional: '×2.0' };
-                  return (
-                    <button
-                      key={level ?? 'none'}
-                      type="button"
-                      onClick={() => setImpactLevel(level)}
-                      style={{
-                        fontSize: 12,
-                        padding: '0.3rem 0.75rem',
-                        borderRadius: 4,
-                        border: '1px solid #ddd',
-                        background: impactLevel === level ? '#222' : 'none',
-                        color: impactLevel === level ? '#fff' : '#333',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {level === null ? 'None' : `${level.charAt(0).toUpperCase() + level.slice(1)} (${multipliers[level]})`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            </>
           )}
-          </>)}
-          {formError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{formError}</p>}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button type="submit" disabled={submitting} style={{ padding: '0.4rem 1.25rem', fontSize: 13 }}>
+
+          {formError && <p className={styles.formError}>{formError}</p>}
+          <div className={styles.formActions}>
+            <Button type="submit" disabled={submitting} size="sm">
               {submitting ? 'Creating…' : 'Create proposal'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => handleCreate(true)}
               disabled={submitting}
-              style={{ padding: '0.4rem 1.25rem', fontSize: 13, border: '1px solid #ddd', background: 'none', cursor: 'pointer' }}
             >
               Save as draft
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
-      {/* Search + sort */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
+      <div className={styles.toolbar}>
         <input
           type="search"
           placeholder="Search proposals…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
+          className={styles.searchInput}
         />
         <select
           aria-label="Sort proposals"
           value={sort}
           onChange={(e) => setSort(e.target.value as typeof sort)}
-          style={{ padding: '0.45rem 0.6rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+          className={styles.sortSelect}
         >
           <option value="newest">Newest</option>
           <option value="oldest">Oldest</option>
@@ -643,17 +609,10 @@ export function ProposalsPage() {
         </select>
       </div>
 
-      {/* Topic filter pills */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+      <div className={styles.filters}>
         <button
           onClick={() => setTopicFilter(null)}
-          style={{
-            ...badge,
-            cursor: 'pointer',
-            border: topicFilter === null ? '1px solid #555' : '1px solid #ddd',
-            background: topicFilter === null ? '#555' : '#f0f0f0',
-            color: topicFilter === null ? '#fff' : '#444',
-          }}
+          className={`${styles.filterPill} ${topicFilter === null ? styles.filterPillActive : ''}`}
         >
           All topics
         </button>
@@ -661,35 +620,21 @@ export function ProposalsPage() {
           <button
             key={t.id}
             onClick={() => setTopicFilter(topicFilter === t.id ? null : t.id)}
-            style={{
-              ...badge,
-              cursor: 'pointer',
-              border: topicFilter === t.id ? '1px solid #555' : '1px solid #ddd',
-              background: topicFilter === t.id ? '#555' : '#f0f0f0',
-              color: topicFilter === t.id ? '#fff' : '#444',
-            }}
+            className={`${styles.filterPill} ${topicFilter === t.id ? styles.filterPillActive : ''}`}
           >
             {t.name}
           </button>
         ))}
       </div>
 
-      {/* Status + personal filters */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+      <div className={styles.filters}>
         {([null, 'open', 'closed', 'withdrawn'] as const).map((s) => {
-          const label = s === null ? 'All statuses' : s.charAt(0).toUpperCase() + s.slice(1);
-          const active = statusFilter === s;
+          const label = s === null ? 'All' : s.charAt(0).toUpperCase() + s.slice(1);
           return (
             <button
               key={String(s)}
               onClick={() => setStatusFilter(s)}
-              style={{
-                ...badge,
-                cursor: 'pointer',
-                border: active ? '1px solid #1a56d6' : '1px solid #ddd',
-                background: active ? '#e8f0fe' : '#f0f0f0',
-                color: active ? '#1a56d6' : '#444',
-              }}
+              className={`${styles.filterPill} ${statusFilter === s ? styles.filterPillActive : ''}`}
             >
               {label}
             </button>
@@ -699,75 +644,49 @@ export function ProposalsPage() {
           <>
             <button
               onClick={() => setMineFilter(mineFilter === 'mine' ? null : 'mine')}
-              style={{
-                ...badge,
-                cursor: 'pointer',
-                border: mineFilter === 'mine' ? '1px solid #6d28d9' : '1px solid #ddd',
-                background: mineFilter === 'mine' ? '#ede9fe' : '#f0f0f0',
-                color: mineFilter === 'mine' ? '#6d28d9' : '#444',
-              }}
+              className={`${styles.filterPill} ${mineFilter === 'mine' ? styles.filterPillActive : ''}`}
             >
-              My proposals
+              Mine
             </button>
             <button
               onClick={() => setMineFilter(mineFilter === 'voted' ? null : 'voted')}
-              style={{
-                ...badge,
-                cursor: 'pointer',
-                border: mineFilter === 'voted' ? '1px solid #6d28d9' : '1px solid #ddd',
-                background: mineFilter === 'voted' ? '#ede9fe' : '#f0f0f0',
-                color: mineFilter === 'voted' ? '#6d28d9' : '#444',
-              }}
+              className={`${styles.filterPill} ${mineFilter === 'voted' ? styles.filterPillActive : ''}`}
             >
-              My votes
+              Voted
             </button>
           </>
         )}
       </div>
 
       {allTags.length > 0 && (
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-          {allTags.map((tag: string) => (
+        <div className={styles.filters} style={{ marginBottom: 'var(--space-5)' }}>
+          {allTags.map((tag: unknown) => (
             <button
-              key={tag}
+              key={tag as string}
               data-testid={`tag-filter-${tag}`}
-              onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
-              style={{
-                ...badge,
-                cursor: 'pointer',
-                border: tagFilter === tag ? '1px solid #3358c4' : '1px solid #c7d2fe',
-                background: tagFilter === tag ? '#e8edf7' : '#f5f7ff',
-                color: '#3358c4',
-              }}
+              onClick={() => setTagFilter(tagFilter === tag ? null : tag as string)}
+              className={`${styles.filterPill} ${tagFilter === tag ? styles.filterPillActive : ''}`}
             >
-              {tag}
+              {tag as string}
             </button>
           ))}
         </div>
       )}
 
       {allProposals === null ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className={styles.list}>
           <ProposalSkeleton />
           <ProposalSkeleton />
           <ProposalSkeleton />
         </div>
       ) : proposals.length === 0 ? (
         topicFilter !== null || statusFilter !== null || mineFilter !== null || tagFilter !== null || search ? (
-          <EmptyState
-            variant="proposals"
-            title="No proposals match these filters"
-            description="Try adjusting your filters or search term."
-          />
+          <EmptyState variant="proposals" title="No proposals match these filters" description="Try adjusting your filters or search term." />
         ) : (
-          <EmptyState
-            variant="proposals"
-            title="No proposals yet"
-            description={currentUser ? 'Be the first to start a discussion.' : 'Sign in to create the first proposal.'}
-          />
+          <EmptyState variant="proposals" title="No proposals yet" description={currentUser ? 'Be the first to start a discussion.' : 'Sign in to create the first proposal.'} />
         )
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className={styles.list}>
           {proposals.map((p: Proposal) => {
             const topic = topicMap[p.topic_id];
             const author = p.author_id ? userMap[p.author_id] : undefined;
@@ -776,9 +695,7 @@ export function ProposalsPage() {
             const no = votes.filter((v: Vote) => v.choice === 'no').length;
             const abstain = votes.filter((v: Vote) => v.choice === 'abstain').length;
             const commentCount = (allComments ?? []).filter((c: Comment) => c.proposal_id === p.id).length;
-            const myVote = currentUser
-              ? votes.find((v: Vote) => v.user_id === currentUser.id)
-              : undefined;
+            const myVote = currentUser ? votes.find((v: Vote) => v.user_id === currentUser.id) : undefined;
 
             const isDraft = p.status === 'draft';
             const isOpen = p.status === 'open';
@@ -787,163 +704,100 @@ export function ProposalsPage() {
             const deadline = isOpen && p.closes_at ? formatDeadline(p.closes_at) : null;
             const result = p.status === 'closed' ? computeResult(yes, no, p.threshold ?? 50) : null;
 
+            const cardCls = [
+              styles.cardInner,
+              isDraft ? styles.cardDraft : '',
+              p.pinned ? styles.cardPinned : '',
+            ].filter(Boolean).join(' ');
+
             return (
               <Link
                 key={p.id}
                 to="/orgs/$slug/proposals/$id"
                 params={{ slug: org.slug, id: p.id }}
-                style={{ textDecoration: 'none', color: 'inherit' }}
+                className={styles.card}
               >
-                <div
-                  style={{
-                    border: `1px solid ${p.pinned ? '#c7d2fe' : isDraft ? '#fde68a' : '#ddd'}`,
-                    borderRadius: 6,
-                    padding: '1rem 1.25rem',
-                    background: p.pinned ? '#f5f7ff' : isDraft ? '#fffdf0' : '#fff',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.15s',
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = p.pinned ? '#818cf8' : isDraft ? '#f6cc00' : '#aaa'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = p.pinned ? '#c7d2fe' : isDraft ? '#fde68a' : '#ddd'; }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: '0 0 0.4rem', fontWeight: 600, fontSize: 15 }}>
-                        {p.pinned && <span style={{ marginRight: '0.4rem', fontSize: 13 }} aria-label="Pinned">📌</span>}
+                <div className={cardCls}>
+                  <div className={styles.cardRow}>
+                    <div className={styles.cardBody}>
+                      <p className={styles.cardTitle}>
+                        {p.pinned && <span className={styles.pinIcon} aria-label="Pinned">📌</span>}
                         {p.title}
                       </p>
                       {p.description && (
-                        <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.description}
-                        </p>
+                        <p className={styles.cardDescription}>{p.description}</p>
                       )}
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div className={styles.cardMeta}>
                         {topic && (
-                          <span style={{ ...badge, background: '#e8f0fe', color: '#1a56d6', border: '1px solid #c3d6fb' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-muted)', color: 'var(--color-fg-muted)', border: 'var(--border)', whiteSpace: 'nowrap' }}>
                             {topic.name}
                           </span>
                         )}
-                        {p.proposal_type === 'discussion' && (
-                          <span style={{ ...badge, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                            Discussion
-                          </span>
-                        )}
-                        {p.proposal_type === 'multiple_choice' && (
-                          <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
-                            Multiple choice
-                          </span>
-                        )}
-                        {p.proposal_type === 'approval' && (
-                          <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
-                            Approval
-                          </span>
-                        )}
-                        {p.proposal_type === 'score_voting' && (
-                          <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
-                            Score
-                          </span>
-                        )}
-                        {p.proposal_type === 'ranked_choice' && (
-                          <span style={{ ...badge, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe' }}>
-                            Ranked choice
-                          </span>
-                        )}
-                        {p.proposal_type === 'temperature_check' && (
-                          <span style={{ ...badge, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
-                            Temp check
-                          </span>
-                        )}
-                        {p.proposal_type === 'consent' && (
-                          <span style={{ ...badge, background: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff' }}>
-                            Consent
-                          </span>
-                        )}
-                        {p.proposal_type === 'petition' && (
-                          <span style={{ ...badge, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3' }}>
-                            Petition
-                          </span>
-                        )}
-                        {p.proposal_type === 'amendment' && (
-                          <span style={{ ...badge, background: '#fff7ed', color: '#92400e', border: '1px solid #fde68a' }}>
-                            Amendment
+                        {p.proposal_type && p.proposal_type !== 'standard' && (
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-muted)', color: 'var(--color-fg-muted)', border: 'var(--border)', whiteSpace: 'nowrap' }}>
+                            {PROPOSAL_TYPE_LABELS[p.proposal_type] ?? p.proposal_type}
                           </span>
                         )}
                         {isDraft && (
-                          <span style={{ ...badge, background: '#fff8e1', color: '#b45309', border: '1px solid #fde68a' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-warning-bg)', color: 'var(--color-warning)', border: '1px solid var(--color-warning-border)', whiteSpace: 'nowrap' }}>
                             Draft
                           </span>
                         )}
                         {result === 'passed' && (
-                          <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
-                            Passed
-                          </span>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)', whiteSpace: 'nowrap' }}>Passed</span>
                         )}
                         {result === 'failed' && (
-                          <span style={{ ...badge, background: '#fdecea', color: '#d94040', border: '1px solid #f5c0c0' }}>
-                            Failed
-                          </span>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-error-bg)', color: 'var(--color-error)', border: '1px solid var(--color-error-border)', whiteSpace: 'nowrap' }}>Failed</span>
                         )}
                         {result === 'no-votes' && (
-                          <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
-                            No votes
-                          </span>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-muted)', color: 'var(--color-fg-subtle)', border: 'var(--border)', whiteSpace: 'nowrap' }}>No votes</span>
                         )}
                         {isWithdrawn && (
-                          <span style={{ ...badge, background: '#f5f5f5', color: '#888', border: '1px solid #ddd' }}>
-                            Withdrawn
-                          </span>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-muted)', color: 'var(--color-fg-subtle)', border: 'var(--border)', whiteSpace: 'nowrap' }}>Withdrawn</span>
                         )}
                         {isDeliberating && (
-                          <span style={{ ...badge, background: '#ede9fe', color: '#6d28d9', border: '1px solid #ddd6fe' }}>
-                            Deliberating
-                          </span>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-muted)', color: 'var(--color-fg-muted)', border: 'var(--border)', whiteSpace: 'nowrap' }}>Deliberating</span>
                         )}
                         {isOpen && !deadline && !isDeliberating && (
-                          <span style={{ ...badge, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
-                            Open
-                          </span>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)', whiteSpace: 'nowrap' }}>Open</span>
                         )}
                         {deadline && (
                           <span style={{
-                            ...badge,
-                            background: deadline.urgent ? '#fff8e1' : '#f5f5f5',
-                            color: deadline.urgent ? '#b45309' : '#666',
-                            border: `1px solid ${deadline.urgent ? '#fde68a' : '#ddd'}`,
+                            fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
+                            background: deadline.urgent ? 'var(--color-warning-bg)' : 'var(--color-bg-muted)',
+                            color: deadline.urgent ? 'var(--color-warning)' : 'var(--color-fg-muted)',
+                            border: deadline.urgent ? '1px solid var(--color-warning-border)' : 'var(--border)',
                           }}>
                             {deadline.label}
                           </span>
                         )}
                         {myVote && (
-                          <span style={{ fontSize: 12, color: '#888' }}>
-                            Your vote: <strong>{myVote.choice}</strong>
-                          </span>
+                          <span className={styles.myVote}>Your vote: <strong>{myVote.choice}</strong></span>
                         )}
                       </div>
                       {p.tags && (p.tags as string[]).length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.35rem' }}>
+                        <div className={styles.cardTags}>
                           {(p.tags as string[]).map((tag: string) => (
-                            <span key={tag} data-testid={`proposal-card-tag-${tag}`} style={{ fontSize: 11, padding: '0.1rem 0.4rem', borderRadius: 10, background: '#e8edf7', color: '#3358c4' }}>{tag}</span>
+                            <span key={tag} data-testid={`proposal-card-tag-${tag}`} className={styles.cardTag}>{tag}</span>
                           ))}
                         </div>
                       )}
-                      {author && (
-                        <p style={{ margin: '0.4rem 0 0', fontSize: 12, color: '#aaa' }}>
-                          by {author.name}
-                        </p>
-                      )}
+                      {author && <p className={styles.cardAuthor}>by {author.name}</p>}
                     </div>
                     {!isDraft && (
-                      <div style={{ textAlign: 'right', flexShrink: 0, fontSize: 13, color: '#666' }}>
+                      <div className={styles.cardVotes}>
                         {(org.voting_visibility !== 'hidden' || !isOpen) ? (
                           <>
-                            <div style={{ color: '#2d9a4e' }}>↑ {yes}</div>
-                            <div style={{ color: '#d94040' }}>↓ {no}</div>
-                            {abstain > 0 && <div style={{ color: '#aaa' }}>— {abstain}</div>}
+                            <div className={styles.voteYes}>↑ {yes}</div>
+                            <div className={styles.voteNo}>↓ {no}</div>
+                            {abstain > 0 && <div className={styles.voteAbstain}>— {abstain}</div>}
                           </>
                         ) : (
-                          <div style={{ color: '#bbb', fontSize: 11 }}>hidden</div>
+                          <div className={styles.voteHidden}>hidden</div>
                         )}
-                        {commentCount > 0 && <div style={{ color: '#aaa', marginTop: '0.2rem' }}>{commentCount} comment{commentCount !== 1 ? 's' : ''}</div>}
+                        {commentCount > 0 && (
+                          <div className={styles.voteComments}>{commentCount}c</div>
+                        )}
                       </div>
                     )}
                   </div>
