@@ -124,6 +124,52 @@ export class VotesService {
     });
   }
 
+  async setScores(proposalId: string, userId: string, scores: Array<{ option_id: string; score: number }>): Promise<{ txid: number }> {
+    const proposal = await this.proposalRepo.findOneBy({ id: proposalId });
+    if (!proposal || proposal.status !== 'open') throw new BadRequestException('Voting is closed');
+    if (proposal.proposal_type !== 'score_voting') throw new BadRequestException('Not a score voting proposal');
+
+    return this.dataSource.transaction(async (manager) => {
+      await manager.delete(Vote, { proposal_id: proposalId, user_id: userId });
+      if (scores.length > 0) {
+        const votes = scores.map(({ option_id, score }) =>
+          manager.create(Vote, {
+            id: `${userId}-${proposalId}-${option_id}`,
+            proposal_id: proposalId, user_id: userId,
+            organisation_id: proposal.organisation_id,
+            choice: null, option_id, score: Math.min(5, Math.max(0, score)), reason: null, rank_position: null,
+          }),
+        );
+        await manager.save(votes);
+      }
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { txid: parseInt(row.txid, 10) };
+    });
+  }
+
+  async setRankings(proposalId: string, userId: string, optionIds: string[]): Promise<{ txid: number }> {
+    const proposal = await this.proposalRepo.findOneBy({ id: proposalId });
+    if (!proposal || proposal.status !== 'open') throw new BadRequestException('Voting is closed');
+    if (proposal.proposal_type !== 'ranked_choice') throw new BadRequestException('Not a ranked choice proposal');
+
+    return this.dataSource.transaction(async (manager) => {
+      await manager.delete(Vote, { proposal_id: proposalId, user_id: userId });
+      if (optionIds.length > 0) {
+        const votes = optionIds.map((option_id, i) =>
+          manager.create(Vote, {
+            id: `${userId}-${proposalId}-${option_id}`,
+            proposal_id: proposalId, user_id: userId,
+            organisation_id: proposal.organisation_id,
+            choice: null, option_id, rank_position: i + 1, score: null, reason: null,
+          }),
+        );
+        await manager.save(votes);
+      }
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { txid: parseInt(row.txid, 10) };
+    });
+  }
+
   async setApprovals(proposalId: string, userId: string, optionIds: string[]): Promise<{ txid: number }> {
     const proposal = await this.proposalRepo.findOneBy({ id: proposalId });
     if (!proposal || proposal.status !== 'open') throw new BadRequestException('Voting is closed');

@@ -25,6 +25,12 @@ export class Vote {
   @Column({ type: 'text', nullable: true })
   reason!: string | null;
 
+  @Column({ type: 'integer', nullable: true })
+  score!: number | null;
+
+  @Column({ name: 'rank_position', type: 'integer', nullable: true })
+  rank_position!: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

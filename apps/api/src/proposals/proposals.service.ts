@@ -26,7 +26,7 @@ export interface TallyResult {
   total: number;
   eligible_count: number | null;
   quorum_met: boolean | null;
-  options: Array<{ id: string; text: string; count: number; position: number }>;
+  options: Array<{ id: string; text: string; count: number; position: number; mean_score?: number; irv_rounds?: Array<{ eliminated: string | null; counts: Record<string, number> }> }>;
 }
 
 export interface DelegationVote {
@@ -398,6 +398,81 @@ export class ProposalsService {
 
   async tally(proposalId: string): Promise<TallyResult> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+
+    if (proposal.proposal_type === 'score_voting') {
+      const options = await this.dataSource.getRepository(ProposalOption).find({
+        where: { proposal_id: proposalId }, order: { position: 'ASC' },
+      });
+      const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+      const scoresMap = new Map<string, number[]>(options.map((o) => [o.id, []]));
+      for (const v of votes) {
+        if (v.option_id && v.score != null && scoresMap.has(v.option_id)) {
+          scoresMap.get(v.option_id)!.push(v.score);
+        }
+      }
+      const uniqueVoters = new Set(votes.map((v) => v.user_id)).size;
+      return {
+        yes: 0, no: 0, abstain: 0, total: uniqueVoters,
+        eligible_count: null, quorum_met: null,
+        options: options.map((o) => {
+          const scores = scoresMap.get(o.id) ?? [];
+          const mean_score = scores.length > 0 ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100 : 0;
+          return { id: o.id, text: o.text, count: scores.length, position: o.position, mean_score };
+        }),
+      };
+    }
+
+    if (proposal.proposal_type === 'ranked_choice') {
+      const options = await this.dataSource.getRepository(ProposalOption).find({
+        where: { proposal_id: proposalId }, order: { position: 'ASC' },
+      });
+      const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+      const optionIds = options.map((o) => o.id);
+      const uniqueVoters = new Set(votes.map((v) => v.user_id)).size;
+
+      const rankings = new Map<string, string[]>();
+      for (const v of votes) {
+        if (!v.option_id || v.rank_position == null) continue;
+        if (!rankings.has(v.user_id)) rankings.set(v.user_id, []);
+        const list = rankings.get(v.user_id)!;
+        list[v.rank_position - 1] = v.option_id;
+      }
+
+      let remaining = new Set(optionIds);
+      const irv_rounds: Array<{ eliminated: string | null; counts: Record<string, number> }> = [];
+
+      while (remaining.size > 1) {
+        const counts: Record<string, number> = {};
+        for (const id of remaining) counts[id] = 0;
+        for (const [, prefs] of rankings) {
+          const first = prefs.find((p) => remaining.has(p));
+          if (first) counts[first] = (counts[first] ?? 0) + 1;
+        }
+        const total = Object.values(counts).reduce((a, b) => a + b, 0);
+        const majority = [...remaining].find((id) => counts[id] > total / 2);
+        if (majority) {
+          irv_rounds.push({ eliminated: null, counts });
+          remaining = new Set([majority]);
+          break;
+        }
+        const minCount = Math.min(...Object.values(counts));
+        const toEliminate = [...remaining].find((id) => counts[id] === minCount)!;
+        irv_rounds.push({ eliminated: toEliminate, counts });
+        remaining.delete(toEliminate);
+      }
+
+      const winner = remaining.size === 1 ? [...remaining][0] : null;
+      return {
+        yes: 0, no: 0, abstain: 0, total: uniqueVoters,
+        eligible_count: null, quorum_met: null,
+        options: options.map((o) => ({
+          id: o.id, text: o.text, position: o.position,
+          count: irv_rounds.length > 0 ? (irv_rounds[irv_rounds.length - 1].counts[o.id] ?? 0) : 0,
+          mean_score: o.id === winner ? 1 : 0,
+          irv_rounds: irv_rounds.length > 0 ? irv_rounds : undefined,
+        })),
+      };
+    }
 
     if (['multiple_choice', 'approval'].includes(proposal.proposal_type)) {
       const options = await this.dataSource.getRepository(ProposalOption).find({

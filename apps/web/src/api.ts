@@ -129,6 +129,8 @@ export interface Vote {
   choice: 'yes' | 'no' | 'abstain' | null;
   option_id: string | null;
   reason: string | null;
+  score: number | null;
+  rank_position: number | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -150,7 +152,7 @@ export interface TallyResult {
   total: number;
   eligible_count: number | null;
   quorum_met: boolean | null;
-  options: Array<{ id: string; text: string; count: number; position: number }>;
+  options: Array<{ id: string; text: string; count: number; position: number; mean_score?: number; irv_rounds?: Array<{ eliminated: string | null; counts: Record<string, number> }> }>;
 }
 
 export interface DelegationVote {
@@ -446,4 +448,8 @@ export const votesApi = {
     request<{ txid: number }>(`/votes/${id}`, { method: 'DELETE' }),
   setApprovals: (proposalId: string, optionIds: string[]) =>
     request<{ txid: number }>(`/votes/proposals/${proposalId}/approvals`, { method: 'POST', body: JSON.stringify({ option_ids: optionIds }) }),
+  setScores: (proposalId: string, scores: Array<{ option_id: string; score: number }>) =>
+    request<{ txid: number }>(`/votes/proposals/${proposalId}/scores`, { method: 'POST', body: JSON.stringify({ scores }) }),
+  setRankings: (proposalId: string, optionIds: string[]) =>
+    request<{ txid: number }>(`/votes/proposals/${proposalId}/rankings`, { method: 'POST', body: JSON.stringify({ option_ids: optionIds }) }),
 };

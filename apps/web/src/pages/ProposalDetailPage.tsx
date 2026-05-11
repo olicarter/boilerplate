@@ -84,6 +84,10 @@ export function ProposalDetailPage() {
   const [voteReason, setVoteReason] = useState('');
   const [approvalSelections, setApprovalSelections] = useState<Set<string>>(new Set());
   const [submittingApprovals, setSubmittingApprovals] = useState(false);
+  const [scoreMap, setScoreMap] = useState<Record<string, number>>({});
+  const [submittingScores, setSubmittingScores] = useState(false);
+  const [rankOrder, setRankOrder] = useState<string[]>([]);
+  const [submittingRankings, setSubmittingRankings] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actioning, setActioning] = useState(false);
   const [commentBody, setCommentBody] = useState('');
@@ -206,10 +210,49 @@ export function ProposalDetailPage() {
   }, [id, currentUser?.id, myVote?.id]);
 
   useEffect(() => {
-    if (proposal?.proposal_type === 'approval') {
+    const type = proposal?.proposal_type;
+    if (type === 'approval') {
       setApprovalSelections(new Set(myApprovalVotes.map((v: Vote) => v.option_id).filter(Boolean) as string[]));
+    } else if (type === 'score_voting') {
+      const map: Record<string, number> = {};
+      for (const v of myApprovalVotes as Vote[]) {
+        if (v.option_id && v.score != null) map[v.option_id] = v.score as number;
+      }
+      setScoreMap(map);
+    } else if (type === 'ranked_choice') {
+      const sorted = (myApprovalVotes as Vote[])
+        .filter((v) => v.option_id && v.rank_position != null)
+        .sort((a, b) => (a.rank_position as number) - (b.rank_position as number));
+      setRankOrder(sorted.map((v) => v.option_id as string));
     }
   }, [proposal?.proposal_type, myApprovalVotes.length]);
+
+  async function submitScores() {
+    if (!currentUser) return;
+    setSubmittingScores(true);
+    try {
+      const scores = Object.entries(scoreMap).map(([option_id, score]) => ({ option_id, score }));
+      await votesApi.setScores(id, scores);
+      addToast('Scores saved', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to save scores', 'error');
+    } finally {
+      setSubmittingScores(false);
+    }
+  }
+
+  async function submitRankings() {
+    if (!currentUser) return;
+    setSubmittingRankings(true);
+    try {
+      await votesApi.setRankings(id, rankOrder);
+      addToast('Rankings saved', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to save rankings', 'error');
+    } finally {
+      setSubmittingRankings(false);
+    }
+  }
 
   async function submitApprovals() {
     if (!currentUser) return;
@@ -314,7 +357,7 @@ export function ProposalDetailPage() {
   const publishBlocked = isDraft && minEndorsements > 0 && endorsements.length < minEndorsements;
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
-  const result = proposal.status === 'closed' && tally && !isApproval
+  const result = proposal.status === 'closed' && tally && !isApproval && !isScoreVoting && !isRankedChoice
     ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard', vetoes.length > 0, proposal.proposal_type)
     : null;
   const comments = (allComments ?? [])
@@ -1231,7 +1274,88 @@ export function ProposalDetailPage() {
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Loading tally…</p>
         ) : tally ? (
           <>
-            {isMultipleChoice || isApproval ? (
+            {isScoreVoting ? (
+              <div>
+                {tally.options.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>No options defined.</p>
+                ) : (
+                  [...tally.options]
+                    .sort((a, b) => (b.mean_score ?? 0) - (a.mean_score ?? 0))
+                    .map((opt, i) => {
+                      const mean = opt.mean_score ?? 0;
+                      const pct = Math.round((mean / 5) * 100);
+                      const isLeader = i === 0 && mean > 0;
+                      return (
+                        <div key={opt.id} style={{ marginBottom: '0.6rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 3 }}>
+                            <span style={{ fontWeight: isLeader ? 600 : 400 }}>{opt.text}{isLeader ? ' ✓' : ''}</span>
+                            <span style={{ color: '#888' }}>{mean.toFixed(2)} / 5 ({opt.count} voter{opt.count !== 1 ? 's' : ''})</span>
+                          </div>
+                          <div style={{ height: 6, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: isLeader ? '#2d9a4e' : '#3358c4', transition: 'width 0.3s' }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+                <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>{tally.total} voter{tally.total !== 1 ? 's' : ''} participated</p>
+              </div>
+            ) : isRankedChoice ? (
+              <div>
+                {tally.options.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>No options defined.</p>
+                ) : (() => {
+                  const winner = tally.options.find((o) => o.mean_score === 1);
+                  const lastRound = tally.options[0]?.irv_rounds?.[tally.options[0].irv_rounds.length - 1];
+                  const sortedOptions = [...tally.options].sort((a, b) => (b.count) - (a.count));
+                  return (
+                    <>
+                      {winner && (
+                        <p style={{ margin: '0 0 0.75rem', fontSize: 14, color: '#2d9a4e', fontWeight: 600 }}>
+                          Winner: {winner.text}
+                        </p>
+                      )}
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        {sortedOptions.map((opt) => {
+                          const isWinner = opt.mean_score === 1;
+                          const finalCount = lastRound?.counts[opt.id] ?? opt.count;
+                          const maxFinal = Math.max(...sortedOptions.map((o) => lastRound?.counts[o.id] ?? o.count), 1);
+                          const pct = Math.round((finalCount / maxFinal) * 100);
+                          return (
+                            <div key={opt.id} style={{ marginBottom: '0.6rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 3 }}>
+                                <span style={{ fontWeight: isWinner ? 600 : 400 }}>{opt.text}{isWinner ? ' ✓' : ''}</span>
+                                <span style={{ color: '#888' }}>{finalCount} vote{finalCount !== 1 ? 's' : ''}</span>
+                              </div>
+                              <div style={{ height: 6, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
+                                <div style={{ width: `${pct}%`, height: '100%', background: isWinner ? '#2d9a4e' : '#3358c4', transition: 'width 0.3s' }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {tally.options[0]?.irv_rounds && tally.options[0].irv_rounds.length > 1 && (
+                        <details style={{ fontSize: 12, color: '#888' }}>
+                          <summary style={{ cursor: 'pointer' }}>IRV rounds ({tally.options[0].irv_rounds.length})</summary>
+                          <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {tally.options[0].irv_rounds.map((round, i) => (
+                              <div key={i} style={{ padding: '0.4rem 0.6rem', background: '#f5f5f5', borderRadius: 4 }}>
+                                <span style={{ fontWeight: 500 }}>Round {i + 1}</span>
+                                {round.eliminated && <span style={{ color: '#d94040', marginLeft: '0.5rem' }}>eliminated: {tally.options.find((o) => o.id === round.eliminated)?.text ?? round.eliminated}</span>}
+                                <span style={{ color: '#aaa', marginLeft: '0.5rem' }}>
+                                  {Object.entries(round.counts).map(([optId, cnt]) => `${tally.options.find((o) => o.id === optId)?.text ?? optId}: ${cnt}`).join(', ')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                      <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>{tally.total} voter{tally.total !== 1 ? 's' : ''} participated</p>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : isMultipleChoice || isApproval ? (
               <div>
                 {tally.options.length === 0 ? (
                   <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>No options defined.</p>
@@ -1382,7 +1506,11 @@ export function ProposalDetailPage() {
               <p style={{ margin: '0 0 0.5rem', fontSize: 14 }}>
                 {isApproval ? (
                   <>You approved <strong>{myApprovalVotes.length}</strong> option{myApprovalVotes.length !== 1 ? 's' : ''}.</>
-                ) : isMultipleChoice || isScoreVoting || isRankedChoice ? (
+                ) : isScoreVoting ? (
+                  <>You rated <strong>{myApprovalVotes.length}</strong> option{myApprovalVotes.length !== 1 ? 's' : ''}.</>
+                ) : isRankedChoice ? (
+                  <>You ranked <strong>{myApprovalVotes.length}</strong> option{myApprovalVotes.length !== 1 ? 's' : ''}.</>
+                ) : isMultipleChoice ? (
                   <>You voted for <strong>{proposalOptions.find((o) => o.id === myVote.option_id)?.text ?? 'unknown option'}</strong>.</>
                 ) : isConsent ? (
                   <>You <strong style={{ color: myVote.choice === 'yes' ? '#2d9a4e' : myVote.choice === 'no' ? '#d94040' : '#888' }}>
@@ -1453,6 +1581,81 @@ export function ProposalDetailPage() {
                     style={{ fontSize: 13, padding: '0.35rem 1rem', cursor: 'pointer', background: '#3358c4', color: '#fff', border: 'none', borderRadius: 4 }}
                   >
                     {submittingApprovals ? 'Saving…' : 'Save approvals'}
+                  </button>
+                </div>
+              ) : isScoreVoting ? (
+                <div>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#666' }}>Rate each option 0–5 (0 = worst, 5 = best):</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                    {proposalOptions.map((opt) => (
+                      <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontSize: 13, flex: 1 }}>{opt.text}</span>
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          {[0, 1, 2, 3, 4, 5].map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setScoreMap((prev) => ({ ...prev, [opt.id]: s }))}
+                              style={{
+                                width: 32, height: 32, fontSize: 13, cursor: 'pointer',
+                                border: '1px solid #ddd', borderRadius: 4,
+                                background: (scoreMap[opt.id] ?? -1) === s ? '#3358c4' : '#f5f5f5',
+                                color: (scoreMap[opt.id] ?? -1) === s ? '#fff' : '#333',
+                              }}
+                            >{s}</button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={submitScores}
+                    disabled={submittingScores}
+                    style={{ fontSize: 13, padding: '0.35rem 1rem', cursor: 'pointer', background: '#3358c4', color: '#fff', border: 'none', borderRadius: 4 }}
+                  >
+                    {submittingScores ? 'Saving…' : 'Save scores'}
+                  </button>
+                </div>
+              ) : isRankedChoice ? (
+                <div>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#666' }}>Drag to rank options (1st = most preferred):</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                    {(() => {
+                      const ranked = rankOrder.map((optId) => proposalOptions.find((o) => o.id === optId)).filter(Boolean);
+                      const unranked = proposalOptions.filter((o) => !rankOrder.includes(o.id));
+                      const all = [...ranked, ...unranked];
+                      return all.map((opt, i) => {
+                        if (!opt) return null;
+                        const isInRanking = rankOrder.includes(opt.id);
+                        return (
+                          <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ minWidth: 24, fontSize: 12, color: isInRanking ? '#3358c4' : '#aaa', fontWeight: 600 }}>{isInRanking ? `${rankOrder.indexOf(opt.id) + 1}.` : '—'}</span>
+                            <div style={{ flex: 1, padding: '0.4rem 0.75rem', border: `1px solid ${isInRanking ? '#3358c4' : '#ddd'}`, borderRadius: 4, background: isInRanking ? '#f0f4ff' : '#fafafa', fontSize: 13 }}>
+                              {opt.text}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <button onClick={() => {
+                                if (!isInRanking) { setRankOrder((prev) => [...prev, opt.id]); return; }
+                                const idx = rankOrder.indexOf(opt.id);
+                                if (idx > 0) { const next = [...rankOrder]; [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]; setRankOrder(next); }
+                              }} style={{ fontSize: 10, padding: '1px 4px', cursor: 'pointer', border: '1px solid #ddd', background: 'none', borderRadius: 2 }}>▲</button>
+                              <button onClick={() => {
+                                if (!isInRanking) return;
+                                const idx = rankOrder.indexOf(opt.id);
+                                if (idx < rankOrder.length - 1) { const next = [...rankOrder]; [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]]; setRankOrder(next); }
+                                else { setRankOrder((prev) => prev.filter((x) => x !== opt.id)); }
+                              }} style={{ fontSize: 10, padding: '1px 4px', cursor: 'pointer', border: '1px solid #ddd', background: 'none', borderRadius: 2 }}>▼</button>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                  <button
+                    onClick={submitRankings}
+                    disabled={submittingRankings || rankOrder.length === 0}
+                    style={{ fontSize: 13, padding: '0.35rem 1rem', cursor: 'pointer', background: '#3358c4', color: '#fff', border: 'none', borderRadius: 4 }}
+                  >
+                    {submittingRankings ? 'Saving…' : 'Save rankings'}
                   </button>
                 </div>
               ) : isMultipleChoice ? (

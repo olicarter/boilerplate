@@ -44,4 +44,24 @@ export class VotesController {
   ) {
     return this.votesService.setApprovals(proposalId, req.user!.id, body.option_ids);
   }
+
+  @Post('proposals/:proposalId/scores')
+  @UseGuards(AuthGuard)
+  setScores(
+    @Param('proposalId') proposalId: string,
+    @Body() body: { scores: Array<{ option_id: string; score: number }> },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.votesService.setScores(proposalId, req.user!.id, body.scores);
+  }
+
+  @Post('proposals/:proposalId/rankings')
+  @UseGuards(AuthGuard)
+  setRankings(
+    @Param('proposalId') proposalId: string,
+    @Body() body: { option_ids: string[] },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.votesService.setRankings(proposalId, req.user!.id, body.option_ids);
+  }
 }
