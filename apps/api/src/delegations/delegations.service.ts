@@ -66,9 +66,15 @@ export class DelegationsService {
     topic_id?: string | null;
     expires_at?: string | null;
     fallback_abstain_hours?: number | null;
+    weight_fraction?: number | null;
   }): Promise<{ item: Delegation; txid: number }> {
     if (data.delegator_id === data.delegate_id) {
       throw new BadRequestException('You cannot delegate to yourself');
+    }
+
+    const fraction = data.weight_fraction ?? 1;
+    if (fraction <= 0 || fraction > 1) {
+      throw new BadRequestException('weight_fraction must be between 0 (exclusive) and 1 (inclusive)');
     }
 
     const existing = await this.delegationRepo.find({ where: { organisation_id: data.organisation_id } });
@@ -81,6 +87,7 @@ export class DelegationsService {
         topic_id: null,
         fallback_abstain_hours: null,
         ...data,
+        weight_fraction: data.weight_fraction ?? 1,
         expires_at: data.expires_at ? new Date(data.expires_at) : null,
       });
       const saved = await manager.save(delegation);

@@ -333,6 +333,17 @@ export class ProposalsService {
     return map;
   }
 
+  private buildSplitDelegationMap(delegations: Delegation[]): Map<string, Map<string | null, Array<{ delegate_id: string; weight_fraction: number }>>> {
+    const map = new Map<string, Map<string | null, Array<{ delegate_id: string; weight_fraction: number }>>>();
+    for (const d of delegations) {
+      if (!map.has(d.delegator_id)) map.set(d.delegator_id, new Map());
+      const topicMap = map.get(d.delegator_id)!;
+      if (!topicMap.has(d.topic_id)) topicMap.set(d.topic_id, []);
+      topicMap.get(d.topic_id)!.push({ delegate_id: d.delegate_id, weight_fraction: Number(d.weight_fraction) || 1 });
+    }
+    return map;
+  }
+
   async listOptions(proposalId: string): Promise<ProposalOption[]> {
     return this.dataSource.getRepository(ProposalOption).find({
       where: { proposal_id: proposalId },
@@ -516,22 +527,28 @@ export class ProposalsService {
       return directVotes.has(d.delegate_id);
     });
 
-    const delegationMap = this.buildDelegationMap(delegations);
+    const splitDelegationMap = this.buildSplitDelegationMap(delegations);
 
     const MAX_DEPTH = 10;
-    const resolveChoice = (startUserId: string): string => {
-      const visited = new Set<string>();
-      let current = startUserId;
-      while (true) {
-        if (visited.has(current) || visited.size >= MAX_DEPTH) return 'abstain';
-        visited.add(current);
-        if (directVotes.has(current)) return directVotes.get(current)!;
-        const userDelegations = delegationMap.get(current);
-        if (!userDelegations) return 'abstain';
-        const next = userDelegations.get(proposal.topic_id) ?? userDelegations.get(null);
-        if (!next) return 'abstain';
-        current = next;
+    const resolveWeightedChoices = (userId: string, visited: Set<string>): Map<string, number> => {
+      if (visited.has(userId) || visited.size >= MAX_DEPTH) return new Map([['abstain', 1]]);
+      if (directVotes.has(userId)) return new Map([[directVotes.get(userId)!, 1]]);
+      const userDelegations = splitDelegationMap.get(userId);
+      if (!userDelegations) return new Map([['abstain', 1]]);
+      const topicDelegates = userDelegations.get(proposal.topic_id) ?? userDelegations.get(null);
+      if (!topicDelegates || topicDelegates.length === 0) return new Map([['abstain', 1]]);
+      const totalFraction = topicDelegates.reduce((s, d) => s + d.weight_fraction, 0);
+      const normalize = totalFraction > 1 ? 1 / totalFraction : 1;
+      const visited2 = new Set(visited);
+      visited2.add(userId);
+      const result = new Map<string, number>();
+      for (const { delegate_id, weight_fraction } of topicDelegates) {
+        const frac = weight_fraction * normalize;
+        for (const [choice, choiceFrac] of resolveWeightedChoices(delegate_id, visited2)) {
+          result.set(choice, (result.get(choice) ?? 0) + frac * choiceFrac);
+        }
       }
+      return result;
     };
 
     const allUsers = new Set<string>([
@@ -551,12 +568,15 @@ export class ProposalsService {
 
     const tally: TallyResult = { yes: 0, no: 0, abstain: 0, total: 0, eligible_count: null, quorum_met: null, options: [] };
     for (const userId of allUsers) {
-      const choice = resolveChoice(userId);
+      const choices = resolveWeightedChoices(userId, new Set());
       const weight = weightMap.get(userId) ?? 1;
-      if (choice === 'yes') tally.yes += weight;
-      else if (choice === 'no') tally.no += weight;
-      else tally.abstain += weight;
-      tally.total += weight;
+      for (const [choice, fraction] of choices) {
+        const contribution = weight * fraction;
+        if (choice === 'yes') tally.yes += contribution;
+        else if (choice === 'no') tally.no += contribution;
+        else tally.abstain += contribution;
+        tally.total += contribution;
+      }
     }
 
     if (proposal.quorum != null) {

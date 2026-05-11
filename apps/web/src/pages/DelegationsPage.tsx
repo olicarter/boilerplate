@@ -25,6 +25,7 @@ export function DelegationsPage() {
   const [scopeTopicId, setScopeTopicId] = useState<string>('__global__');
   const [expiresAt, setExpiresAt] = useState('');
   const [fallbackHours, setFallbackHours] = useState<string>('');
+  const [weightPercent, setWeightPercent] = useState<string>('100');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -49,6 +50,13 @@ export function DelegationsPage() {
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
+  // Compute allocation totals per scope for outgoing delegations
+  const allocationByScopeKey = (outgoing as Delegation[]).reduce((acc: Record<string, number>, d: Delegation) => {
+    const key = d.topic_id ?? '__global__';
+    acc[key] = (acc[key] ?? 0) + (Number(d.weight_fraction) || 1);
+    return acc;
+  }, {});
+
   function scopeLabel(topicId: string | null) {
     if (!topicId) return 'Global';
     return topicMap[topicId]?.name ?? topicId;
@@ -67,15 +75,12 @@ export function DelegationsPage() {
     }
 
     const resolvedTopicId = scopeTopicId === '__global__' ? null : scopeTopicId;
+    const fraction = Math.min(100, Math.max(1, parseInt(weightPercent, 10) || 100)) / 100;
 
-    // Check for duplicate scope
-    const duplicate = outgoing.find((d: Delegation) => d.topic_id === resolvedTopicId);
+    // Check for exact duplicate (same delegate + same topic)
+    const duplicate = outgoing.find((d: Delegation) => d.topic_id === resolvedTopicId && d.delegate_id === selectedDelegate.id);
     if (duplicate) {
-      setFormError(
-        resolvedTopicId
-          ? `You already have a delegation for topic "${scopeLabel(resolvedTopicId)}". Remove it first.`
-          : 'You already have a global delegation. Remove it first.',
-      );
+      setFormError('You already have a delegation to this person for that scope.');
       return;
     }
 
@@ -89,6 +94,7 @@ export function DelegationsPage() {
         topic_id: resolvedTopicId,
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
         fallback_abstain_hours: fallbackHours ? parseInt(fallbackHours, 10) : null,
+        weight_fraction: fraction,
         created_at: new Date().toISOString(),
       } as Delegation);
       await tx.isPersisted.promise;
@@ -96,6 +102,7 @@ export function DelegationsPage() {
       setScopeTopicId('__global__');
       setExpiresAt('');
       setFallbackHours('');
+      setWeightPercent('100');
       addToast('Delegation added', 'success');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add delegation.');
@@ -146,6 +153,11 @@ export function DelegationsPage() {
               const expiresDate = d.expires_at
                 ? new Date(d.expires_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                 : null;
+              const fraction = Number(d.weight_fraction) || 1;
+              const pct = Math.round(fraction * 100);
+              const scopeKey = d.topic_id ?? '__global__';
+              const totalAlloc = allocationByScopeKey[scopeKey] ?? 1;
+              const overAllocated = totalAlloc > 1.001;
               return (
                 <div
                   key={d.id}
@@ -153,7 +165,7 @@ export function DelegationsPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    border: `1px solid ${expired ? '#f5c0c0' : '#ddd'}`,
+                    border: `1px solid ${expired ? '#f5c0c0' : overAllocated ? '#f5d0a0' : '#ddd'}`,
                     borderRadius: 6,
                     padding: '0.6rem 1rem',
                     fontSize: 14,
@@ -178,6 +190,12 @@ export function DelegationsPage() {
                     >
                       {scopeLabel(d.topic_id)}
                     </span>
+                    {pct !== 100 && (
+                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#555', fontWeight: 500 }}>{pct}%</span>
+                    )}
+                    {overAllocated && (
+                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#b06000' }}>· over-allocated ({Math.round(totalAlloc * 100)}% total — will be normalised)</span>
+                    )}
                     {expired && (
                       <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#d94040' }}>Expired</span>
                     )}
@@ -253,7 +271,7 @@ export function DelegationsPage() {
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: '0.75rem', marginBottom: '1rem' }}>
             <div>
               <label htmlFor="delegation-scope" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Scope</label>
               <select
@@ -279,6 +297,20 @@ export function DelegationsPage() {
                 type="datetime-local"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              />
+            </div>
+            <div>
+              <label htmlFor="delegation-weight" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+                Weight %
+              </label>
+              <input
+                id="delegation-weight"
+                type="number"
+                min={1}
+                max={100}
+                value={weightPercent}
+                onChange={(e) => setWeightPercent(e.target.value)}
                 style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
               />
             </div>

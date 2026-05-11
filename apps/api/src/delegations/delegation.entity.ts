@@ -25,6 +25,10 @@ export class Delegation {
   @Column({ name: 'fallback_abstain_hours', type: 'integer', nullable: true, default: null })
   fallback_abstain_hours!: number | null;
 
+  /** Fraction of the delegator's weight assigned to this delegate (0 < f ≤ 1, default 1.0) */
+  @Column({ name: 'weight_fraction', type: 'decimal', precision: 5, scale: 4, default: 1.0 })
+  weight_fraction!: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }
