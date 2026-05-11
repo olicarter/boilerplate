@@ -109,6 +109,27 @@ export class ProposalsController {
     return this.proposalsService.delete(id);
   }
 
+  @Get(':id/reactions')
+  listReactions(@Param('id') id: string) {
+    return this.proposalsService.listReactions(id);
+  }
+
+  @Post(':id/reactions')
+  @UseGuards(AuthGuard)
+  react(
+    @Param('id') id: string,
+    @Body() body: { emoji: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.reactToProposal(id, req.user!.id, body.emoji);
+  }
+
+  @Delete(':id/reactions')
+  @UseGuards(AuthGuard)
+  removeReaction(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.removeReaction(id, req.user!.id);
+  }
+
   @Get(':id/options')
   listOptions(@Param('id') id: string) {
     return this.proposalsService.listOptions(id);

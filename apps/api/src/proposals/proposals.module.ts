@@ -3,6 +3,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Proposal } from './proposal.entity';
 import { ProposalOption } from './proposal-option.entity';
+import { ProposalReaction } from './proposal-reaction.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
@@ -17,7 +18,7 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalOption, ProposalVersion, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule],
+  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalOption, ProposalReaction, ProposalVersion, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule],
   controllers: [ProposalsController],
   providers: [ProposalsService, ProposalsScheduler],
 })

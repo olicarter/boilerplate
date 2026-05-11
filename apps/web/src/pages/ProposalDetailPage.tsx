@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -96,6 +96,8 @@ export function ProposalDetailPage() {
   const [minEndorsementsLive, setMinEndorsementsLive] = useState<number | null>(null);
   const [versions, setVersions] = useState<ProposalVersion[] | null>(null);
   const [showVersions, setShowVersions] = useState(false);
+  const [reactions, setReactions] = useState<ProposalReaction[]>([]);
+  const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -171,6 +173,7 @@ export function ProposalDetailPage() {
     fetchEndorsements();
     proposalsApi.versions(id).then(setVersions).catch(() => setVersions([]));
     orgsApi.get(org.slug).then((o) => setMinEndorsementsLive(o.min_endorsements ?? 0)).catch(() => {});
+    proposalsApi.listReactions(id).then(setReactions).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -387,6 +390,28 @@ export function ProposalDetailPage() {
       addToast('Comment unpinned', 'info');
     } catch {
       addToast('Failed to unpin comment', 'error');
+    }
+  }
+
+  async function handleReact(emoji: string) {
+    if (!currentUser || reactingEmoji) return;
+    setReactingEmoji(emoji);
+    try {
+      const myReaction = reactions.find((r) => r.user_id === currentUser.id);
+      if (myReaction?.emoji === emoji) {
+        await proposalsApi.removeReaction(id);
+        setReactions((prev) => prev.filter((r) => r.user_id !== currentUser.id));
+      } else {
+        const updated = await proposalsApi.react(id, emoji);
+        setReactions((prev) => {
+          const without = prev.filter((r) => r.user_id !== currentUser.id);
+          return [...without, updated];
+        });
+      }
+    } catch {
+      addToast('Failed to react', 'error');
+    } finally {
+      setReactingEmoji(null);
     }
   }
 
@@ -716,6 +741,42 @@ export function ProposalDetailPage() {
         {new Date(proposal.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
         {proposal.closed_at && ` · Closed ${new Date(proposal.closed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`}
       </p>
+
+      {/* Reactions */}
+      {currentUser && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          {(['👍', '👎', '💬', '🎉', '🤔'] as const).map((emoji) => {
+            const count = reactions.filter((r) => r.emoji === emoji).length;
+            const myReaction = reactions.find((r) => r.user_id === currentUser.id);
+            const isMyEmoji = myReaction?.emoji === emoji;
+            return (
+              <button
+                key={emoji}
+                data-testid={`reaction-${emoji}`}
+                onClick={() => handleReact(emoji)}
+                disabled={!!reactingEmoji}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  padding: '0.3rem 0.65rem',
+                  border: `1px solid ${isMyEmoji ? '#818cf8' : '#ddd'}`,
+                  borderRadius: 20,
+                  background: isMyEmoji ? '#eef2ff' : '#fafafa',
+                  cursor: reactingEmoji ? 'default' : 'pointer',
+                  fontSize: 14,
+                  color: '#555',
+                  fontWeight: isMyEmoji ? 600 : 400,
+                  transition: 'border-color 0.1s, background 0.1s',
+                }}
+              >
+                <span>{emoji}</span>
+                {count > 0 && <span style={{ fontSize: 12 }}>{count}</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Draft banner + endorsements */}
       {isDraft && (

@@ -4,6 +4,7 @@ import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Proposal, ProposalStatus } from './proposal.entity';
 import { ProposalOption } from './proposal-option.entity';
+import { ProposalReaction } from './proposal-reaction.entity';
 import { Endorsement } from '../endorsements/endorsement.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { Vote } from '../votes/vote.entity';
@@ -46,6 +47,8 @@ export class ProposalsService {
     private readonly orgRepo: Repository<Organisation>,
     @InjectRepository(Membership)
     private readonly memberRepo: Repository<Membership>,
+    @InjectRepository(ProposalReaction)
+    private readonly reactionRepo: Repository<ProposalReaction>,
     private readonly dataSource: DataSource,
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
@@ -352,6 +355,44 @@ export class ProposalsService {
       throw new ForbiddenException('Only the author or moderators can remove options');
     }
     await this.dataSource.getRepository(ProposalOption).delete(optionId);
+  }
+
+  async listReactions(proposalId: string): Promise<ProposalReaction[]> {
+    return this.reactionRepo.find({ where: { proposal_id: proposalId }, order: { created_at: 'ASC' } });
+  }
+
+  async reactToProposal(
+    proposalId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<ProposalReaction> {
+    const ALLOWED = ['👍', '👎', '💬', '🎉', '🤔'];
+    if (!ALLOWED.includes(emoji)) throw new BadRequestException('Invalid reaction emoji');
+
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+
+    const existing = await this.reactionRepo.findOneBy({ proposal_id: proposalId, user_id: userId });
+    if (existing) {
+      if (existing.emoji === emoji) {
+        await this.reactionRepo.delete(existing.id);
+        return existing;
+      }
+      await this.reactionRepo.update(existing.id, { emoji });
+      return this.reactionRepo.findOneByOrFail({ id: existing.id });
+    }
+
+    const reaction = this.reactionRepo.create({
+      id: randomUUID(),
+      proposal_id: proposalId,
+      organisation_id: proposal.organisation_id,
+      user_id: userId,
+      emoji,
+    });
+    return this.reactionRepo.save(reaction);
+  }
+
+  async removeReaction(proposalId: string, userId: string): Promise<void> {
+    await this.reactionRepo.delete({ proposal_id: proposalId, user_id: userId });
   }
 
   async tally(proposalId: string): Promise<TallyResult> {

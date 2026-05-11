@@ -279,7 +279,23 @@ export const proposalsApi = {
     request<MutationResult<Proposal>>(`/proposals/${id}/pin`, { method: 'POST' }),
   unpin: (id: string) =>
     request<MutationResult<Proposal>>(`/proposals/${id}/unpin`, { method: 'POST' }),
+  listReactions: (id: string) =>
+    request<ProposalReaction[]>(`/proposals/${id}/reactions`),
+  react: (id: string, emoji: string) =>
+    request<ProposalReaction>(`/proposals/${id}/reactions`, { method: 'POST', body: JSON.stringify({ emoji }) }),
+  removeReaction: (id: string) =>
+    request<void>(`/proposals/${id}/reactions`, { method: 'DELETE' }),
 };
+
+export interface ProposalReaction {
+  id: string;
+  proposal_id: string;
+  organisation_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+  [key: string]: unknown;
+}
 
 export const delegationsApi = {
   create: (data: { id: string; organisation_id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null }) =>
