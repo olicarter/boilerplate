@@ -28,6 +28,7 @@ import { OrgHomePage } from './pages/OrgHomePage';
 import { JoinPage } from './pages/JoinPage';
 import { AdminPage } from './pages/AdminPage';
 import { PublicResultsPage } from './pages/PublicResultsPage';
+import { ActivityFeedPage } from './pages/ActivityFeedPage';
 import { OrgProvider } from './OrgContext';
 
 const STORAGE_KEY = 'ripple_user';
@@ -206,6 +207,15 @@ function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlu
             onClick={onClose}
           >
             Members
+          </Link>
+          <Link
+            to="/orgs/$slug/activity"
+            params={{ slug: orgSlug }}
+            style={linkStyle}
+            activeProps={{ style: { ...linkStyle, background: '#e8e8e8', fontWeight: 600 } }}
+            onClick={onClose}
+          >
+            Activity
           </Link>
           {isAdmin && (
             <Link
@@ -510,6 +520,12 @@ const userProfileRoute = createRoute({
   component: UserProfilePage,
 });
 
+const activityRoute = createRoute({
+  getParentRoute: () => orgLayout,
+  path: '/activity',
+  component: ActivityFeedPage,
+});
+
 const adminRoute = createRoute({
   getParentRoute: () => orgLayout,
   path: '/admin',
@@ -524,7 +540,7 @@ const publicResultsRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
-  orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, membersRoute, userProfileRoute, joinRoute, adminRoute]),
+  orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute]),
   publicResultsRoute,
 ]);
 
