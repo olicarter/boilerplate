@@ -78,6 +78,8 @@ export function ProposalDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editTagInput, setEditTagInput] = useState('');
+  const [editTags, setEditTags] = useState<string[]>([]);
   const [editError, setEditError] = useState('');
   const [saving, setSaving] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -535,6 +537,8 @@ export function ProposalDetailPage() {
   function startEditing() {
     setEditTitle(proposal.title);
     setEditDescription(proposal.description ?? '');
+    setEditTags(proposal.tags ?? []);
+    setEditTagInput('');
     setEditError('');
     setEditing(true);
   }
@@ -544,7 +548,7 @@ export function ProposalDetailPage() {
     setSaving(true);
     setEditError('');
     try {
-      await proposalsApi.update(id, { title: editTitle.trim(), description: editDescription });
+      await proposalsApi.update(id, { title: editTitle.trim(), description: editDescription, tags: editTags });
       addToast('Proposal updated', 'success');
       setEditing(false);
       proposalsApi.versions(id).then(setVersions).catch(() => {});
@@ -664,6 +668,46 @@ export function ProposalDetailPage() {
               style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
             />
           </div>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ fontSize: 13, display: 'block', marginBottom: 4 }}>Tags</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.4rem' }}>
+              {editTags.map((t) => (
+                <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#e8edf7', color: '#3358c4', fontSize: 12, padding: '0.2rem 0.5rem', borderRadius: 12 }}>
+                  {t}
+                  <button type="button" onClick={() => setEditTags(editTags.filter((x) => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <input
+                data-testid="tag-input"
+                type="text"
+                value={editTagInput}
+                onChange={(e) => setEditTagInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                onKeyDown={(e) => {
+                  if ((e.key === 'Enter' || e.key === ',') && editTagInput.trim()) {
+                    e.preventDefault();
+                    const tag = editTagInput.trim();
+                    if (!editTags.includes(tag)) setEditTags([...editTags, tag]);
+                    setEditTagInput('');
+                  }
+                }}
+                placeholder="Add tag (Enter to add)"
+                style={{ flex: 1, fontSize: 13, padding: '0.3rem 0.5rem', border: '1px solid #ddd', borderRadius: 4 }}
+              />
+              <button
+                type="button"
+                data-testid="add-tag-btn"
+                onClick={() => {
+                  const tag = editTagInput.trim();
+                  if (tag && !editTags.includes(tag)) setEditTags([...editTags, tag]);
+                  setEditTagInput('');
+                }}
+                disabled={!editTagInput.trim()}
+                style={{ fontSize: 13, padding: '0.3rem 0.7rem', cursor: 'pointer' }}
+              >Add</button>
+            </div>
+          </div>
           {editError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{editError}</p>}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit" disabled={saving} style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer' }}>
@@ -700,6 +744,13 @@ export function ProposalDetailPage() {
               </button>
             )}
           </div>
+          {proposal.tags && proposal.tags.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.5rem' }}>
+              {proposal.tags.map((tag: string) => (
+                <span key={tag} data-testid="proposal-tag" style={{ fontSize: 12, padding: '0.15rem 0.5rem', borderRadius: 12, background: '#e8edf7', color: '#3358c4' }}>{tag}</span>
+              ))}
+            </div>
+          )}
           {proposal.description && (
             <div style={{ margin: '0 0 0.75rem' }}>
               <MarkdownContent content={proposal.description} />

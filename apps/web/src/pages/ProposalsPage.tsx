@@ -84,6 +84,7 @@ export function ProposalsPage() {
   const [topicFilter, setTopicFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [mineFilter, setMineFilter] = useState<'mine' | 'voted' | null>(null);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [sort, setSort] = useState<'newest' | 'oldest' | 'most-votes'>('newest');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -117,6 +118,8 @@ export function ProposalsPage() {
     ? new Set((allVotes ?? []).filter((v: Vote) => v.user_id === currentUser.id).map((v: Vote) => v.proposal_id))
     : new Set<string>();
 
+  const allTags = [...new Set((allProposals ?? []).flatMap((p: Proposal) => p.tags ?? []))].sort();
+
   const proposals = (allProposals ?? [])
     .filter((p: Proposal) => {
       if (topicFilter !== null && p.topic_id !== topicFilter) return false;
@@ -124,6 +127,7 @@ export function ProposalsPage() {
       if (statusFilter !== null && p.status !== statusFilter) return false;
       if (mineFilter === 'mine' && p.author_id !== currentUser?.id) return false;
       if (mineFilter === 'voted' && !myVotedProposalIds.has(p.id)) return false;
+      if (tagFilter !== null && !(p.tags ?? []).includes(tagFilter)) return false;
       if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     })
@@ -638,6 +642,27 @@ export function ProposalsPage() {
         )}
       </div>
 
+      {allTags.length > 0 && (
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          {allTags.map((tag: string) => (
+            <button
+              key={tag}
+              data-testid={`tag-filter-${tag}`}
+              onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+              style={{
+                ...badge,
+                cursor: 'pointer',
+                border: tagFilter === tag ? '1px solid #3358c4' : '1px solid #c7d2fe',
+                background: tagFilter === tag ? '#e8edf7' : '#f5f7ff',
+                color: '#3358c4',
+              }}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       {allProposals === null ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <ProposalSkeleton />
@@ -645,7 +670,7 @@ export function ProposalsPage() {
           <ProposalSkeleton />
         </div>
       ) : proposals.length === 0 ? (
-        topicFilter !== null || statusFilter !== null || mineFilter !== null || search ? (
+        topicFilter !== null || statusFilter !== null || mineFilter !== null || tagFilter !== null || search ? (
           <EmptyState
             variant="proposals"
             title="No proposals match these filters"
@@ -776,6 +801,13 @@ export function ProposalsPage() {
                           </span>
                         )}
                       </div>
+                      {p.tags && (p.tags as string[]).length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.35rem' }}>
+                          {(p.tags as string[]).map((tag: string) => (
+                            <span key={tag} data-testid={`proposal-card-tag-${tag}`} style={{ fontSize: 11, padding: '0.1rem 0.4rem', borderRadius: 10, background: '#e8edf7', color: '#3358c4' }}>{tag}</span>
+                          ))}
+                        </div>
+                      )}
                       {author && (
                         <p style={{ margin: '0.4rem 0 0', fontSize: 12, color: '#aaa' }}>
                           by {author.name}

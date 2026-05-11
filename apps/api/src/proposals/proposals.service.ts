@@ -80,6 +80,7 @@ export class ProposalsService {
     quorum_type?: 'soft' | 'hard';
     status?: 'open' | 'draft';
     proposal_type?: 'standard' | 'discussion' | 'multiple_choice';
+    tags?: string[];
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Title is required');
@@ -118,7 +119,7 @@ export class ProposalsService {
 
   async update(
     id: string,
-    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'deliberation_ends_at' | 'threshold' | 'outcome' | 'pinned'>>,
+    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'deliberation_ends_at' | 'threshold' | 'outcome' | 'pinned' | 'tags'>>,
   ): Promise<{ item: Proposal; txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       await manager.update(Proposal, id, data);
@@ -136,7 +137,7 @@ export class ProposalsService {
   async edit(
     id: string,
     userId: string,
-    data: { title?: string; description?: string },
+    data: { title?: string; description?: string; tags?: string[] },
   ): Promise<{ item: Proposal; txid: number }> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id });
     if (proposal.author_id !== userId && !(await this.canModerate(proposal.organisation_id, userId))) {

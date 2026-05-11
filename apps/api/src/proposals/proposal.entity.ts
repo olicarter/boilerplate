@@ -55,4 +55,7 @@ export class Proposal {
 
   @Column({ type: 'boolean', default: false })
   pinned!: boolean;
+
+  @Column({ type: 'text', array: true, default: '{}' })
+  tags!: string[];
 }
