@@ -375,6 +375,21 @@ export function ProposalDetailPage() {
   const againstArguments = proposalArguments.filter((a: Argument) => a.side === 'against');
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
+  const delegationSuggestions = (() => {
+    if (!currentUser || !isOpen || myVote || delegationChain?.voter) return [];
+    const orgMembers = (allMemberships ?? []).filter((m: Membership) => m.organisation_id === org.id && m.user_id !== currentUser.id);
+    const nonDraftCount = (allProposals ?? []).filter((p: Proposal) => p.status !== 'draft' && p.organisation_id === org.id).length;
+    if (nonDraftCount === 0) return [];
+    return orgMembers
+      .map((m: Membership) => {
+        const voted = new Set((allVotes ?? []).filter((v: Vote) => v.user_id === m.user_id).map((v: Vote) => v.proposal_id)).size;
+        return { userId: m.user_id, pct: Math.round((voted / nonDraftCount) * 100) };
+      })
+      .filter((s: { userId: string; pct: number }) => s.pct >= 50)
+      .sort((a: { userId: string; pct: number }, b: { userId: string; pct: number }) => b.pct - a.pct)
+      .slice(0, 3);
+  })();
+
   async function handleAction(successMsg: string, action: () => Promise<unknown>) {
     setActioning(true);
     setActionError('');
@@ -1517,6 +1532,28 @@ export function ProposalDetailPage() {
                 )}
               </div>
               <span style={{ fontSize: 12, color: '#888' }}>Cast your own vote below to override.</span>
+            </div>
+          )}
+
+          {delegationSuggestions.length > 0 && (
+            <div style={{ background: '#f5f9ff', border: '1px solid #c3d6fb', borderRadius: 4, padding: '0.6rem 0.75rem', marginBottom: '0.75rem', fontSize: 13 }}>
+              <p style={{ margin: '0 0 0.4rem', color: '#555' }}>Suggested delegates (high participation):</p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {delegationSuggestions.map((s: { userId: string; pct: number }) => {
+                  const suggestedUser = userMap[s.userId];
+                  if (!suggestedUser) return null;
+                  return (
+                    <Link
+                      key={s.userId}
+                      to="/orgs/$slug/delegations"
+                      params={{ slug: org.slug }}
+                      style={{ fontSize: 12, color: '#1a56d6', textDecoration: 'none', padding: '0.2rem 0.6rem', border: '1px solid #c3d6fb', borderRadius: 12, background: '#fff' }}
+                    >
+                      {suggestedUser.name} ({s.pct}%)
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
 
