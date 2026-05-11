@@ -358,7 +358,7 @@ export interface Notification {
   id: string;
   user_id: string;
   org_id: string | null;
-  type: 'proposal.opened' | 'proposal.closed' | 'delegate.voted' | 'member.joined';
+  type: 'proposal.opened' | 'proposal.closed' | 'delegate.voted' | 'member.joined' | 'comment.mention' | 'comment.posted' | 'delegation.added' | 'delegation.removed';
   actor_id: string | null;
   target_type: string | null;
   target_id: string | null;

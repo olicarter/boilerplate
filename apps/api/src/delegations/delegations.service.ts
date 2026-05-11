@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Delegation } from './delegation.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MAX_DELEGATION_DEPTH = 10;
 
@@ -11,6 +12,7 @@ export class DelegationsService {
     @InjectRepository(Delegation)
     private readonly delegationRepo: Repository<Delegation>,
     private readonly dataSource: DataSource,
+    private readonly notifications: NotificationsService,
   ) {}
 
   findAll(): Promise<Delegation[]> {
@@ -73,7 +75,7 @@ export class DelegationsService {
       throw new BadRequestException('This delegation would create a circular chain');
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const delegation = manager.create(Delegation, {
         topic_id: null,
         ...data,
@@ -83,13 +85,42 @@ export class DelegationsService {
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };
     });
+
+    try {
+      await this.notifications.create({
+        userId: data.delegate_id,
+        orgId: data.organisation_id,
+        type: 'delegation.added',
+        actorId: data.delegator_id,
+        targetType: 'delegation',
+        targetId: result.item.id,
+        metadata: {},
+      });
+    } catch { /* non-critical */ }
+
+    return result;
   }
 
   async delete(id: string): Promise<{ txid: number }> {
-    return this.dataSource.transaction(async (manager) => {
+    const delegation = await this.delegationRepo.findOneBy({ id });
+    const result = await this.dataSource.transaction(async (manager) => {
       await manager.delete(Delegation, id);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { txid: parseInt(row.txid, 10) };
     });
+    if (delegation) {
+      try {
+        await this.notifications.create({
+          userId: delegation.delegate_id,
+          orgId: delegation.organisation_id,
+          type: 'delegation.removed',
+          actorId: delegation.delegator_id,
+          targetType: 'delegation',
+          targetId: id,
+          metadata: {},
+        });
+      } catch { /* non-critical */ }
+    }
+    return result;
   }
 }

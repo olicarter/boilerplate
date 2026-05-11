@@ -55,6 +55,7 @@ export class CommentsService {
     });
 
     await this.notifyMentions(data.body, data.author_id, proposal.organisation_id, data.proposal_id, result.item.id);
+    await this.notifyCommented(data.body, data.author_id, proposal, result.item.id);
     return result;
   }
 
@@ -99,6 +100,35 @@ export class CommentsService {
           targetType: 'proposal',
           targetId: proposalId,
           metadata: { commentId },
+        })),
+      );
+    } catch { /* non-critical */ }
+  }
+
+  private async notifyCommented(body: string, authorId: string, proposal: Proposal, commentId: string): Promise<void> {
+    try {
+      const members = await this.orgsService.getMembersWithNames(proposal.organisation_id);
+      const mentionedIds = new Set(members.filter((m) => body.includes(`@${m.name}`)).map((m) => m.userId));
+      const votes = await this.dataSource.query<{ user_id: string }[]>(
+        'SELECT DISTINCT user_id FROM votes WHERE proposal_id = $1',
+        [proposal.id],
+      );
+      const interested = new Set<string>();
+      if (proposal.author_id && proposal.author_id !== authorId) interested.add(proposal.author_id);
+      for (const v of votes) {
+        if (v.user_id !== authorId) interested.add(v.user_id);
+      }
+      for (const id of mentionedIds) interested.delete(id);
+      if (interested.size === 0) return;
+      await this.notifications.createMany(
+        [...interested].map((userId) => ({
+          userId,
+          orgId: proposal.organisation_id,
+          type: 'comment.posted' as const,
+          actorId: authorId,
+          targetType: 'proposal',
+          targetId: proposal.id,
+          metadata: { commentId, title: proposal.title },
         })),
       );
     } catch { /* non-critical */ }

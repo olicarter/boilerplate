@@ -8,6 +8,10 @@ const TYPE_LABELS: Record<Notification['type'], string> = {
   'proposal.closed': 'Proposal closed',
   'delegate.voted': 'Delegate voted',
   'member.joined': 'New member',
+  'comment.mention': 'You were mentioned',
+  'comment.posted': 'New comment',
+  'delegation.added': 'Someone delegated to you',
+  'delegation.removed': 'Delegation removed',
 };
 
 function NotificationItem({
@@ -29,7 +33,7 @@ function NotificationItem({
     }
   }
 
-  const body = n.metadata?.title as string | undefined;
+  const body = (n.metadata?.title ?? n.metadata?.proposalTitle) as string | undefined;
   const delegateChoice = n.metadata?.choice as string | undefined;
 
   return (
