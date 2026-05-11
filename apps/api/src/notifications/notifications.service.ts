@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Notification, NotificationType } from './notification.entity';
 
@@ -9,7 +9,25 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly repo: Repository<Notification>,
+    private readonly dataSource: DataSource,
   ) {}
+
+  private async allowedByPreferences(
+    items: { userId: string; type: NotificationType }[],
+  ): Promise<boolean[]> {
+    if (items.length === 0) return [];
+    const userIds = [...new Set(items.map((n) => n.userId))];
+    const rows: { id: string; notification_preferences: Record<string, boolean> }[] =
+      await this.dataSource.query(
+        `SELECT id, notification_preferences FROM users WHERE id = ANY($1)`,
+        [userIds],
+      );
+    const prefMap = Object.fromEntries(rows.map((r) => [r.id, r.notification_preferences ?? {}]));
+    return items.map((n) => {
+      const prefs = prefMap[n.userId] ?? {};
+      return prefs[n.type] !== false;
+    });
+  }
 
   async create(data: {
     userId: string;
@@ -20,6 +38,8 @@ export class NotificationsService {
     targetId?: string | null;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
+    const [allowed] = await this.allowedByPreferences([{ userId: data.userId, type: data.type }]);
+    if (!allowed) return;
     await this.repo.save(
       this.repo.create({
         id: randomUUID(),
@@ -36,8 +56,13 @@ export class NotificationsService {
 
   async createMany(notifications: Parameters<typeof this.create>[0][]): Promise<void> {
     if (notifications.length === 0) return;
+    const checks = await this.allowedByPreferences(
+      notifications.map((n) => ({ userId: n.userId, type: n.type })),
+    );
+    const filtered = notifications.filter((_, i) => checks[i]);
+    if (filtered.length === 0) return;
     await this.repo.save(
-      notifications.map((n) =>
+      filtered.map((n) =>
         this.repo.create({
           id: randomUUID(),
           user_id: n.userId,

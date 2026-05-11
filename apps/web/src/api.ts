@@ -186,6 +186,13 @@ export const usersApi = {
     request<MutationResult<User>>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/users/${id}`, { method: 'DELETE' }),
+  getNotificationPreferences: () =>
+    request<Record<string, boolean>>('/users/me/notification-preferences'),
+  updateNotificationPreferences: (prefs: Record<string, boolean>) =>
+    request<Record<string, boolean>>('/users/me/notification-preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(prefs),
+    }),
 };
 
 export const orgsApi = {

@@ -13,4 +13,7 @@ export class User {
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
+
+  @Column({ name: 'notification_preferences', type: 'jsonb', default: {} })
+  notification_preferences!: Record<string, boolean>;
 }

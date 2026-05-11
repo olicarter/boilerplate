@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 
 @Controller('users')
 export class UsersController {
@@ -32,5 +32,20 @@ export class UsersController {
   @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {
     return this.usersService.delete(id);
+  }
+
+  @Get('me/notification-preferences')
+  @UseGuards(AuthGuard)
+  getNotificationPreferences(@Req() req: AuthenticatedRequest) {
+    return this.usersService.getNotificationPreferences(req.user!.id);
+  }
+
+  @Patch('me/notification-preferences')
+  @UseGuards(AuthGuard)
+  updateNotificationPreferences(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: Record<string, boolean>,
+  ) {
+    return this.usersService.updateNotificationPreferences(req.user!.id, body);
   }
 }

@@ -52,4 +52,18 @@ export class UsersService {
       return { txid: parseInt(row.txid, 10) };
     });
   }
+
+  async getNotificationPreferences(id: string): Promise<Record<string, boolean>> {
+    const user = await this.userRepo.findOneBy({ id });
+    return user?.notification_preferences ?? {};
+  }
+
+  async updateNotificationPreferences(
+    id: string,
+    prefs: Record<string, boolean>,
+  ): Promise<Record<string, boolean>> {
+    await this.userRepo.update(id, { notification_preferences: prefs });
+    const user = await this.userRepo.findOneByOrFail({ id });
+    return user.notification_preferences;
+  }
 }
