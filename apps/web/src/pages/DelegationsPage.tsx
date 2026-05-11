@@ -24,6 +24,7 @@ export function DelegationsPage() {
   const [selectedDelegate, setSelectedDelegate] = useState<User | null>(null);
   const [scopeTopicId, setScopeTopicId] = useState<string>('__global__');
   const [expiresAt, setExpiresAt] = useState('');
+  const [fallbackHours, setFallbackHours] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -87,12 +88,14 @@ export function DelegationsPage() {
         delegate_id: selectedDelegate.id,
         topic_id: resolvedTopicId,
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        fallback_abstain_hours: fallbackHours ? parseInt(fallbackHours, 10) : null,
         created_at: new Date().toISOString(),
       } as Delegation);
       await tx.isPersisted.promise;
       setSelectedDelegate(null);
       setScopeTopicId('__global__');
       setExpiresAt('');
+      setFallbackHours('');
       addToast('Delegation added', 'success');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add delegation.');
@@ -180,6 +183,9 @@ export function DelegationsPage() {
                     )}
                     {!expired && expiresDate && (
                       <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888' }}>· expires {expiresDate}</span>
+                    )}
+                    {d.fallback_abstain_hours != null && (
+                      <span style={{ marginLeft: '0.5rem', fontSize: 12, color: '#888' }}>· voids if delegate doesn't vote within {d.fallback_abstain_hours}h of deadline</span>
                     )}
                   </div>
                   <ConfirmButton
@@ -275,6 +281,24 @@ export function DelegationsPage() {
                 onChange={(e) => setExpiresAt(e.target.value)}
                 style={{ width: '100%', padding: '0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
               />
+            </div>
+          </div>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label htmlFor="delegation-fallback" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+              Conditional <span style={{ color: '#aaa', fontWeight: 400 }}>(optional — void if delegate hasn't voted within N hours of deadline)</span>
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                id="delegation-fallback"
+                type="number"
+                min={1}
+                max={168}
+                value={fallbackHours}
+                onChange={(e) => setFallbackHours(e.target.value)}
+                placeholder="e.g. 48"
+                style={{ width: 80, padding: '0.4rem 0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              />
+              <span style={{ fontSize: 13, color: '#666' }}>hours before deadline</span>
             </div>
           </div>
 

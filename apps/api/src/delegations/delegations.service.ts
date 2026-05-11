@@ -65,6 +65,7 @@ export class DelegationsService {
     delegate_id: string;
     topic_id?: string | null;
     expires_at?: string | null;
+    fallback_abstain_hours?: number | null;
   }): Promise<{ item: Delegation; txid: number }> {
     if (data.delegator_id === data.delegate_id) {
       throw new BadRequestException('You cannot delegate to yourself');
@@ -78,6 +79,7 @@ export class DelegationsService {
     const result = await this.dataSource.transaction(async (manager) => {
       const delegation = manager.create(Delegation, {
         topic_id: null,
+        fallback_abstain_hours: null,
         ...data,
         expires_at: data.expires_at ? new Date(data.expires_at) : null,
       });

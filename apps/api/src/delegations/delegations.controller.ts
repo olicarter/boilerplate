@@ -13,7 +13,7 @@ export class DelegationsController {
 
   @Post()
   @UseGuards(AuthGuard)
-  create(@Body() body: { id: string; organisation_id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null }) {
+  create(@Body() body: { id: string; organisation_id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null; fallback_abstain_hours?: number | null }) {
     return this.delegationsService.create(body);
   }
 

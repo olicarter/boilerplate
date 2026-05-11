@@ -505,9 +505,17 @@ export class ProposalsService {
 
     const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
     const allDelegations = await this.dataSource.getRepository(Delegation).find({ where: { organisation_id: proposal.organisation_id } });
-    const delegations = DelegationsService.activeDelegations(allDelegations);
-
     const directVotes = new Map<string, string>(votes.map((v) => [v.user_id, v.choice ?? 'abstain']));
+
+    const now = new Date();
+    const closesAt = proposal.closes_at ? new Date(proposal.closes_at) : null;
+    const delegations = DelegationsService.activeDelegations(allDelegations).filter((d) => {
+      if (!d.fallback_abstain_hours || !closesAt) return true;
+      const cutoff = new Date(closesAt.getTime() - d.fallback_abstain_hours * 3600_000);
+      if (now < cutoff) return true;
+      return directVotes.has(d.delegate_id);
+    });
+
     const delegationMap = this.buildDelegationMap(delegations);
 
     const MAX_DEPTH = 10;

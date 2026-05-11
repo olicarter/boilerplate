@@ -119,6 +119,7 @@ export interface Delegation {
   delegate_id: string;
   topic_id: string | null;
   expires_at: string | null;
+  fallback_abstain_hours: number | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -316,7 +317,7 @@ export interface ProposalReaction {
 }
 
 export const delegationsApi = {
-  create: (data: { id: string; organisation_id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null }) =>
+  create: (data: { id: string; organisation_id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null; fallback_abstain_hours?: number | null }) =>
     request<MutationResult<Delegation>>('/delegations', { method: 'POST', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/delegations/${id}`, { method: 'DELETE' }),

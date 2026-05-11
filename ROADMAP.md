@@ -108,9 +108,9 @@ Current state: users can register with passkeys, create proposals under topics, 
 
 ### Advanced delegation
 - [x] **Transitive delegation UI** — visualise the delegation chain: "Your vote flows Alice → Bob → Carol who voted yes". Show the full chain on the proposal detail page for your own vote.
-- [ ] **Delegation network graph** — org-level page showing the delegation graph as an interactive force-directed diagram (D3.js or similar). Members can see who trusts whom.
+- [x] **Delegation network graph** — org-level page showing the delegation graph as an interactive force-directed diagram (D3.js or similar). Members can see who trusts whom.
 - [x] **Delegation weight display** — show how many votes each member is currently carrying across the org (their own + all delegated to them).
-- [ ] **Conditional delegation** — delegate to X, but only if X hasn't voted within 48 hours of the deadline; otherwise your vote defaults to abstain. Encourages responsive delegates.
+- [x] **Conditional delegation** — delegate to X, but only if X hasn't voted within 48 hours of the deadline; otherwise your vote defaults to abstain. Encourages responsive delegates.
 - [ ] **Split delegation** — delegate different percentages of your voting weight to multiple delegates per topic. E.g. 60% to Alice, 40% to Bob on Environment.
 - [x] **Delegation suggestions** — when a user hasn't voted and has no delegation set, suggest members with high participation rates in that topic as potential delegates.
 

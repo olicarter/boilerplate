@@ -21,6 +21,10 @@ export class Delegation {
   @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
   expires_at!: Date | null;
 
+  /** If set, delegation is voided if delegate hasn't voted within this many hours of the proposal deadline */
+  @Column({ name: 'fallback_abstain_hours', type: 'integer', nullable: true, default: null })
+  fallback_abstain_hours!: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }
