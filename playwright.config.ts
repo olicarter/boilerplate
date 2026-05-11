@@ -1,8 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Requires docker-compose stack (postgres + electric): npm run db:up
-// Start API with NODE_ENV=test before running: NODE_ENV=test npm run dev:api
+// The API webServer is started with NODE_ENV=test automatically.
+// If you already have a dev API running on :3001, stop it first — the test
+// suite needs its own test-mode instance (globalSetup enforces this).
 export default defineConfig({
+  globalSetup: './e2e/global-setup.ts',
   testDir: './e2e',
   fullyParallel: false,
   workers: 1,

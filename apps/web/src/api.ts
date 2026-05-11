@@ -4,7 +4,13 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
     credentials: 'include',
     ...options,
   });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem('ripple_user');
+      window.location.reload();
+    }
+    throw new Error(`API error: ${res.status}`);
+  }
   const text = await res.text();
   return (text ? JSON.parse(text) : null) as T;
 }

@@ -1,64 +1,75 @@
 import { test, expect, API, ORG_SLUG } from '../fixtures';
 
 test.describe('public organisation', () => {
-  test('admin can enable public org toggle', async ({ page, asAlice }) => {
-    await page.goto(`https://localhost:5174/orgs/${ORG_SLUG}/admin`);
+  test('admin can toggle public org setting', async ({ page, asAlice }) => {
+    await page.goto(`/orgs/${ORG_SLUG}/admin`);
     const checkbox = page.getByLabel('Allow anyone to discover and join this organisation');
     await expect(checkbox).not.toBeChecked();
     await checkbox.check();
     await expect(page.getByText('Setting saved')).toBeVisible();
+    await checkbox.uncheck();
+    await expect(page.getByText('Setting saved')).toBeVisible();
   });
 
-  test('non-member sees public org in discover section', async ({ page, asAlice, bob, org }) => {
-    // Make the test org public as Alice
-    await page.request.patch(`${API}/api/orgs/${ORG_SLUG}`, { data: { is_public: true } });
-
-    // Switch to Bob's session (Bob is a member from the fixture, so use a different approach)
-    // Create a second org as Alice, make it public, then test Bob discovering it
+  test('authenticated non-member sees public org in Discover and can join', async ({ page, asAlice, bob }) => {
+    // Create a second public org as Alice
     const orgRes = await page.request.post(`${API}/api/orgs`, {
-      data: { name: 'Public Org', slug: 'public-org-test' },
+      data: { name: 'Open Community', slug: 'open-community-test' },
     });
-    const newOrg = await orgRes.json();
-    await page.request.patch(`${API}/api/orgs/${newOrg.item.slug}`, { data: { is_public: true } });
+    const { item: newOrg } = await orgRes.json();
+    await page.request.patch(`${API}/api/orgs/${newOrg.slug}`, { data: { is_public: true } });
 
-    // Switch to Bob
+    // Switch page to Bob's session, then remove him from ripple-test so he has 0 orgs
+    // (avoids the single-org redirect that would take him away from the OrgListPage)
     await page.request.post(`${API}/api/auth/test-setup`, { data: { name: bob.name, email: bob.email } });
+    await page.request.delete(`${API}/api/orgs/${ORG_SLUG}/members/${bob.id}`);
     await page.addInitScript(
       ({ key, value }) => localStorage.setItem(key, value),
-      { key: 'ripple_user', value: JSON.stringify({ id: bob.id, name: bob.name, email: bob.email, created_at: bob.created_at }) },
+      { key: 'ripple_user', value: JSON.stringify(bob) },
     );
 
-    await page.goto('https://localhost:5174/');
-    // Bob should see the "Discover" section with the public org he's not a member of
-    await expect(page.getByRole('heading', { name: 'Discover' })).toBeVisible({ timeout: 8000 });
-    await expect(page.getByText('Public Org')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Join' })).toBeVisible();
-  });
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Discover' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Open Community')).toBeVisible();
 
-  test('non-member can join a public org', async ({ page, asAlice, bob, org }) => {
-    // Create a public org as Alice
-    const orgRes = await page.request.post(`${API}/api/orgs`, {
-      data: { name: 'Joinable Org', slug: 'joinable-org-test' },
-    });
-    const newOrg = await orgRes.json();
-    await page.request.patch(`${API}/api/orgs/${newOrg.item.slug}`, { data: { is_public: true } });
-
-    // Switch to Bob
-    await page.request.post(`${API}/api/auth/test-setup`, { data: { name: bob.name, email: bob.email } });
-    await page.addInitScript(
-      ({ key, value }) => localStorage.setItem(key, value),
-      { key: 'ripple_user', value: JSON.stringify({ id: bob.id, name: bob.name, email: bob.email, created_at: bob.created_at }) },
-    );
-
-    await page.goto('https://localhost:5174/');
-    await expect(page.getByText('Joinable Org')).toBeVisible({ timeout: 8000 });
     await page.getByRole('button', { name: 'Join' }).click();
-    // Should navigate into the org after joining
-    await expect(page).toHaveURL(/joinable-org-test/, { timeout: 8000 });
+    await expect(page).toHaveURL(/open-community-test/, { timeout: 8000 });
   });
 
-  test('joining a private org without token is rejected', async ({ page, asAlice, org }) => {
+  test('API: authenticated user can join a public org', async ({ page, asAlice }) => {
+    const orgRes = await page.request.post(`${API}/api/orgs`, {
+      data: { name: 'Joinable Org', slug: 'joinable-org-api-test' },
+    });
+    const { item: newOrg } = await orgRes.json();
+    await page.request.patch(`${API}/api/orgs/${newOrg.slug}`, { data: { is_public: true } });
+
+    const joinRes = await page.request.post(`${API}/api/orgs/${newOrg.slug}/join`, { data: {} });
+    expect(joinRes.status()).toBe(201);
+    const body = await joinRes.json();
+    expect(body.item.organisation_id).toBe(newOrg.id);
+  });
+
+  test('API: joining a private org without a token is rejected', async ({ page, asAlice }) => {
     const res = await page.request.post(`${API}/api/orgs/${ORG_SLUG}/join`, { data: {} });
     expect(res.status()).toBe(403);
+  });
+
+  test('unauthenticated user can browse a public org without signing in', async ({ page, asAlice }) => {
+    await page.request.patch(`${API}/api/orgs/${ORG_SLUG}`, { data: { is_public: true } });
+
+    // Navigate without any session or localStorage
+    await page.context().clearCookies();
+    await page.addInitScript(({ key }) => localStorage.removeItem(key), { key: 'ripple_user' });
+
+    await page.goto(`/orgs/${ORG_SLUG}/proposals`);
+    // Shell renders with a Sign in button — not the full AuthPanel
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Sign in with passkey' })).not.toBeVisible();
+  });
+
+  test('unauthenticated user sees sign-in form for private org', async ({ page }) => {
+    // ripple-test is private by default; no session set
+    await page.goto(`/orgs/${ORG_SLUG}/proposals`);
+    await expect(page.getByRole('button', { name: 'Sign in with passkey' })).toBeVisible({ timeout: 10000 });
   });
 });
