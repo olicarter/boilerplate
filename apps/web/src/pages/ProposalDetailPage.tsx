@@ -69,6 +69,7 @@ export function ProposalDetailPage() {
   const [voting, setVoting] = useState(false);
   const [voteError, setVoteError] = useState('');
   const [changingVote, setChangingVote] = useState(false);
+  const [voteReason, setVoteReason] = useState('');
   const [actionError, setActionError] = useState('');
   const [actioning, setActioning] = useState(false);
   const [commentBody, setCommentBody] = useState('');
@@ -197,11 +198,13 @@ export function ProposalDetailPage() {
         user_id: currentUser.id,
         choice: choice ?? null,
         option_id: optionId ?? null,
+        reason: voteReason.trim() || null,
         created_at: new Date().toISOString(),
       });
       await tx.isPersisted.promise;
       await fetchTally();
       setChangingVote(false);
+      setVoteReason('');
       setDelegationVote(null);
       setDelegationChain(null);
       addToast('Vote cast', 'success');
@@ -220,10 +223,12 @@ export function ProposalDetailPage() {
       const tx = votesCollection.update(myVote.id, (draft: Vote) => {
         draft.choice = choice ?? null;
         draft.option_id = optionId ?? null;
+        draft.reason = voteReason.trim() || null;
       });
       await tx.isPersisted.promise;
       await fetchTally();
       setChangingVote(false);
+      setVoteReason('');
       addToast('Vote updated', 'success');
     } catch (err) {
       setVoteError(err instanceof Error ? err.message : 'Failed to update vote.');
@@ -1114,6 +1119,28 @@ export function ProposalDetailPage() {
         )}
       </div>}
 
+      {/* Vote statements */}
+      {!isDiscussion && org.voting_visibility !== 'hidden' && (() => {
+        const proposalVotes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === id && v.reason);
+        if (proposalVotes.length === 0) return null;
+        return (
+          <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '1rem 1.25rem', marginBottom: '1.5rem', background: '#fafafa' }}>
+            <h3 style={{ margin: '0 0 0.75rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vote statements</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {proposalVotes.map((v: Vote) => {
+                const voter = (allUsers ?? []).find((u: User) => u.id === v.user_id);
+                return (
+                  <div key={v.id} data-testid="vote-statement" style={{ fontSize: 13, display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                    <span style={{ color: choiceColors[(v.choice as VoteChoice) ?? 'abstain'], fontWeight: 600, minWidth: 48, textTransform: 'capitalize' }}>{v.choice ?? 'voted'}</span>
+                    <span style={{ color: '#888' }}><strong style={{ color: '#444' }}>{voter?.name ?? 'Unknown'}</strong>: <em>{v.reason as string}</em></span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Vote action */}
       {!isDiscussion && isDeliberating && (
         <div style={{ border: '1px solid #ddd6fe', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#faf5ff', marginBottom: '1.5rem' }}>
@@ -1178,16 +1205,21 @@ export function ProposalDetailPage() {
             </p>
           ) : myVote && !changingVote ? (
             <div>
-              <p style={{ margin: '0 0 0.75rem', fontSize: 14 }}>
+              <p style={{ margin: '0 0 0.5rem', fontSize: 14 }}>
                 {isMultipleChoice ? (
                   <>You voted for <strong>{proposalOptions.find((o) => o.id === myVote.option_id)?.text ?? 'unknown option'}</strong>.</>
                 ) : (
                   <>You voted <strong style={{ color: choiceColors[myVote.choice as VoteChoice] }}>{myVote.choice}</strong>.</>
                 )}
               </p>
+              {myVote.reason && (
+                <p data-testid="my-vote-reason" style={{ margin: '0 0 0.75rem', fontSize: 13, color: '#555', fontStyle: 'italic' }}>
+                  "{myVote.reason}"
+                </p>
+              )}
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
-                  onClick={() => setChangingVote(true)}
+                  onClick={() => { setChangingVote(true); setVoteReason((myVote.reason as string) ?? ''); }}
                   disabled={voting}
                   style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer' }}
                 >
@@ -1210,6 +1242,14 @@ export function ProposalDetailPage() {
                   Choose a new vote:
                 </p>
               )}
+              <textarea
+                data-testid="vote-reason-input"
+                placeholder="Add a reason (optional)"
+                value={voteReason}
+                onChange={(e) => setVoteReason(e.target.value)}
+                rows={2}
+                style={{ width: '100%', fontSize: 13, padding: '0.4rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical', marginBottom: '0.6rem', boxSizing: 'border-box' }}
+              />
               {isMultipleChoice ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {proposalOptions.map((opt) => (

@@ -19,13 +19,13 @@ export class VotesController {
 
   @Post()
   @UseGuards(AuthGuard)
-  create(@Body() body: { id: string; proposal_id: string; user_id: string; choice?: VoteChoice | null; option_id?: string | null }) {
+  create(@Body() body: { id: string; proposal_id: string; user_id: string; choice?: VoteChoice | null; option_id?: string | null; reason?: string | null }) {
     return this.votesService.create(body);
   }
 
   @Patch(':id')
   @UseGuards(AuthGuard)
-  update(@Param('id') id: string, @Body() body: { choice?: VoteChoice | null; option_id?: string | null }) {
+  update(@Param('id') id: string, @Body() body: { choice?: VoteChoice | null; option_id?: string | null; reason?: string | null }) {
     return this.votesService.update(id, body);
   }
 

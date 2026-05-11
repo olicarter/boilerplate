@@ -34,6 +34,7 @@ export class VotesService {
     user_id: string;
     choice?: VoteChoice | null;
     option_id?: string | null;
+    reason?: string | null;
   }): Promise<{ item: Vote; txid: number }> {
     const proposal = await this.proposalRepo.findOneBy({ id: data.proposal_id });
     if (!proposal || proposal.status !== 'open') {
@@ -55,6 +56,7 @@ export class VotesService {
         user_id: data.user_id,
         choice: data.choice ?? null,
         option_id: data.option_id ?? null,
+        reason: data.reason ?? null,
         organisation_id: proposal.organisation_id,
       });
       const saved = await manager.save(vote);
@@ -93,7 +95,7 @@ export class VotesService {
     } catch { /* non-critical */ }
   }
 
-  async update(id: string, data: { choice?: VoteChoice | null; option_id?: string | null }): Promise<{ item: Vote; txid: number }> {
+  async update(id: string, data: { choice?: VoteChoice | null; option_id?: string | null; reason?: string | null }): Promise<{ item: Vote; txid: number }> {
     const vote = await this.voteRepo.findOneBy({ id });
     if (vote) {
       const proposal = await this.proposalRepo.findOneBy({ id: vote.proposal_id });

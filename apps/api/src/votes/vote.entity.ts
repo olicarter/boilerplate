@@ -22,6 +22,9 @@ export class Vote {
   @Column({ name: 'option_id', type: 'uuid', nullable: true })
   option_id!: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  reason!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

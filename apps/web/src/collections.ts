@@ -157,12 +157,12 @@ export function createOrgCollections(orgId: string) {
       getKey: (row: unknown) => (row as Vote).id,
       onInsert: async ({ transaction }) => {
         const v = transaction.mutations[0].modified as Vote;
-        const result = await votesApi.create({ id: v.id, proposal_id: v.proposal_id, user_id: v.user_id, choice: v.choice, option_id: v.option_id });
+        const result = await votesApi.create({ id: v.id, proposal_id: v.proposal_id, user_id: v.user_id, choice: v.choice, option_id: v.option_id, reason: v.reason });
         return { txid: result.txid };
       },
       onUpdate: async ({ transaction }) => {
         const v = transaction.mutations[0].modified as Vote;
-        const result = await votesApi.update(v.id, { choice: v.choice, option_id: v.option_id });
+        const result = await votesApi.update(v.id, { choice: v.choice, option_id: v.option_id, reason: v.reason });
         return { txid: result.txid };
       },
       onDelete: async ({ transaction }) => {

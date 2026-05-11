@@ -126,6 +126,7 @@ export interface Vote {
   user_id: string;
   choice: 'yes' | 'no' | 'abstain' | null;
   option_id: string | null;
+  reason: string | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -433,9 +434,9 @@ export const notificationsApi = {
 };
 
 export const votesApi = {
-  create: (data: { id: string; proposal_id: string; user_id: string; choice?: Vote['choice']; option_id?: string | null }) =>
+  create: (data: { id: string; proposal_id: string; user_id: string; choice?: Vote['choice']; option_id?: string | null; reason?: string | null }) =>
     request<MutationResult<Vote>>('/votes', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: { choice?: Vote['choice']; option_id?: string | null }) =>
+  update: (id: string, data: { choice?: Vote['choice']; option_id?: string | null; reason?: string | null }) =>
     request<MutationResult<Vote>>(`/votes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/votes/${id}`, { method: 'DELETE' }),
