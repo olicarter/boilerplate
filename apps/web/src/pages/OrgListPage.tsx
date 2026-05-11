@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { organisationsCollection, membershipsCollection } from '../collections';
@@ -25,6 +25,14 @@ export function OrgListPage() {
   const discoverOrgs = currentUser
     ? ((allOrgs ?? []) as Organisation[]).filter((o) => o.is_public && !myOrgIds.has(o.id))
     : [];
+
+  // Skip the org list entirely when the user belongs to exactly one org.
+  const isLoaded = allOrgs !== undefined && allMemberships !== undefined;
+  useEffect(() => {
+    if (isLoaded && myOrgs.length === 1) {
+      navigate({ to: '/orgs/$slug', params: { slug: myOrgs[0].slug }, replace: true });
+    }
+  }, [isLoaded, myOrgs.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [joiningSlug, setJoiningSlug] = useState<string | null>(null);
 

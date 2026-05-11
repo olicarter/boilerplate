@@ -54,7 +54,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-function AuthPanel({ onLogin }: { onLogin: (user: User) => void }) {
+function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDismiss?: () => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -229,6 +229,16 @@ function AuthPanel({ onLogin }: { onLogin: (user: User) => void }) {
             {error}
           </p>
         )}
+        {onDismiss && (
+          <p style={{ marginTop: 'var(--space-5)', marginBottom: 0 }}>
+            <button
+              onClick={onDismiss}
+              style={{ background: 'none', border: 'none', color: 'var(--color-fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', cursor: 'pointer', padding: 0 }}
+            >
+              ← Continue browsing
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );
@@ -265,9 +275,10 @@ function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlu
   );
 }
 
-function Shell({ user, onLogout, orgSlug, orgId, children, notificationOrgSlug }: {
+function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificationOrgSlug }: {
   user: User | null;
   onLogout: () => void;
+  onSignIn?: () => void;
   orgSlug?: string;
   orgId?: string;
   notificationOrgSlug?: string;
@@ -292,6 +303,13 @@ function Shell({ user, onLogout, orgSlug, orgId, children, notificationOrgSlug }
           </div>
           <button onClick={onLogout} className={styles.signOut}>Sign out</button>
         </>
+      ) : onSignIn ? (
+        <button
+          onClick={onSignIn}
+          style={{ background: 'none', border: 'none', color: 'var(--color-sidebar-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', cursor: 'pointer', padding: 0, textAlign: 'left', fontWeight: 'var(--weight-medium)' }}
+        >
+          Sign in
+        </button>
       ) : (
         <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-sidebar-fg-muted)' }}>Not signed in</span>
       )}
@@ -374,6 +392,7 @@ function RootComponent() {
 // Org layout — resolves org from slug, wraps with OrgProvider
 function OrgLayout() {
   const [user, setUser] = useState<User | null>(getStoredUser);
+  const [showAuthOverlay, setShowAuthOverlay] = useState(false);
   const { slug } = useParams({ from: '/orgs/$slug' });
   const { data: allOrgs } = useLiveQuery(organisationsCollection);
   const org = (allOrgs ?? []).find((o: unknown) => (o as Organisation).slug === slug) as Organisation | undefined ?? null;
@@ -382,6 +401,7 @@ function OrgLayout() {
   async function handleLogin(u: User) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
     setUser(u);
+    setShowAuthOverlay(false);
   }
 
   async function handleLogout() {
@@ -390,20 +410,29 @@ function OrgLayout() {
     setUser(null);
   }
 
-  if (!user) {
+  // While org data loads, show a minimal loading state — we need the org to
+  // decide whether to require auth, so we can't hard-block unauthed users yet.
+  if (isLoading) {
     return (
-      <UserContext.Provider value={null}>
-        <AuthPanel onLogin={handleLogin} />
+      <UserContext.Provider value={user}>
+        {user ? (
+          <Shell user={user} onLogout={handleLogout} orgSlug={slug}>
+            <p style={{ color: 'var(--color-fg-subtle)', fontSize: 'var(--text-base)' }}>Loading…</p>
+          </Shell>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+            <p style={{ color: 'var(--color-fg-subtle)', fontSize: 'var(--text-base)' }}>Loading…</p>
+          </div>
+        )}
       </UserContext.Provider>
     );
   }
 
-  if (isLoading) {
+  // Private orgs (and unknown slugs) require sign-in.
+  if (!user && (!org || !org.is_public)) {
     return (
-      <UserContext.Provider value={user}>
-        <Shell user={user} onLogout={handleLogout} orgSlug={slug}>
-          <p style={{ color: 'var(--color-fg-subtle)', fontSize: 'var(--text-base)' }}>Loading…</p>
-        </Shell>
+      <UserContext.Provider value={null}>
+        <AuthPanel onLogin={handleLogin} />
       </UserContext.Provider>
     );
   }
@@ -421,10 +450,21 @@ function OrgLayout() {
   return (
     <UserContext.Provider value={user}>
       <OrgProvider org={org}>
-        <Shell user={user} onLogout={handleLogout} orgSlug={slug} orgId={org.id}>
+        <Shell
+          user={user}
+          onLogout={handleLogout}
+          onSignIn={!user ? () => setShowAuthOverlay(true) : undefined}
+          orgSlug={slug}
+          orgId={org.id}
+        >
           <Outlet />
         </Shell>
       </OrgProvider>
+      {showAuthOverlay && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
+          <AuthPanel onLogin={handleLogin} onDismiss={() => setShowAuthOverlay(false)} />
+        </div>
+      )}
     </UserContext.Provider>
   );
 }
