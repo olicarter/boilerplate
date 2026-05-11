@@ -31,7 +31,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 
 ### Auth & identity
 - [ ] **Email magic-link fallback** — not every device supports passkeys. Add an email-based sign-in flow (send a one-time link) as a fallback. The user can then add a passkey from their profile settings.
-- [ ] **Display name / avatar** — display name change is in Settings; avatar upload (profile photo as URL or base64 thumbnail) is not yet implemented.
+- [ ] **Avatar upload** — profile photo as URL or base64 thumbnail. Display name change is already in Settings.
 - [x] **Account settings page** — `/settings` page for changing display name and managing registered passkeys (list, add, remove).
 
 ### UI / UX
@@ -61,7 +61,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [ ] **Invite by email** — admins can invite people by email; a signed token is emailed with a link to join. Pending invites are listed in org settings.
 - [x] **Invite link** — generate a shareable invite link with a token; anyone with the link can join (can be disabled or made single-use).
 - [ ] **Email domain restriction** — optional: restrict membership to users whose email matches one or more domains (e.g. `@acme.com`).
-- [ ] **Member approval** — optional: new members must be approved by an admin before they can vote. Shows a pending queue in org settings.
+- [x] **Member approval** — optional: new members must be approved by an admin before they can vote. Shows a pending queue in org settings.
 - [x] **Member directory** — `/orgs/:slug/members` page listing all members with their role, join date, and a link to their profile. Sortable by name / join date / participation.
 - [x] **Leave organisation** — members can leave; the final admin cannot leave until they transfer ownership.
 - [x] **Remove member** — admins can remove a member, which also removes their delegations (incoming and outgoing) within the org.
@@ -87,7 +87,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 > More nuanced voting mechanics and delegation features for organisations with complex needs.
 
 ### Proposal types & voting modes
-- [ ] **Multiple choice proposals** — instead of yes/no/abstain, a proposal can have N custom options (e.g. "Option A / Option B / Option C / None of the above"). Votes are stored with an `option_id` foreign key.
+- [x] **Multiple choice proposals** — instead of yes/no/abstain, a proposal can have N custom options (e.g. "Option A / Option B / Option C / None of the above"). Votes are stored with an `option_id` foreign key.
 - [ ] **Ranked choice / instant runoff** — voters rank options in order of preference; the API computes the IRV winner across rounds. Show each elimination round in the results.
 - [ ] **Approval voting** — voters select all options they find acceptable; the option with the most approvals wins. Simple and strategy-proof for multi-option decisions.
 - [ ] **Score voting (range voting)** — voters rate each option 0–5; highest mean score wins. Good for prioritisation and resource allocation decisions.
@@ -102,12 +102,12 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **Veto rights** — certain roles (e.g. a board member or founder) can cast a veto vote that blocks a proposal regardless of the vote count. Vetoes must include a written reason. Veto role is configurable per org (admin-only by default, can be lowered to moderator).
 
 ### Weighted voting
-- [ ] **Share-based weight** — admins can assign a numeric `weight` to each member (e.g. representing equity shares, stake, or seniority). Votes and delegations carry this weight. The tally shows weighted counts alongside raw counts.
+- [x] **Share-based weight** — admins can assign a numeric `weight` to each member (e.g. representing equity shares, stake, or seniority). Votes and delegations carry this weight. The tally shows weighted counts alongside raw counts.
 - [ ] **Equal weight per seat** — alternative: weight by role (e.g. admin = 2, member = 1, observer = 0). Simple way to give a board a stronger voice.
 - [ ] **Weight display** — show each voter's weight on their profile (within the org) and in the delegation chain visualisation.
 
 ### Advanced delegation
-- [ ] **Transitive delegation UI** — visualise the delegation chain: "Your vote flows Alice → Bob → Carol who voted yes". Show the full chain on the proposal detail page for your own vote.
+- [x] **Transitive delegation UI** — visualise the delegation chain: "Your vote flows Alice → Bob → Carol who voted yes". Show the full chain on the proposal detail page for your own vote.
 - [ ] **Delegation network graph** — org-level page showing the delegation graph as an interactive force-directed diagram (D3.js or similar). Members can see who trusts whom.
 - [ ] **Delegation weight display** — show how many votes each member is currently carrying across the org (their own + all delegated to them).
 - [ ] **Conditional delegation** — delegate to X, but only if X hasn't voted within 48 hours of the deadline; otherwise your vote defaults to abstain. Encourages responsive delegates.
@@ -140,11 +140,11 @@ Current state: users can register with passkeys, create proposals under topics, 
 
 ### Deliberation periods
 - [x] **Deliberation window** — a proposal can have a `deliberation_ends_at` before `closes_at`. Voting is disabled during this window; only discussion is permitted. Visual timeline on the proposal page: Deliberation → Voting → Closed.
-- [ ] **Discussion-only proposals** — a proposal type with no formal vote. Used for announcements or open-ended discussions that may lead to future formal proposals.
+- [x] **Discussion-only proposals** — a proposal type with no formal vote. Used for announcements or open-ended discussions that may lead to future formal proposals.
 
 ### Mentions & notifications (within discussions)
-- [ ] **@mention autocomplete** — typing `@` in a comment box triggers an autocomplete of org members. Mentions create a notification for the mentioned user.
-- [ ] **Quote reply** — select text in a comment and click "reply" to quote it in a new comment.
+- [x] **@mention autocomplete** — typing `@` in a comment box triggers an autocomplete of org members. Mentions create a notification for the mentioned user.
+- [x] **Quote reply** — select text in a comment and click "reply" to quote it in a new comment.
 
 ---
 
@@ -153,9 +153,9 @@ Current state: users can register with passkeys, create proposals under topics, 
 > People won't participate if they don't know something needs their attention.
 
 ### In-app notifications
-- [ ] **Notification centre** — bell icon in the nav showing unread count. Dropdown or `/notifications` page listing all notifications with mark-as-read and mark-all-read.
-- [ ] **Notification types**: new proposal in your org, proposal deadline approaching (24h warning), vote result published, comment on a proposal you voted on, @mention in a comment, your delegate voted on your behalf, new member joined (admins only), delegation added/removed.
-- [ ] **Notification preferences** — per-user, per-org settings for which events trigger in-app vs. email notifications. Granular: "only for proposals I'm watching" / "all proposals" / "off".
+- [x] **Notification centre** — bell icon in the nav showing unread count. Dropdown listing all notifications with mark-as-read and mark-all-read.
+- [x] **Notification types**: new proposal, proposal closed, comment posted, @mention, delegate voted, new member joined, delegation added/removed, vote reminder.
+- [x] **Notification preferences** — per-user settings for which notification types are enabled. Managed from account settings.
 
 ### Email notifications
 - [ ] **Transactional emails** — integrate a mail provider (Resend or Postmark). Templates for: welcome, invite, magic-link, proposal opened, deadline reminder, result announced.
@@ -185,7 +185,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [x] **Audit log** — immutable append-only log of all significant actions: proposal created/edited/closed/withdrawn, vote cast/changed, delegation added/removed, member invited/removed, role changed, org setting changed. Stored in `audit_log` (id, org_id, actor_id, action, target_type, target_id, metadata jsonb, created_at).
 - [x] **Public results page** — for public organisations, a read-only page at `/orgs/:slug/results` showing all closed proposals and their outcomes. No login required. Good for community groups publishing governance decisions.
 - [ ] **Vote receipt** — after voting, users can download a signed receipt (JSON + signature) proving their vote was recorded correctly. Useful for high-stakes decisions.
-- [ ] **Export** — admins can export proposal results and vote tallies as CSV or PDF. Individual users can export their own voting history.
+- [x] **Export** — moderators can export vote tallies for any proposal as CSV (includes voter names, choices, and rationales).
 
 ### Delegation transparency
 - [ ] **Who carries my vote** — on any open proposal, show members exactly how many votes a person is currently carrying and on whose behalf, visible to all org members.
@@ -305,6 +305,21 @@ Current state: users can register with passkeys, create proposals under topics, 
 - [ ] **Custom domains** — organisations can map their own domain (e.g. `vote.acme.com`) to their Ripple org, with automatic TLS via Let's Encrypt.
 - [ ] **Custom branding** — org-level: primary colour, logo, font choice. Applied via CSS custom properties so all components pick it up.
 - [ ] **Email white-labelling** — emails sent from the org's own domain using a verified sending address.
+
+---
+
+## Implemented (not in original roadmap)
+
+Features shipped that extend beyond the original spec:
+
+- [x] **Pinned proposals** — moderators can pin proposals to float them to the top of the list.
+- [x] **Proposal reactions** — members can react to proposals with emoji (👍 👎 💬 🎉 🤔).
+- [x] **Activity feed** — org-level feed of recent events (proposals opened/closed, votes cast, comments, members joined).
+- [x] **Proposal templates** — admins define reusable templates (name, description, type, threshold); authors select one when creating a new proposal to pre-fill the form.
+- [x] **Vote rationale** — members can attach an optional written reason when casting a vote, displayed in a "Vote statements" section on the proposal.
+- [x] **Proposal tags** — free-form labels on proposals; tag filter bar on the proposals page.
+- [x] **Vote reminder** — moderators can send a notification to all members who haven't yet voted on an open proposal.
+- [x] **Member bio** — users can write a short bio visible on their profile page.
 
 ---
 
