@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
@@ -9,7 +9,7 @@ import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
 import { ConfirmButton } from '../components/ConfirmButton';
-import { MentionTextarea } from '../components/MentionTextarea';
+import { MentionTextarea, type MentionTextareaHandle } from '../components/MentionTextarea';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 
@@ -72,6 +72,7 @@ export function ProposalDetailPage() {
   const [actioning, setActioning] = useState(false);
   const [commentBody, setCommentBody] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const commentTextareaRef = useRef<MentionTextareaHandle>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -303,6 +304,15 @@ export function ProposalDetailPage() {
     } finally {
       setPostingComment(false);
     }
+  }
+
+  function quoteReply(body: string) {
+    const quoted = body
+      .split('\n')
+      .map((line) => `> ${line}`)
+      .join('\n');
+    setCommentBody((prev) => (prev ? `${prev}\n\n${quoted}\n\n` : `${quoted}\n\n`));
+    requestAnimationFrame(() => commentTextareaRef.current?.focus());
   }
 
   async function deleteComment(commentId: string) {
@@ -1382,7 +1392,17 @@ export function ProposalDetailPage() {
                             <div style={{ fontSize: 14, color: '#333', lineHeight: 1.5 }}>
                               <MarkdownContent content={c.body} />
                             </div>
-                            <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                              {currentUser && (
+                                <button
+                                  type="button"
+                                  data-testid="quote-reply-btn"
+                                  onClick={() => quoteReply(c.body)}
+                                  style={{ fontSize: 11, padding: '1px 6px', border: '1px solid #e0e0e0', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: '#555' }}
+                                >
+                                  Reply
+                                </button>
+                              )}
                               {['👍', '👎', '❤️', '🤔'].map((emoji) => {
                                 const reactionsForEmoji = (allReactions ?? []).filter(
                                   (r: CommentReaction) => r.comment_id === c.id && r.emoji === emoji,
@@ -1436,6 +1456,7 @@ export function ProposalDetailPage() {
                 )}
               </div>
               <MentionTextarea
+                ref={commentTextareaRef}
                 id="comment-body"
                 data-testid="comment-body"
                 value={commentBody}

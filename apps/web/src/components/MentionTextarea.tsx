@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { orgsApi } from '../api';
 
 interface Props {
@@ -13,9 +13,12 @@ interface Props {
   'data-testid'?: string;
 }
 
+export interface MentionTextareaHandle {
+  focus: () => void;
+}
+
 interface Suggestion { id: string; name: string }
 
-// Detects whether the cursor is inside an @mention query and extracts the query string.
 function getMentionQuery(text: string, cursor: number): { query: string; start: number } | null {
   const before = text.slice(0, cursor);
   const match = before.match(/@([^\s@]*)$/);
@@ -23,12 +26,19 @@ function getMentionQuery(text: string, cursor: number): { query: string; start: 
   return { query: match[1], start: cursor - match[0].length };
 }
 
-export function MentionTextarea({ value, onChange, orgSlug, id, rows = 3, placeholder, maxLength, style, 'data-testid': testId }: Props) {
+export const MentionTextarea = forwardRef<MentionTextareaHandle, Props>(function MentionTextarea(
+  { value, onChange, orgSlug, id, rows = 3, placeholder, maxLength, style, 'data-testid': testId },
+  ref,
+) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [mentionStart, setMentionStart] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fetchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }));
 
   const clearSuggestions = useCallback(() => {
     setSuggestions([]);
@@ -141,4 +151,5 @@ export function MentionTextarea({ value, onChange, orgSlug, id, rows = 3, placeh
       )}
     </div>
   );
-}
+});
+
