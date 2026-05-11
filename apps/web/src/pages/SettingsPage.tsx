@@ -3,6 +3,8 @@ import { startRegistration } from '@simplewebauthn/browser';
 import { authApi, usersApi, type Passkey } from '../api';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
+import { Button } from '../components/ui';
+import styles from './SettingsPage.module.css';
 
 const NOTIFICATION_LABELS: Record<string, string> = {
   'proposal.opened': 'A new proposal is opened',
@@ -63,7 +65,7 @@ export function SettingsPage() {
   }, [currentUser?.name, currentUser?.bio]);
 
   if (!currentUser) {
-    return <p style={{ fontSize: 14, color: '#999' }}>Sign in to access settings.</p>;
+    return <p className={styles.signIn}>Sign in to access settings.</p>;
   }
 
   async function handleSaveName(e: React.FormEvent) {
@@ -145,40 +147,36 @@ export function SettingsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 560 }}>
-      <h2 style={{ marginTop: 0, fontSize: '1.25rem' }}>Settings</h2>
+    <div className={styles.page}>
+      <h2 className={styles.heading}>Settings</h2>
 
-      {/* Display name */}
-      <section style={{ marginBottom: '2rem', border: '1px solid #ddd', borderRadius: 8, padding: '1.25rem' }}>
-        <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Display name
-        </h3>
-        <form onSubmit={handleSaveName} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1 }}>
-            <label htmlFor="settings-name" style={{ display: 'block', fontSize: 13, color: '#666', marginBottom: 4 }}>
-              Name
-            </label>
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Display name</h3>
+        <form className={styles.nameForm} onSubmit={handleSaveName}>
+          <div className={styles.nameField}>
+            <label htmlFor="settings-name" className={styles.formLabel}>Name</label>
             <input
               id="settings-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              style={{ width: '100%', padding: '0.45rem 0.6rem', boxSizing: 'border-box', fontSize: 14, border: '1px solid #ccc', borderRadius: 4 }}
+              className={styles.formInput}
             />
           </div>
-          <button
+          <Button
             type="submit"
             disabled={savingName || !name.trim() || name.trim() === currentUser.name}
-            style={{ padding: '0.45rem 1rem', fontSize: 14, whiteSpace: 'nowrap' }}
+            size="sm"
           >
             {savingName ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </form>
-        <p style={{ margin: '0.75rem 0 0', fontSize: 13, color: '#888' }}>{currentUser.email}</p>
-        <form onSubmit={handleSaveBio} style={{ marginTop: '1rem' }}>
-          <label htmlFor="settings-bio" style={{ display: 'block', fontSize: 13, color: '#666', marginBottom: 4 }}>
-            Bio <span style={{ color: '#aaa' }}>(optional)</span>
+        <p className={styles.emailHint}>{currentUser.email}</p>
+
+        <form className={styles.bioForm} onSubmit={handleSaveBio}>
+          <label htmlFor="settings-bio" className={styles.formLabel}>
+            Bio <span className={styles.formLabelNote}>(optional)</span>
           </label>
           <textarea
             id="settings-bio"
@@ -188,118 +186,79 @@ export function SettingsPage() {
             rows={3}
             maxLength={300}
             placeholder="Tell other members a bit about yourself…"
-            style={{ width: '100%', padding: '0.45rem 0.6rem', boxSizing: 'border-box', fontSize: 14, border: '1px solid #ccc', borderRadius: 4, resize: 'vertical' }}
+            className={styles.formTextarea}
           />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
-            <span style={{ fontSize: 12, color: '#aaa' }}>{bio.length}/300</span>
-            <button
+          <div className={styles.bioFooter}>
+            <span className={styles.charCount}>{bio.length}/300</span>
+            <Button
               type="submit"
               data-testid="save-bio-btn"
               disabled={savingBio || bio.trim() === ((currentUser.bio as string) ?? '')}
-              style={{ padding: '0.35rem 0.9rem', fontSize: 13 }}
+              size="sm"
             >
               {savingBio ? 'Saving…' : 'Save bio'}
-            </button>
+            </Button>
           </div>
         </form>
       </section>
 
-      {/* Notification preferences */}
-      <section style={{ marginBottom: '2rem', border: '1px solid #ddd', borderRadius: 8, padding: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0, fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Notification preferences
-          </h3>
-          {savingNotif && <span style={{ fontSize: 12, color: '#aaa' }}>Saving…</span>}
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>Notification preferences</h3>
+          {savingNotif && <span className={styles.savingHint}>Saving…</span>}
         </div>
         {notifPrefs === null ? (
-          <p style={{ fontSize: 14, color: '#999', margin: 0 }}>Loading…</p>
+          <p className={styles.loading}>Loading…</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <div className={styles.notifList}>
             {Object.entries(NOTIFICATION_LABELS).map(([type, label]) => (
               <label
                 key={type}
                 data-testid={`notif-pref-${type}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  fontSize: 14,
-                  cursor: 'pointer',
-                  padding: '0.4rem 0',
-                }}
+                className={styles.notifLabel}
               >
                 <input
                   type="checkbox"
                   checked={isEnabled(type)}
                   onChange={() => toggleNotif(type)}
-                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  className={styles.notifCheckbox}
                 />
-                <span style={{ color: isEnabled(type) ? '#333' : '#aaa' }}>{label}</span>
+                <span className={isEnabled(type) ? styles.notifTextOn : styles.notifTextOff}>{label}</span>
               </label>
             ))}
           </div>
         )}
       </section>
 
-      {/* Passkeys */}
-      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0, fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Passkeys
-          </h3>
-          <button
-            onClick={handleAddPasskey}
-            disabled={addingPasskey}
-            style={{ fontSize: 13, padding: '0.35rem 0.85rem' }}
-          >
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>Passkeys</h3>
+          <Button size="sm" onClick={handleAddPasskey} disabled={addingPasskey}>
             {addingPasskey ? 'Waiting for device…' : '+ Add passkey'}
-          </button>
+          </Button>
         </div>
 
         {passkeys === null ? (
-          <p style={{ fontSize: 14, color: '#999', margin: 0 }}>Loading…</p>
+          <p className={styles.loading}>Loading…</p>
         ) : passkeys.length === 0 ? (
-          <p style={{ fontSize: 14, color: '#999', margin: 0 }}>No passkeys found.</p>
+          <p className={styles.loading}>No passkeys found.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className={styles.passkeyList}>
             {passkeys.map((pk) => (
-              <div
-                key={pk.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.6rem 0.85rem',
-                  border: '1px solid #eee',
-                  borderRadius: 6,
-                  background: '#fafafa',
-                }}
-              >
+              <div key={pk.id} className={styles.passkeyRow}>
                 <div>
-                  <span style={{ fontSize: 14, fontFamily: 'monospace', color: '#555' }}>
-                    {pk.id.slice(0, 16)}…
-                  </span>
-                  <span style={{ marginLeft: '0.75rem', fontSize: 12, color: '#aaa' }}>
-                    Added {new Date(pk.createdAt).toLocaleDateString()}
-                  </span>
+                  <span className={styles.passkeyId}>{pk.id.slice(0, 16)}…</span>
+                  <span className={styles.passkeyDate}>Added {new Date(pk.createdAt).toLocaleDateString()}</span>
                 </div>
-                <button
+                <Button
+                  variant="danger"
+                  size="sm"
                   onClick={() => handleDeletePasskey(pk.id)}
                   disabled={deletingId === pk.id || passkeys.length <= 1}
                   title={passkeys.length <= 1 ? 'Cannot remove your only passkey' : 'Remove passkey'}
-                  style={{
-                    fontSize: 12,
-                    padding: '0.25rem 0.6rem',
-                    color: passkeys.length <= 1 ? '#ccc' : '#d94040',
-                    border: `1px solid ${passkeys.length <= 1 ? '#eee' : '#f5c5c5'}`,
-                    background: 'none',
-                    borderRadius: 4,
-                    cursor: passkeys.length <= 1 ? 'not-allowed' : 'pointer',
-                  }}
                 >
                   {deletingId === pk.id ? 'Removing…' : 'Remove'}
-                </button>
+                </Button>
               </div>
             ))}
           </div>
