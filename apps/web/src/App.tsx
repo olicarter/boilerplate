@@ -29,6 +29,7 @@ import { JoinPage } from './pages/JoinPage';
 import { AdminPage } from './pages/AdminPage';
 import { PublicResultsPage } from './pages/PublicResultsPage';
 import { ActivityFeedPage } from './pages/ActivityFeedPage';
+import { DelegationNetworkPage } from './pages/DelegationNetworkPage';
 import { OrgProvider } from './OrgContext';
 
 const STORAGE_KEY = 'ripple_user';
@@ -532,6 +533,12 @@ const adminRoute = createRoute({
   component: AdminPage,
 });
 
+const delegationNetworkRoute = createRoute({
+  getParentRoute: () => orgLayout,
+  path: '/delegations/network',
+  component: DelegationNetworkPage,
+});
+
 const publicResultsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/orgs/$slug/results',
@@ -540,7 +547,7 @@ const publicResultsRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
-  orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute]),
+  orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute]),
   publicResultsRoute,
 ]);
 

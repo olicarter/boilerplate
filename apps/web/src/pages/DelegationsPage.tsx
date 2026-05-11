@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from '@tanstack/react-db';
+import { Link } from '@tanstack/react-router';
 import { v4 as uuid } from 'uuid';
 import { usersCollection } from '../collections';
 import { useOrg } from '../OrgContext';
@@ -112,7 +113,16 @@ export function DelegationsPage() {
 
   return (
     <div style={{ maxWidth: 600 }}>
-      <h2 style={{ margin: '0 0 1.5rem' }}>Delegations</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <h2 style={{ margin: 0 }}>Delegations</h2>
+        <Link
+          to="/orgs/$slug/delegations/network"
+          params={{ slug: org.slug }}
+          style={{ fontSize: 13, color: '#1a56d6', textDecoration: 'none' }}
+        >
+          View network graph →
+        </Link>
+      </div>
 
       {/* Your outgoing delegations */}
       <section style={{ marginBottom: '2rem' }}>

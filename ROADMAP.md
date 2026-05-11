@@ -97,22 +97,22 @@ Current state: users can register with passkeys, create proposals under topics, 
 ### Quorum & thresholds
 - [x] **Hard quorum** — if participation (direct votes + delegated weight) does not reach the quorum threshold by deadline, the proposal fails automatically regardless of the yes/no split.
 - [x] **Soft quorum** — proposal result is advisory only if quorum isn't met; clearly labelled as "not binding".
-- [ ] **Dynamic quorum** — quorum requirement scales with the proposal's estimated impact level (low / medium / high / constitutional), set by the author or a moderator.
+- [x] **Dynamic quorum** — quorum requirement scales with the proposal's estimated impact level (low / medium / high / constitutional), set by the author or a moderator.
 - [x] **Supermajority threshold** — set a threshold above 50% (e.g. 66%, 75%) for high-impact decisions like constitutional changes or large expenditures.
 - [x] **Veto rights** — certain roles (e.g. a board member or founder) can cast a veto vote that blocks a proposal regardless of the vote count. Vetoes must include a written reason. Veto role is configurable per org (admin-only by default, can be lowered to moderator).
 
 ### Weighted voting
 - [x] **Share-based weight** — admins can assign a numeric `weight` to each member (e.g. representing equity shares, stake, or seniority). Votes and delegations carry this weight. The tally shows weighted counts alongside raw counts.
-- [ ] **Equal weight per seat** — alternative: weight by role (e.g. admin = 2, member = 1, observer = 0). Simple way to give a board a stronger voice.
-- [ ] **Weight display** — show each voter's weight on their profile (within the org) and in the delegation chain visualisation.
+- [x] **Equal weight per seat** — alternative: weight by role (e.g. admin = 2, member = 1, observer = 0). Simple way to give a board a stronger voice.
+- [x] **Weight display** — show each voter's weight on their profile (within the org) and in the delegation chain visualisation.
 
 ### Advanced delegation
 - [x] **Transitive delegation UI** — visualise the delegation chain: "Your vote flows Alice → Bob → Carol who voted yes". Show the full chain on the proposal detail page for your own vote.
 - [ ] **Delegation network graph** — org-level page showing the delegation graph as an interactive force-directed diagram (D3.js or similar). Members can see who trusts whom.
-- [ ] **Delegation weight display** — show how many votes each member is currently carrying across the org (their own + all delegated to them).
+- [x] **Delegation weight display** — show how many votes each member is currently carrying across the org (their own + all delegated to them).
 - [ ] **Conditional delegation** — delegate to X, but only if X hasn't voted within 48 hours of the deadline; otherwise your vote defaults to abstain. Encourages responsive delegates.
 - [ ] **Split delegation** — delegate different percentages of your voting weight to multiple delegates per topic. E.g. 60% to Alice, 40% to Bob on Environment.
-- [ ] **Delegation suggestions** — when a user hasn't voted and has no delegation set, suggest members with high participation rates in that topic as potential delegates.
+- [x] **Delegation suggestions** — when a user hasn't voted and has no delegation set, suggest members with high participation rates in that topic as potential delegates.
 
 ### Proposal endorsements
 - [x] **Endorsement / co-sponsorship** — a proposal in draft requires N endorsements from other members before it can be formally opened. Prevents spam and low-quality proposals. Config: minimum endorsements required.
