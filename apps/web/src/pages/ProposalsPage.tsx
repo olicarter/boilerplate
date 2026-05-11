@@ -110,7 +110,8 @@ export function ProposalsPage() {
   const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
   const [quorumType, setQuorumType] = useState<'soft' | 'hard'>('soft');
   const [impactLevel, setImpactLevel] = useState<'low' | 'medium' | 'high' | 'constitutional' | null>(null);
-  const [proposalType, setProposalType] = useState<'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice'>('standard');
+  const [proposalType, setProposalType] = useState<'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition'>('standard');
+  const [signatureThreshold, setSignatureThreshold] = useState<string>('');
   const [mcOptions, setMcOptions] = useState<string[]>(['', '']);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -212,6 +213,11 @@ export function ProposalsPage() {
           return;
         }
       }
+      if (proposalType === 'petition' && !signatureThreshold) {
+        setFormError('Please set a signature threshold for petition mode.');
+        setSubmitting(false);
+        return;
+      }
       const noDeadline = proposalType === 'discussion';
       const proposalTx = proposalsCollection.insert({
         id: proposalId,
@@ -226,6 +232,7 @@ export function ProposalsPage() {
         quorum,
         quorum_type: quorumType,
         impact_level: impactLevel,
+        signature_threshold: proposalType === 'petition' ? parseInt(signatureThreshold, 10) : null,
         created_at: new Date().toISOString(),
         closes_at: noDeadline ? null : (closesAt ? new Date(closesAt).toISOString() : null),
         deliberation_ends_at: noDeadline ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
@@ -377,6 +384,7 @@ export function ProposalsPage() {
                 { value: 'ranked_choice', label: 'Ranked choice' },
                 { value: 'temperature_check', label: 'Temperature check' },
                 { value: 'consent', label: 'Consent' },
+                { value: 'petition', label: 'Petition' },
                 { value: 'discussion', label: 'Discussion only' },
               ] as const).map(({ value, label }) => (
                 <button
@@ -419,7 +427,26 @@ export function ProposalsPage() {
             {proposalType === 'consent' && (
               <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Passes unless someone raises a paramount objection (Block). Good for consensus-oriented groups.</p>
             )}
+            {proposalType === 'petition' && (
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Collects signatures. Once the threshold is reached, it automatically transitions to a standard vote.</p>
+            )}
           </div>
+          {proposalType === 'petition' && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label htmlFor="signature-threshold" style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+                Signature threshold <span style={{ color: '#888', fontWeight: 400 }}>(transitions to vote when reached)</span>
+              </label>
+              <input
+                id="signature-threshold"
+                type="number"
+                min={1}
+                value={signatureThreshold}
+                onChange={(e) => setSignatureThreshold(e.target.value)}
+                placeholder="e.g. 10"
+                style={{ width: 100, padding: '0.4rem 0.5rem', fontSize: 14, border: '1px solid #ddd', borderRadius: 4 }}
+              />
+            </div>
+          )}
           {(['multiple_choice', 'approval', 'score_voting', 'ranked_choice'] as const).includes(proposalType as any) && (
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Options</label>
@@ -829,6 +856,11 @@ export function ProposalsPage() {
                         {p.proposal_type === 'consent' && (
                           <span style={{ ...badge, background: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff' }}>
                             Consent
+                          </span>
+                        )}
+                        {p.proposal_type === 'petition' && (
+                          <span style={{ ...badge, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3' }}>
+                            Petition
                           </span>
                         )}
                         {isDraft && (

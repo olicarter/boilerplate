@@ -61,7 +61,7 @@ export interface Organisation {
     id: string;
     name: string;
     description: string;
-    proposal_type: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice';
+    proposal_type: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition';
     threshold: number;
   }>;
   created_at: string;
@@ -97,7 +97,7 @@ export interface Proposal {
   title: string;
   description: string;
   status: 'draft' | 'open' | 'closed' | 'withdrawn';
-  proposal_type: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice';
+  proposal_type: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition';
   threshold: number;
   quorum: number | null;
   quorum_type: 'soft' | 'hard';
@@ -109,6 +109,7 @@ export interface Proposal {
   pinned: boolean;
   tags: string[];
   impact_level: 'low' | 'medium' | 'high' | 'constitutional' | null;
+  signature_threshold: number | null;
   [key: string]: unknown;
 }
 
@@ -261,6 +262,23 @@ export const topicsApi = {
     request<{ txid: number }>(`/topics/${id}`, { method: 'DELETE' }),
 };
 
+export interface ProposalSignature {
+  id: string;
+  proposal_id: string;
+  organisation_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export const proposalSignaturesApi = {
+  list: (proposalId: string) =>
+    request<{ signatures: ProposalSignature[]; count: number }>(`/proposals/${proposalId}/signatures`),
+  sign: (proposalId: string) =>
+    request<{ signed: boolean; count: number; transitioned: boolean }>(`/proposals/${proposalId}/signatures`, { method: 'POST' }),
+  unsign: (proposalId: string) =>
+    request<{ count: number }>(`/proposals/${proposalId}/signatures`, { method: 'DELETE' }),
+};
+
 export const proposalOptionsApi = {
   create: (proposalId: string, data: { id: string; text: string; position: number }) =>
     request<ProposalOption>(`/proposals/${proposalId}/options`, { method: 'POST', body: JSON.stringify(data) }),
@@ -269,7 +287,7 @@ export const proposalOptionsApi = {
 };
 
 export const proposalsApi = {
-  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice'; impact_level?: 'low' | 'medium' | 'high' | 'constitutional' | null }) =>
+  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition'; impact_level?: 'low' | 'medium' | 'high' | 'constitutional' | null; signature_threshold?: number | null }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold' | 'tags'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),

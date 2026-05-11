@@ -116,7 +116,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 
 ### Proposal endorsements
 - [x] **Endorsement / co-sponsorship** — a proposal in draft requires N endorsements from other members before it can be formally opened. Prevents spam and low-quality proposals. Config: minimum endorsements required.
-- [ ] **Signatures / petition mode** — a proposal can be opened in "petition" mode, collecting expressions of support before a formal vote. Once a signature threshold is met, it automatically transitions to voting.
+- [x] **Signatures / petition mode** — a proposal can be opened in "petition" mode, collecting expressions of support before a formal vote. Once a signature threshold is met, it automatically transitions to voting.
 
 ### Amendments
 - [ ] **Amendment proposals** — a member can propose an amendment to an open proposal. If the amendment passes (simple majority), the parent proposal description is updated and the vote resets. Creates a clear history.

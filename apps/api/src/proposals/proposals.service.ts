@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { ImpactLevel, Proposal, ProposalStatus } from './proposal.entity';
 import { ProposalOption } from './proposal-option.entity';
 import { ProposalReaction } from './proposal-reaction.entity';
+import { ProposalSignature } from './proposal-signature.entity';
 import { Endorsement } from '../endorsements/endorsement.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { Vote } from '../votes/vote.entity';
@@ -86,9 +87,10 @@ export class ProposalsService {
     quorum?: number | null;
     quorum_type?: 'soft' | 'hard';
     status?: 'open' | 'draft';
-    proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice';
+    proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition';
     tags?: string[];
     impact_level?: ImpactLevel | null;
+    signature_threshold?: number | null;
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Title is required');
@@ -740,5 +742,49 @@ export class ProposalsService {
     );
 
     return { count: nonVoters.length };
+  }
+
+  async listSignatures(proposalId: string): Promise<{ signatures: ProposalSignature[]; count: number }> {
+    const signatures = await this.dataSource.getRepository(ProposalSignature).find({
+      where: { proposal_id: proposalId },
+      order: { created_at: 'ASC' },
+    });
+    return { signatures, count: signatures.length };
+  }
+
+  async sign(proposalId: string, userId: string): Promise<{ signed: boolean; count: number; transitioned: boolean }> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    if (proposal.proposal_type !== 'petition') throw new BadRequestException('This proposal is not in petition mode');
+    if (proposal.status !== 'open') throw new BadRequestException('This proposal is not open for signatures');
+
+    const repo = this.dataSource.getRepository(ProposalSignature);
+    const existing = await repo.findOneBy({ proposal_id: proposalId, user_id: userId });
+    if (existing) return { signed: false, count: await repo.count({ where: { proposal_id: proposalId } }), transitioned: false };
+
+    await repo.save(repo.create({ id: randomUUID(), proposal_id: proposalId, organisation_id: proposal.organisation_id, user_id: userId }));
+    const count = await repo.count({ where: { proposal_id: proposalId } });
+
+    let transitioned = false;
+    if (proposal.signature_threshold != null && count >= proposal.signature_threshold) {
+      await this.proposalRepo.update(proposalId, { proposal_type: 'standard' as any });
+      transitioned = true;
+      try {
+        await this.notifyOrgMembers(proposal.organisation_id, null, {
+          type: 'proposal.opened',
+          targetType: 'proposal',
+          targetId: proposalId,
+          metadata: { title: proposal.title, petitionTransition: true },
+        });
+      } catch { /* non-critical */ }
+    }
+
+    return { signed: true, count, transitioned };
+  }
+
+  async unsign(proposalId: string, userId: string): Promise<{ count: number }> {
+    const repo = this.dataSource.getRepository(ProposalSignature);
+    await repo.delete({ proposal_id: proposalId, user_id: userId });
+    const count = await repo.count({ where: { proposal_id: proposalId } });
+    return { count };
   }
 }

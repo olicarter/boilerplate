@@ -51,7 +51,7 @@ export class ProposalsController {
   @Post()
   @UseGuards(AuthGuard)
   create(
-    @Body() body: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice'; tags?: string[]; impact_level?: 'low' | 'medium' | 'high' | 'constitutional' | null },
+    @Body() body: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition'; tags?: string[]; impact_level?: 'low' | 'medium' | 'high' | 'constitutional' | null; signature_threshold?: number | null },
     @Req() req: AuthenticatedRequest,
   ) {
     return this.proposalsService.create({ ...body, author_id: req.user!.id });
@@ -168,5 +168,22 @@ export class ProposalsController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.proposalsService.deleteOption(optionId, req.user!.id);
+  }
+
+  @Get(':id/signatures')
+  listSignatures(@Param('id') id: string) {
+    return this.proposalsService.listSignatures(id);
+  }
+
+  @Post(':id/signatures')
+  @UseGuards(AuthGuard)
+  sign(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.sign(id, req.user!.id);
+  }
+
+  @Delete(':id/signatures')
+  @UseGuards(AuthGuard)
+  unsign(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.unsign(id, req.user!.id);
   }
 }

@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, votesApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, votesApi, proposalSignaturesApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -119,6 +119,9 @@ export function ProposalDetailPage() {
   const [showVersions, setShowVersions] = useState(false);
   const [reactions, setReactions] = useState<ProposalReaction[]>([]);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
+  const [signatures, setSignatures] = useState<ProposalSignature[]>([]);
+  const [signatureCount, setSignatureCount] = useState<number>(0);
+  const [signing, setSigning] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -198,6 +201,7 @@ export function ProposalDetailPage() {
     proposalsApi.versions(id).then(setVersions).catch(() => setVersions([]));
     orgsApi.get(org.slug).then((o) => setMinEndorsementsLive(o.min_endorsements ?? 0)).catch(() => {});
     proposalsApi.listReactions(id).then(setReactions).catch(() => {});
+    proposalSignaturesApi.list(id).then((r) => { setSignatures(r.signatures); setSignatureCount(r.count); }).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -348,6 +352,7 @@ export function ProposalDetailPage() {
   const isRankedChoice = proposal.proposal_type === 'ranked_choice';
   const isTemperatureCheck = proposal.proposal_type === 'temperature_check';
   const isConsent = proposal.proposal_type === 'consent';
+  const isPetition = proposal.proposal_type === 'petition';
   const proposalOptions = ((allProposalOptions ?? []) as ProposalOption[])
     .filter((o) => o.proposal_id === id)
     .sort((a, b) => a.position - b.position);
@@ -520,6 +525,33 @@ export function ProposalDetailPage() {
       addToast('Failed to react', 'error');
     } finally {
       setReactingEmoji(null);
+    }
+  }
+
+  async function handleSign() {
+    if (!currentUser || signing) return;
+    setSigning(true);
+    try {
+      const mySig = signatures.find((s) => s.user_id === currentUser.id);
+      if (mySig) {
+        const result = await proposalSignaturesApi.unsign(id);
+        setSignatures((prev) => prev.filter((s) => s.user_id !== currentUser.id));
+        setSignatureCount(result.count);
+        addToast('Signature removed', 'info');
+      } else {
+        const result = await proposalSignaturesApi.sign(id);
+        setSignatures((prev) => [...prev, { id: '', proposal_id: id, organisation_id: org.id, user_id: currentUser.id, created_at: new Date().toISOString() }]);
+        setSignatureCount(result.count);
+        if (result.transitioned) {
+          addToast('Threshold reached — petition has transitioned to a vote!', 'success');
+        } else {
+          addToast('Signed', 'success');
+        }
+      }
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed', 'error');
+    } finally {
+      setSigning(false);
     }
   }
 
@@ -1285,7 +1317,7 @@ export function ProposalDetailPage() {
           <p style={{ margin: 0, fontSize: 13, color: '#c2410c' }}>This is a non-binding temperature check — results are advisory only and do not constitute a formal decision.</p>
         </div>
       )}
-      {!isDiscussion && <div
+      {!isDiscussion && !isPetition && <div
         style={{
           border: '1px solid #ddd',
           borderRadius: 6,
@@ -1443,7 +1475,7 @@ export function ProposalDetailPage() {
       </div>}
 
       {/* Vote statements */}
-      {!isDiscussion && org.voting_visibility !== 'hidden' && (() => {
+      {!isDiscussion && !isPetition && org.voting_visibility !== 'hidden' && (() => {
         const proposalVotes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === id && v.reason);
         if (proposalVotes.length === 0) return null;
         return (
@@ -1477,7 +1509,63 @@ export function ProposalDetailPage() {
           </p>
         </div>
       )}
-      {!isDiscussion && isOpen && !isDeliberating && (
+      {isPetition && isOpen && (
+        <div style={{ border: '1px solid #fecdd3', borderRadius: 6, padding: '1rem 1.25rem', marginBottom: '1.5rem', background: '#fff1f2' }}>
+          <h3 style={{ margin: '0 0 0.75rem', fontSize: 14, color: '#be123c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Petition
+          </h3>
+          {proposal.signature_threshold != null && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                <span style={{ color: '#555' }}>{signatureCount} / {proposal.signature_threshold} signatures</span>
+                <span style={{ color: '#888' }}>{Math.min(100, Math.round((signatureCount / proposal.signature_threshold) * 100))}%</span>
+              </div>
+              <div style={{ height: 8, background: '#fecdd3', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(100, (signatureCount / proposal.signature_threshold) * 100)}%`, height: '100%', background: '#be123c', transition: 'width 0.3s' }} />
+              </div>
+              <p style={{ margin: '0.4rem 0 0', fontSize: 12, color: '#888' }}>
+                {proposal.signature_threshold - signatureCount > 0
+                  ? `${proposal.signature_threshold - signatureCount} more signature${proposal.signature_threshold - signatureCount !== 1 ? 's' : ''} needed to trigger a vote`
+                  : 'Threshold reached'}
+              </p>
+            </div>
+          )}
+          {currentUser && myMembership && (
+            <button
+              onClick={handleSign}
+              disabled={signing}
+              style={{
+                fontSize: 13,
+                padding: '0.4rem 1.25rem',
+                borderRadius: 4,
+                border: `1px solid ${signatures.find((s) => s.user_id === currentUser.id) ? '#be123c' : '#be123c'}`,
+                background: signatures.find((s) => s.user_id === currentUser.id) ? '#be123c' : 'none',
+                color: signatures.find((s) => s.user_id === currentUser.id) ? '#fff' : '#be123c',
+                cursor: 'pointer',
+                marginBottom: '0.75rem',
+              }}
+            >
+              {signing ? '…' : signatures.find((s) => s.user_id === currentUser.id) ? 'Remove signature' : 'Sign this petition'}
+            </button>
+          )}
+          {signatures.length > 0 && (
+            <div>
+              <p style={{ fontSize: 12, color: '#888', margin: '0 0 0.3rem' }}>Signatories:</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                {signatures.map((s) => {
+                  const signer = (allUsers ?? []).find((u: User) => u.id === s.user_id);
+                  return (
+                    <span key={s.id || s.user_id} style={{ fontSize: 12, padding: '1px 8px', borderRadius: 10, background: '#fecdd3', color: '#be123c', border: '1px solid #fca5a5' }}>
+                      {signer?.name ?? s.user_id}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {!isDiscussion && !isPetition && isOpen && !isDeliberating && (
         <div
           style={{
             border: '1px solid #ddd',
