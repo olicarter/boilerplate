@@ -12,6 +12,8 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { MentionTextarea, type MentionTextareaHandle } from '../components/MentionTextarea';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
+import { Button } from '../components/ui';
+import styles from './ProposalDetailPage.module.css';
 
 const TITLE_MAX = 200;
 const DESC_MAX = 10000;
@@ -765,92 +767,38 @@ export function ProposalDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: 680 }}>
+    <div className={styles.page}>
       <Link
         to="/orgs/$slug/proposals"
         params={{ slug: org.slug }}
-        style={{ fontSize: 13, color: '#888', textDecoration: 'none', display: 'inline-block', marginBottom: '1rem' }}
+        className={styles.backLink}
       >
         ← Proposals
       </Link>
 
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+      <div className={styles.headerMeta}>
         {topic && (
-          <span
-            style={{
-              display: 'inline-block',
-              padding: '2px 8px',
-              borderRadius: 12,
-              fontSize: 12,
-              fontWeight: 500,
-              background: '#e8f0fe',
-              color: '#1a56d6',
-              border: '1px solid #c3d6fb',
-            }}
-          >
-            {topic.name}
-          </span>
+          <span className={`${styles.badge} ${styles.badgeDefault}`}>{topic.name}</span>
         )}
         {proposal.pinned && (
-          <span
-            data-testid="pinned-badge"
-            style={{
-              display: 'inline-block',
-              padding: '2px 8px',
-              borderRadius: 12,
-              fontSize: 12,
-              fontWeight: 500,
-              background: '#eef2ff',
-              color: '#4f46e5',
-              border: '1px solid #c7d2fe',
-            }}
-          >
-            📌 Pinned
-          </span>
+          <span data-testid="pinned-badge" className={`${styles.badge} ${styles.badgeDefault}`}>📌 Pinned</span>
         )}
-        <span
-          style={{
-            display: 'inline-block',
-            padding: '2px 8px',
-            borderRadius: 12,
-            fontSize: 12,
-            fontWeight: 500,
-            background: isDraft ? '#fff8e1' : isOpen ? '#e6f9ed' : '#f5f5f5',
-            color: isDraft ? '#b45309' : isOpen ? '#2d9a4e' : '#888',
-            border: `1px solid ${isDraft ? '#fde68a' : isOpen ? '#b3e5c2' : '#ddd'}`,
-          }}
-        >
+        <span className={`${styles.badge} ${isDraft ? styles.badgeDraft : isOpen ? styles.badgeOpen : styles.badgeDefault}`}>
           {proposal.status}
         </span>
-        {result === 'passed' && (
-          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500, background: '#e6f9ed', color: '#2d9a4e', border: '1px solid #b3e5c2' }}>
-            Passed
-          </span>
-        )}
-        {result === 'failed' && (
-          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500, background: '#fdecea', color: '#d94040', border: '1px solid #f5c0c0' }}>
-            Failed
-          </span>
-        )}
-        {result === 'blocked' && (
-          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500, background: '#fdecea', color: '#d94040', border: '1px solid #f5c0c0' }}>
-            Blocked
-          </span>
-        )}
-        {result === 'advisory' && (
-          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
-            Advisory
-          </span>
-        )}
+        {result === 'passed' && <span className={`${styles.badge} ${styles.badgeSuccess}`}>Passed</span>}
+        {result === 'failed' && <span className={`${styles.badge} ${styles.badgeError}`}>Failed</span>}
+        {result === 'blocked' && <span className={`${styles.badge} ${styles.badgeError}`}>Blocked</span>}
+        {result === 'advisory' && <span className={`${styles.badge} ${styles.badgeDefault}`}>Advisory</span>}
       </div>
 
       {editing ? (
-        <form onSubmit={saveEdit} style={{ marginBottom: '1.5rem' }}>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <label htmlFor="edit-title" style={{ fontSize: 13 }}>Title</label>
+        <form onSubmit={saveEdit} className={styles.editForm}>
+          <div style={{ marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)' }}>
+              <label htmlFor="edit-title" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--color-fg-muted)' }}>Title</label>
               {editTitle.length > TITLE_MAX - 40 && (
-                <span style={{ fontSize: 11, color: editTitle.length >= TITLE_MAX ? '#d94040' : '#aaa' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: editTitle.length >= TITLE_MAX ? 'var(--color-error)' : 'var(--color-fg-subtle)' }}>
                   {TITLE_MAX - editTitle.length} left
                 </span>
               )}
@@ -862,14 +810,14 @@ export function ProposalDetailPage() {
               onChange={(e) => setEditTitle(e.target.value.slice(0, TITLE_MAX))}
               required
               maxLength={TITLE_MAX}
-              style={{ width: '100%', padding: '0.5rem', fontSize: 15, fontWeight: 600, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4 }}
+              className={styles.editInput}
             />
           </div>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <label htmlFor="edit-description" style={{ fontSize: 13 }}>Description</label>
+          <div style={{ marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)' }}>
+              <label htmlFor="edit-description" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--color-fg-muted)' }}>Description</label>
               {editDescription.length > DESC_MAX - 500 && (
-                <span style={{ fontSize: 11, color: editDescription.length >= DESC_MAX ? '#d94040' : '#aaa' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: editDescription.length >= DESC_MAX ? 'var(--color-error)' : 'var(--color-fg-subtle)' }}>
                   {DESC_MAX - editDescription.length} left
                 </span>
               )}
@@ -880,20 +828,20 @@ export function ProposalDetailPage() {
               onChange={(e) => setEditDescription(e.target.value.slice(0, DESC_MAX))}
               rows={5}
               maxLength={DESC_MAX}
-              style={{ width: '100%', padding: '0.5rem', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
+              className={styles.editTextarea}
             />
           </div>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ fontSize: 13, display: 'block', marginBottom: 4 }}>Tags</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.4rem' }}>
+          <div style={{ marginBottom: 'var(--space-3)' }}>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--color-fg-muted)', display: 'block', marginBottom: 'var(--space-2)' }}>Tags</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1)', marginBottom: 'var(--space-2)' }}>
               {editTags.map((t) => (
-                <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#e8edf7', color: '#3358c4', fontSize: 12, padding: '0.2rem 0.5rem', borderRadius: 12 }}>
+                <span key={t} className={styles.tagChip}>
                   {t}
-                  <button type="button" onClick={() => setEditTags(editTags.filter((x) => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                  <button type="button" onClick={() => setEditTags(editTags.filter((x) => x !== t))} className={styles.tagChipRemove}>×</button>
                 </span>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
               <input
                 data-testid="tag-input"
                 type="text"
@@ -907,11 +855,14 @@ export function ProposalDetailPage() {
                     setEditTagInput('');
                   }
                 }}
-                placeholder="Add tag (Enter to add)"
-                style={{ flex: 1, fontSize: 13, padding: '0.3rem 0.5rem', border: '1px solid #ddd', borderRadius: 4 }}
+                placeholder="Add tag…"
+                className={styles.editTextarea}
+                style={{ height: 32, padding: '0 var(--space-3)', resize: 'none' }}
               />
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 data-testid="add-tag-btn"
                 onClick={() => {
                   const tag = editTagInput.trim();
@@ -919,95 +870,45 @@ export function ProposalDetailPage() {
                   setEditTagInput('');
                 }}
                 disabled={!editTagInput.trim()}
-                style={{ fontSize: 13, padding: '0.3rem 0.7rem', cursor: 'pointer' }}
-              >Add</button>
+              >Add</Button>
             </div>
           </div>
-          {editError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{editError}</p>}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button type="submit" disabled={saving} style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer' }}>
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
-            <button type="button" onClick={() => setEditing(false)} style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}>
-              Cancel
-            </button>
+          {editError && <p style={{ color: 'var(--color-error)', fontSize: 'var(--text-base)', margin: '0 0 var(--space-3)' }}>{editError}</p>}
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <Button type="submit" size="sm" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
           </div>
         </form>
       ) : (
         <>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>
+          <div className={styles.titleRow}>
+            <h1 className={styles.title}>
               {proposal.title}
-              {isDiscussion && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', verticalAlign: 'middle' }}>
-                  Discussion
-                </span>
-              )}
-              {isMultipleChoice && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
-                  Multiple choice
-                </span>
-              )}
-              {isApproval && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
-                  Approval voting
-                </span>
-              )}
-              {isScoreVoting && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
-                  Score voting
-                </span>
-              )}
-              {isRankedChoice && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#f0f4ff', color: '#3358c4', border: '1px solid #c7d2fe', verticalAlign: 'middle' }}>
-                  Ranked choice
-                </span>
-              )}
-              {isTemperatureCheck && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', verticalAlign: 'middle' }}>
-                  Temperature check
-                </span>
-              )}
-              {isConsent && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff', verticalAlign: 'middle' }}>
-                  Consent
-                </span>
-              )}
-              {isPetition && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', verticalAlign: 'middle' }}>
-                  Petition
-                </span>
-              )}
-              {isAmendment && (
-                <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: '#fff7ed', color: '#92400e', border: '1px solid #fde68a', verticalAlign: 'middle' }}>
-                  Amendment
-                </span>
-              )}
-              {proposal.impact_level && (() => {
-                const colors: Record<string, { bg: string; color: string; border: string }> = {
-                  low: { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
-                  medium: { bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
-                  high: { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
-                  constitutional: { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
-                };
-                const s = colors[proposal.impact_level];
-                return (
-                  <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: s.bg, color: s.color, border: `1px solid ${s.border}`, verticalAlign: 'middle' }}>
-                    {proposal.impact_level.charAt(0).toUpperCase() + proposal.impact_level.slice(1)} impact
-                  </span>
-                );
-              })()}
-            </h2>
+            </h1>
             {(isAuthor || isModerator) && (isDraft || isOpen) && (
-              <button
-                type="button"
-                onClick={startEditing}
-                style={{ fontSize: 12, padding: '0.2rem 0.6rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4, flexShrink: 0, color: '#666' }}
-              >
-                Edit proposal
-              </button>
+              <Button type="button" variant="secondary" size="sm" onClick={startEditing} style={{ flexShrink: 0 }}>
+                Edit
+              </Button>
             )}
           </div>
+          {(isDiscussion || isMultipleChoice || isApproval || isScoreVoting || isRankedChoice || isTemperatureCheck || isConsent || isPetition || isAmendment || proposal.impact_level) && (
+            <div className={styles.headerMeta} style={{ marginBottom: 'var(--space-4)' }}>
+              {isDiscussion && <span className={`${styles.badge} ${styles.badgeDefault}`}>Discussion</span>}
+              {isMultipleChoice && <span className={`${styles.badge} ${styles.badgeDefault}`}>Multiple choice</span>}
+              {isApproval && <span className={`${styles.badge} ${styles.badgeDefault}`}>Approval voting</span>}
+              {isScoreVoting && <span className={`${styles.badge} ${styles.badgeDefault}`}>Score voting</span>}
+              {isRankedChoice && <span className={`${styles.badge} ${styles.badgeDefault}`}>Ranked choice</span>}
+              {isTemperatureCheck && <span className={`${styles.badge} ${styles.badgeDefault}`}>Temperature check</span>}
+              {isConsent && <span className={`${styles.badge} ${styles.badgeDefault}`}>Consent</span>}
+              {isPetition && <span className={`${styles.badge} ${styles.badgeDefault}`}>Petition</span>}
+              {isAmendment && <span className={`${styles.badge} ${styles.badgeDefault}`}>Amendment</span>}
+              {proposal.impact_level && (
+                <span className={`${styles.badge} ${styles.badgeDefault}`}>
+                  {proposal.impact_level.charAt(0).toUpperCase() + proposal.impact_level.slice(1)} impact
+                </span>
+              )}
+            </div>
+          )}
           {proposal.tags && proposal.tags.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.5rem' }}>
               {proposal.tags.map((tag: string) => (
@@ -1909,7 +1810,7 @@ export function ProposalDetailPage() {
                     value={voteReason}
                     onChange={(e) => setVoteReason(e.target.value)}
                     rows={2}
-                    style={{ width: '100%', fontSize: 13, padding: '0.4rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical', marginBottom: '0.6rem', boxSizing: 'border-box' }}
+                    className={styles.voteReason}
                   />
                   {proposalOptions.map((opt) => (
                     <button
@@ -1948,38 +1849,32 @@ export function ProposalDetailPage() {
                     value={voteReason}
                     onChange={(e) => setVoteReason(e.target.value)}
                     rows={2}
-                    style={{ width: '100%', fontSize: 13, padding: '0.4rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical', marginBottom: '0.6rem', boxSizing: 'border-box' }}
+                    className={styles.voteReason}
                   />
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className={styles.voteButtons}>
                     {(isConsent
                       ? [['yes', 'Consent'], ['abstain', 'Stand Aside'], ['no', 'Block']] as [VoteChoice, string][]
                       : (['yes', 'no', 'abstain'] as VoteChoice[]).map((c) => [c, c] as [VoteChoice, string])
-                    ).map(([choice, label]) => (
-                      <button
-                        key={choice}
-                        onClick={() => (myVote ? changeVote(choice) : castVote(choice))}
-                        disabled={voting}
-                        style={{
-                          fontSize: 13,
-                          padding: '0.35rem 1rem',
-                          cursor: 'pointer',
-                          background: choice === 'no' && isConsent ? '#d94040' : choiceColors[choice],
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 4,
-                          textTransform: 'capitalize',
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                    ).map(([choice, label]) => {
+                      const btnCls = [
+                        styles.voteBtn,
+                        choice === 'yes' ? styles.voteBtnYes : '',
+                        choice === 'no' ? (isConsent ? styles.voteBtnBlock : styles.voteBtnNo) : '',
+                        choice === 'abstain' ? styles.voteBtnAbstain : '',
+                      ].filter(Boolean).join(' ');
+                      return (
+                        <button
+                          key={choice}
+                          onClick={() => (myVote ? changeVote(choice) : castVote(choice))}
+                          disabled={voting}
+                          className={btnCls}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
                     {changingVote && (
-                      <button
-                        onClick={() => setChangingVote(false)}
-                        style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}
-                      >
-                        Cancel
-                      </button>
+                      <Button variant="secondary" size="md" onClick={() => setChangingVote(false)}>Cancel</Button>
                     )}
                   </div>
                 </div>
@@ -2005,16 +1900,8 @@ export function ProposalDetailPage() {
 
       {/* Author/moderator management actions */}
       {(isAuthor || isModerator) && !isWithdrawn && (
-        <div
-          style={{
-            marginTop: '2rem',
-            borderTop: '1px solid #eee',
-            paddingTop: '1.5rem',
-          }}
-        >
-          <h3 style={{ margin: '0 0 0.75rem', fontSize: 13, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Manage proposal
-          </h3>
+        <div className={styles.manageSection}>
+          <p className={styles.sectionHeader}>Manage</p>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {isModerator && !isDiscussion && (
               <a
