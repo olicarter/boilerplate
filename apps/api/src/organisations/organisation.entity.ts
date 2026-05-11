@@ -47,6 +47,9 @@ export class Organisation {
   @Column({ name: 'require_member_approval', type: 'boolean', default: false })
   require_member_approval!: boolean;
 
+  @Column({ name: 'weight_mode', type: 'varchar', length: 20, default: 'manual' })
+  weight_mode!: 'manual' | 'by_role';
+
   @Column({ name: 'proposal_templates', type: 'jsonb', default: [] })
   proposal_templates!: Array<{
     id: string;

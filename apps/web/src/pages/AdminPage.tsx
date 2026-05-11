@@ -61,6 +61,8 @@ export function AdminPage() {
 
   const [requireApproval, setRequireApproval] = useState<boolean>((org as { require_member_approval?: boolean }).require_member_approval ?? false);
   const [savingApproval, setSavingApproval] = useState(false);
+  const [weightMode, setWeightMode] = useState<'manual' | 'by_role'>((org as { weight_mode?: 'manual' | 'by_role' }).weight_mode ?? 'manual');
+  const [savingWeightMode, setSavingWeightMode] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
 
@@ -216,6 +218,20 @@ export function AdminPage() {
       setRequireApproval((org as { require_member_approval?: boolean }).require_member_approval ?? false);
     } finally {
       setSavingApproval(false);
+    }
+  }
+
+  async function saveWeightMode(value: 'manual' | 'by_role') {
+    setWeightMode(value);
+    setSavingWeightMode(true);
+    try {
+      await orgsApi.update(org.slug, { weight_mode: value });
+      addToast('Weight mode saved', 'success');
+    } catch {
+      addToast('Failed to save weight mode', 'error');
+      setWeightMode((org as { weight_mode?: 'manual' | 'by_role' }).weight_mode ?? 'manual');
+    } finally {
+      setSavingWeightMode(false);
     }
   }
 
@@ -565,6 +581,27 @@ export function AdminPage() {
               />
               Require admin approval before new members can participate
             </label>
+          </div>
+          <div>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#555' }}>Vote weight mode</p>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 12, color: '#aaa' }}>
+              Manual: admins assign a numeric weight to each member. By role: admin=3, moderator=2, member=1, observer=0.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              {(['manual', 'by_role'] as const).map((mode) => (
+                <label key={mode} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: savingWeightMode ? 'not-allowed' : 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="weight_mode"
+                    value={mode}
+                    checked={weightMode === mode}
+                    onChange={() => saveWeightMode(mode)}
+                    disabled={savingWeightMode}
+                  />
+                  {mode === 'manual' ? 'Manual (per-member weight)' : 'By role (admin=3, moderator=2, member=1, observer=0)'}
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       </section>

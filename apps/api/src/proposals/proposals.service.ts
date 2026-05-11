@@ -534,7 +534,12 @@ export class ProposalsService {
     const memberships = await this.memberRepo.find({
       where: { organisation_id: proposal.organisation_id, status: 'approved' as any },
     });
-    const weightMap = new Map<string, number>(memberships.map((m) => [m.user_id, (m as any).weight ?? 1]));
+    const org = await this.orgRepo.findOneBy({ id: proposal.organisation_id });
+    const ROLE_WEIGHT: Record<string, number> = { admin: 3, moderator: 2, member: 1, observer: 0 };
+    const weightMap = new Map<string, number>(memberships.map((m) => {
+      const w = org?.weight_mode === 'by_role' ? (ROLE_WEIGHT[m.role] ?? 1) : ((m as any).weight ?? 1);
+      return [m.user_id, w];
+    }));
 
     const tally: TallyResult = { yes: 0, no: 0, abstain: 0, total: 0, eligible_count: null, quorum_met: null, options: [] };
     for (const userId of allUsers) {
@@ -547,7 +552,7 @@ export class ProposalsService {
     }
 
     if (proposal.quorum != null) {
-      const totalWeight = memberships.reduce((sum, m) => sum + ((m as any).weight ?? 1), 0);
+      const totalWeight = memberships.reduce((sum, m) => sum + (weightMap.get(m.user_id) ?? 1), 0);
       tally.eligible_count = totalWeight;
       const multiplier = proposal.impact_level ? (IMPACT_QUORUM_MULTIPLIER[proposal.impact_level] ?? 1.0) : 1.0;
       const effectiveQuorum = Math.min(100, proposal.quorum * multiplier);
