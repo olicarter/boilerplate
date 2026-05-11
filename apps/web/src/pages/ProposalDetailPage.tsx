@@ -854,6 +854,20 @@ export function ProposalDetailPage() {
                   Consent
                 </span>
               )}
+              {proposal.impact_level && (() => {
+                const colors: Record<string, { bg: string; color: string; border: string }> = {
+                  low: { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+                  medium: { bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
+                  high: { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+                  constitutional: { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+                };
+                const s = colors[proposal.impact_level];
+                return (
+                  <span style={{ marginLeft: '0.5rem', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: s.bg, color: s.color, border: `1px solid ${s.border}`, verticalAlign: 'middle' }}>
+                    {proposal.impact_level.charAt(0).toUpperCase() + proposal.impact_level.slice(1)} impact
+                  </span>
+                );
+              })()}
             </h2>
             {(isAuthor || isModerator) && (isDraft || isOpen) && (
               <button

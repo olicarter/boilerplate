@@ -109,6 +109,7 @@ export function ProposalsPage() {
   const [deliberationEndsAt, setDeliberationEndsAt] = useState('');
   const [quorum, setQuorum] = useState<number | null>(org.default_quorum ?? null);
   const [quorumType, setQuorumType] = useState<'soft' | 'hard'>('soft');
+  const [impactLevel, setImpactLevel] = useState<'low' | 'medium' | 'high' | 'constitutional' | null>(null);
   const [proposalType, setProposalType] = useState<'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice'>('standard');
   const [mcOptions, setMcOptions] = useState<string[]>(['', '']);
   const [submitting, setSubmitting] = useState(false);
@@ -163,6 +164,7 @@ export function ProposalsPage() {
     setThreshold(org.default_threshold ?? 50);
     setQuorum(org.default_quorum ?? null);
     setQuorumType('soft');
+    setImpactLevel(null);
     setProposalType('standard');
     setMcOptions(['', '']);
     setShowForm(false);
@@ -223,6 +225,7 @@ export function ProposalsPage() {
         threshold,
         quorum,
         quorum_type: quorumType,
+        impact_level: impactLevel,
         created_at: new Date().toISOString(),
         closes_at: noDeadline ? null : (closesAt ? new Date(closesAt).toISOString() : null),
         deliberation_ends_at: noDeadline ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
@@ -543,7 +546,38 @@ export function ProposalsPage() {
                 </div>
               )}
             </div>
-          </div></>)}
+          </div>
+          {quorum !== null && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
+                Impact level <span style={{ color: '#aaa' }}>(optional — scales quorum requirement)</span>
+              </label>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {([null, 'low', 'medium', 'high', 'constitutional'] as const).map((level) => {
+                  const multipliers: Record<string, string> = { low: '×0.5', medium: '×1.0', high: '×1.5', constitutional: '×2.0' };
+                  return (
+                    <button
+                      key={level ?? 'none'}
+                      type="button"
+                      onClick={() => setImpactLevel(level)}
+                      style={{
+                        fontSize: 12,
+                        padding: '0.3rem 0.75rem',
+                        borderRadius: 4,
+                        border: '1px solid #ddd',
+                        background: impactLevel === level ? '#222' : 'none',
+                        color: impactLevel === level ? '#fff' : '#333',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {level === null ? 'None' : `${level.charAt(0).toUpperCase() + level.slice(1)} (${multipliers[level]})`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          </>)}
           {formError && <p style={{ color: '#d94040', fontSize: 13, margin: '0 0 0.75rem' }}>{formError}</p>}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit" disabled={submitting} style={{ padding: '0.4rem 1.25rem', fontSize: 13 }}>

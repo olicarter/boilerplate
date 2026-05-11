@@ -2,6 +2,7 @@ import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
 
 export type ProposalStatus = 'draft' | 'open' | 'closed' | 'withdrawn';
 export type ProposalType = 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice';
+export type ImpactLevel = 'low' | 'medium' | 'high' | 'constitutional';
 
 @Entity('proposals')
 export class Proposal {
@@ -58,4 +59,7 @@ export class Proposal {
 
   @Column({ type: 'text', array: true, default: '{}' })
   tags!: string[];
+
+  @Column({ name: 'impact_level', type: 'varchar', length: 20, nullable: true, default: null })
+  impact_level!: ImpactLevel | null;
 }

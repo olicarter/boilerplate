@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { Proposal, ProposalStatus } from './proposal.entity';
+import { ImpactLevel, Proposal, ProposalStatus } from './proposal.entity';
 import { ProposalOption } from './proposal-option.entity';
 import { ProposalReaction } from './proposal-reaction.entity';
 import { Endorsement } from '../endorsements/endorsement.entity';
@@ -35,6 +35,13 @@ export interface DelegationVote {
 }
 
 const ROLE_RANK: Record<string, number> = { member: 1, moderator: 2, admin: 3 };
+
+const IMPACT_QUORUM_MULTIPLIER: Record<string, number> = {
+  low: 0.5,
+  medium: 1.0,
+  high: 1.5,
+  constitutional: 2.0,
+};
 
 @Injectable()
 export class ProposalsService {
@@ -81,6 +88,7 @@ export class ProposalsService {
     status?: 'open' | 'draft';
     proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice';
     tags?: string[];
+    impact_level?: ImpactLevel | null;
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Title is required');
@@ -541,8 +549,10 @@ export class ProposalsService {
     if (proposal.quorum != null) {
       const totalWeight = memberships.reduce((sum, m) => sum + ((m as any).weight ?? 1), 0);
       tally.eligible_count = totalWeight;
+      const multiplier = proposal.impact_level ? (IMPACT_QUORUM_MULTIPLIER[proposal.impact_level] ?? 1.0) : 1.0;
+      const effectiveQuorum = Math.min(100, proposal.quorum * multiplier);
       tally.quorum_met = totalWeight > 0
-        ? (tally.total / totalWeight) * 100 >= proposal.quorum
+        ? (tally.total / totalWeight) * 100 >= effectiveQuorum
         : false;
     }
 

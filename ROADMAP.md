@@ -88,11 +88,11 @@ Current state: users can register with passkeys, create proposals under topics, 
 
 ### Proposal types & voting modes
 - [x] **Multiple choice proposals** — instead of yes/no/abstain, a proposal can have N custom options (e.g. "Option A / Option B / Option C / None of the above"). Votes are stored with an `option_id` foreign key.
-- [ ] **Ranked choice / instant runoff** — voters rank options in order of preference; the API computes the IRV winner across rounds. Show each elimination round in the results.
-- [ ] **Approval voting** — voters select all options they find acceptable; the option with the most approvals wins. Simple and strategy-proof for multi-option decisions.
-- [ ] **Score voting (range voting)** — voters rate each option 0–5; highest mean score wins. Good for prioritisation and resource allocation decisions.
-- [ ] **Consent-based (sociocracy)** — instead of majority yes, the question is "does anyone have a paramount objection?" A single "block" vote triggers mandatory discussion. Good for cooperatives and consensus-oriented groups.
-- [ ] **Temperature check** — lightweight, non-binding straw poll attached to a proposal in draft stage. Helps authors gauge support before formally opening a vote.
+- [x] **Ranked choice / instant runoff** — voters rank options in order of preference; the API computes the IRV winner across rounds. Show each elimination round in the results.
+- [x] **Approval voting** — voters select all options they find acceptable; the option with the most approvals wins. Simple and strategy-proof for multi-option decisions.
+- [x] **Score voting (range voting)** — voters rate each option 0–5; highest mean score wins. Good for prioritisation and resource allocation decisions.
+- [x] **Consent-based (sociocracy)** — instead of majority yes, the question is "does anyone have a paramount objection?" A single "block" vote triggers mandatory discussion. Good for cooperatives and consensus-oriented groups.
+- [x] **Temperature check** — lightweight, non-binding straw poll attached to a proposal in draft stage. Helps authors gauge support before formally opening a vote.
 
 ### Quorum & thresholds
 - [x] **Hard quorum** — if participation (direct votes + delegated weight) does not reach the quorum threshold by deadline, the proposal fails automatically regardless of the yes/no split.
