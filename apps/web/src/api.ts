@@ -97,6 +97,7 @@ export interface Proposal {
   created_at: string;
   closes_at: string | null;
   closed_at: string | null;
+  pinned: boolean;
   [key: string]: unknown;
 }
 
@@ -274,6 +275,10 @@ export const proposalsApi = {
     request<ProposalVersion[]>(`/proposals/${id}/versions`),
   setOutcome: (id: string, outcome: Proposal['outcome']) =>
     request<MutationResult<Proposal>>(`/proposals/${id}/outcome`, { method: 'POST', body: JSON.stringify({ outcome }) }),
+  pin: (id: string) =>
+    request<MutationResult<Proposal>>(`/proposals/${id}/pin`, { method: 'POST' }),
+  unpin: (id: string) =>
+    request<MutationResult<Proposal>>(`/proposals/${id}/unpin`, { method: 'POST' }),
 };
 
 export const delegationsApi = {

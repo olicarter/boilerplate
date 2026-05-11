@@ -91,6 +91,18 @@ export class ProposalsController {
     return this.proposalsService.setOutcome(id, req.user!.id, body.outcome);
   }
 
+  @Post(':id/pin')
+  @UseGuards(AuthGuard)
+  pin(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.setPin(id, req.user!.id, true);
+  }
+
+  @Post(':id/unpin')
+  @UseGuards(AuthGuard)
+  unpin(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.setPin(id, req.user!.id, false);
+  }
+
   @Delete(':id')
   @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {

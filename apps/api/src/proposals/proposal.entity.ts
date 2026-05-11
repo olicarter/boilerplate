@@ -52,4 +52,7 @@ export class Proposal {
 
   @Column({ type: 'varchar', length: 20, nullable: true, default: null })
   outcome!: 'implemented' | 'not_implemented' | 'in_progress' | null;
+
+  @Column({ type: 'boolean', default: false })
+  pinned!: boolean;
 }

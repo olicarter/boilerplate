@@ -115,7 +115,7 @@ export class ProposalsService {
 
   async update(
     id: string,
-    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'deliberation_ends_at' | 'threshold' | 'outcome'>>,
+    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'deliberation_ends_at' | 'threshold' | 'outcome' | 'pinned'>>,
   ): Promise<{ item: Proposal; txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       await manager.update(Proposal, id, data);
@@ -164,6 +164,14 @@ export class ProposalsService {
     );
 
     return this.update(id, data);
+  }
+
+  async setPin(id: string, userId: string, pinned: boolean): Promise<{ item: Proposal; txid: number }> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id });
+    if (!(await this.canModerate(proposal.organisation_id, userId))) {
+      throw new ForbiddenException('Only moderators and admins can pin proposals');
+    }
+    return this.update(id, { pinned });
   }
 
   async listVersions(proposalId: string): Promise<ProposalVersion[]> {

@@ -552,6 +552,23 @@ export function ProposalDetailPage() {
             {topic.name}
           </span>
         )}
+        {proposal.pinned && (
+          <span
+            data-testid="pinned-badge"
+            style={{
+              display: 'inline-block',
+              padding: '2px 8px',
+              borderRadius: 12,
+              fontSize: 12,
+              fontWeight: 500,
+              background: '#eef2ff',
+              color: '#4f46e5',
+              border: '1px solid #c7d2fe',
+            }}
+          >
+            📌 Pinned
+          </span>
+        )}
         <span
           style={{
             display: 'inline-block',
@@ -1226,6 +1243,19 @@ export function ProposalDetailPage() {
             Manage proposal
           </h3>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {isModerator && (
+              <button
+                data-testid={proposal.pinned ? 'unpin-proposal' : 'pin-proposal'}
+                onClick={() => handleAction(
+                  proposal.pinned ? 'Proposal unpinned' : 'Proposal pinned',
+                  () => proposal.pinned ? proposalsApi.unpin(id) : proposalsApi.pin(id),
+                )}
+                disabled={actioning}
+                style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none' }}
+              >
+                {proposal.pinned ? 'Unpin' : 'Pin to top'}
+              </button>
+            )}
             {isOpen && (
               <ConfirmButton
                 label="Close voting"

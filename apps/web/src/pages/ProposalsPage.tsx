@@ -128,6 +128,8 @@ export function ProposalsPage() {
       return true;
     })
     .sort((a: Proposal, b: Proposal) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
       if (sort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       if (sort === 'most-votes') {
         const aVotes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === a.id).length;
@@ -661,19 +663,22 @@ export function ProposalsPage() {
               >
                 <div
                   style={{
-                    border: `1px solid ${isDraft ? '#fde68a' : '#ddd'}`,
+                    border: `1px solid ${p.pinned ? '#c7d2fe' : isDraft ? '#fde68a' : '#ddd'}`,
                     borderRadius: 6,
                     padding: '1rem 1.25rem',
-                    background: isDraft ? '#fffdf0' : '#fff',
+                    background: p.pinned ? '#f5f7ff' : isDraft ? '#fffdf0' : '#fff',
                     cursor: 'pointer',
                     transition: 'border-color 0.15s',
                   }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = isDraft ? '#f6cc00' : '#aaa'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = isDraft ? '#fde68a' : '#ddd'; }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = p.pinned ? '#818cf8' : isDraft ? '#f6cc00' : '#aaa'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = p.pinned ? '#c7d2fe' : isDraft ? '#fde68a' : '#ddd'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: '0 0 0.4rem', fontWeight: 600, fontSize: 15 }}>{p.title}</p>
+                      <p style={{ margin: '0 0 0.4rem', fontWeight: 600, fontSize: 15 }}>
+                        {p.pinned && <span style={{ marginRight: '0.4rem', fontSize: 13 }} aria-label="Pinned">📌</span>}
+                        {p.title}
+                      </p>
                       {p.description && (
                         <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {p.description}
