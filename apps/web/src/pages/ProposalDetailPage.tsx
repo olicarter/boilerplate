@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, votesApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -82,6 +82,8 @@ export function ProposalDetailPage() {
   const [voteError, setVoteError] = useState('');
   const [changingVote, setChangingVote] = useState(false);
   const [voteReason, setVoteReason] = useState('');
+  const [approvalSelections, setApprovalSelections] = useState<Set<string>>(new Set());
+  const [submittingApprovals, setSubmittingApprovals] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actioning, setActioning] = useState(false);
   const [commentBody, setCommentBody] = useState('');
@@ -124,6 +126,9 @@ export function ProposalDetailPage() {
   const myVote = currentUser
     ? (allVotes ?? []).find((v: Vote) => v.proposal_id === id && v.user_id === currentUser.id)
     : undefined;
+  const myApprovalVotes = currentUser
+    ? (allVotes ?? []).filter((v: Vote) => v.proposal_id === id && v.user_id === currentUser.id)
+    : [];
 
   const myMembership = currentUser
     ? (allMemberships ?? []).find((m: Membership) => m.organisation_id === org.id && m.user_id === currentUser.id)
@@ -199,6 +204,25 @@ export function ProposalDetailPage() {
       setDelegationChain(null);
     }
   }, [id, currentUser?.id, myVote?.id]);
+
+  useEffect(() => {
+    if (proposal?.proposal_type === 'approval') {
+      setApprovalSelections(new Set(myApprovalVotes.map((v: Vote) => v.option_id).filter(Boolean) as string[]));
+    }
+  }, [proposal?.proposal_type, myApprovalVotes.length]);
+
+  async function submitApprovals() {
+    if (!currentUser) return;
+    setSubmittingApprovals(true);
+    try {
+      await votesApi.setApprovals(id, [...approvalSelections]);
+      addToast('Approvals saved', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to save approvals', 'error');
+    } finally {
+      setSubmittingApprovals(false);
+    }
+  }
 
   async function castVote(choice: VoteChoice | null, optionId?: string) {
     if (!currentUser) return;
@@ -290,7 +314,9 @@ export function ProposalDetailPage() {
   const publishBlocked = isDraft && minEndorsements > 0 && endorsements.length < minEndorsements;
   const threshold = proposal.threshold ?? 50;
   const deadline = isOpen && proposal.closes_at ? formatDeadline(proposal.closes_at) : null;
-  const result = proposal.status === 'closed' && tally ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard', vetoes.length > 0, proposal.proposal_type) : null;
+  const result = proposal.status === 'closed' && tally && !isApproval
+    ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard', vetoes.length > 0, proposal.proposal_type)
+    : null;
   const comments = (allComments ?? [])
     .filter((c: Comment) => c.proposal_id === id)
     .sort((a: Comment, b: Comment) => {
@@ -1205,27 +1231,35 @@ export function ProposalDetailPage() {
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Loading tally…</p>
         ) : tally ? (
           <>
-            {isMultipleChoice ? (
+            {isMultipleChoice || isApproval ? (
               <div>
                 {tally.options.length === 0 ? (
                   <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>No options defined.</p>
                 ) : (
                   tally.options.map((opt) => {
-                    const pct = tally.total > 0 ? Math.round((opt.count / tally.total) * 100) : 0;
+                    const maxCount = Math.max(...tally.options.map((o) => o.count), 1);
+                    const pct = isApproval ? Math.round((opt.count / maxCount) * 100) : (tally.total > 0 ? Math.round((opt.count / tally.total) * 100) : 0);
+                    const isWinner = isApproval && tally.options.length > 0 && opt.count === maxCount && maxCount > 0;
                     return (
                       <div key={opt.id} style={{ marginBottom: '0.6rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 3 }}>
-                          <span>{opt.text}</span>
-                          <span style={{ color: '#888' }}>{opt.count} vote{opt.count !== 1 ? 's' : ''} ({pct}%)</span>
+                          <span style={{ fontWeight: isWinner ? 600 : 400 }}>{opt.text}{isWinner ? ' ✓' : ''}</span>
+                          <span style={{ color: '#888' }}>
+                            {isApproval
+                              ? `${opt.count} approval${opt.count !== 1 ? 's' : ''}`
+                              : `${opt.count} vote${opt.count !== 1 ? 's' : ''} (${pct}%)`}
+                          </span>
                         </div>
                         <div style={{ height: 6, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: '#3358c4', transition: 'width 0.3s' }} />
+                          <div style={{ width: `${pct}%`, height: '100%', background: isWinner ? '#2d9a4e' : '#3358c4', transition: 'width 0.3s' }} />
                         </div>
                       </div>
                     );
                   })
                 )}
-                <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>{tally.total} vote{tally.total !== 1 ? 's' : ''} total</p>
+                <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#aaa' }}>
+                  {isApproval ? `${tally.total} voter${tally.total !== 1 ? 's' : ''} participated` : `${tally.total} vote${tally.total !== 1 ? 's' : ''} total`}
+                </p>
               </div>
             ) : isConsent ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -1346,7 +1380,9 @@ export function ProposalDetailPage() {
           ) : myVote && !changingVote ? (
             <div>
               <p style={{ margin: '0 0 0.5rem', fontSize: 14 }}>
-                {isMultipleChoice || isApproval || isScoreVoting || isRankedChoice ? (
+                {isApproval ? (
+                  <>You approved <strong>{myApprovalVotes.length}</strong> option{myApprovalVotes.length !== 1 ? 's' : ''}.</>
+                ) : isMultipleChoice || isScoreVoting || isRankedChoice ? (
                   <>You voted for <strong>{proposalOptions.find((o) => o.id === myVote.option_id)?.text ?? 'unknown option'}</strong>.</>
                 ) : isConsent ? (
                   <>You <strong style={{ color: myVote.choice === 'yes' ? '#2d9a4e' : myVote.choice === 'no' ? '#d94040' : '#888' }}>
@@ -1386,16 +1422,49 @@ export function ProposalDetailPage() {
                   Choose a new vote:
                 </p>
               )}
-              <textarea
-                data-testid="vote-reason-input"
-                placeholder="Add a reason (optional)"
-                value={voteReason}
-                onChange={(e) => setVoteReason(e.target.value)}
-                rows={2}
-                style={{ width: '100%', fontSize: 13, padding: '0.4rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical', marginBottom: '0.6rem', boxSizing: 'border-box' }}
-              />
-              {isMultipleChoice ? (
+              {isApproval ? (
+                <div>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#666' }}>Select all options you approve of:</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                    {proposalOptions.map((opt) => {
+                      const checked = approvalSelections.has(opt.id);
+                      return (
+                        <label
+                          key={opt.id}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: 14, cursor: 'pointer', padding: '0.4rem 0.75rem', border: `1px solid ${checked ? '#3358c4' : '#ddd'}`, borderRadius: 4, background: checked ? '#f0f4ff' : '#fafafa' }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              const next = new Set(approvalSelections);
+                              if (checked) next.delete(opt.id); else next.add(opt.id);
+                              setApprovalSelections(next);
+                            }}
+                          />
+                          {opt.text}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={submitApprovals}
+                    disabled={submittingApprovals}
+                    style={{ fontSize: 13, padding: '0.35rem 1rem', cursor: 'pointer', background: '#3358c4', color: '#fff', border: 'none', borderRadius: 4 }}
+                  >
+                    {submittingApprovals ? 'Saving…' : 'Save approvals'}
+                  </button>
+                </div>
+              ) : isMultipleChoice ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <textarea
+                    data-testid="vote-reason-input"
+                    placeholder="Add a reason (optional)"
+                    value={voteReason}
+                    onChange={(e) => setVoteReason(e.target.value)}
+                    rows={2}
+                    style={{ width: '100%', fontSize: 13, padding: '0.4rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical', marginBottom: '0.6rem', boxSizing: 'border-box' }}
+                  />
                   {proposalOptions.map((opt) => (
                     <button
                       key={opt.id}
@@ -1426,38 +1495,48 @@ export function ProposalDetailPage() {
                   )}
                 </div>
               ) : (
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {(isConsent
-                  ? [['yes', 'Consent'], ['abstain', 'Stand Aside'], ['no', 'Block']] as [VoteChoice, string][]
-                  : (['yes', 'no', 'abstain'] as VoteChoice[]).map((c) => [c, c] as [VoteChoice, string])
-                ).map(([choice, label]) => (
-                  <button
-                    key={choice}
-                    onClick={() => (myVote ? changeVote(choice) : castVote(choice))}
-                    disabled={voting}
-                    style={{
-                      fontSize: 13,
-                      padding: '0.35rem 1rem',
-                      cursor: 'pointer',
-                      background: choice === 'no' && isConsent ? '#d94040' : choiceColors[choice],
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 4,
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-                {changingVote && (
-                  <button
-                    onClick={() => setChangingVote(false)}
-                    style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
+                <div>
+                  <textarea
+                    data-testid="vote-reason-input"
+                    placeholder="Add a reason (optional)"
+                    value={voteReason}
+                    onChange={(e) => setVoteReason(e.target.value)}
+                    rows={2}
+                    style={{ width: '100%', fontSize: 13, padding: '0.4rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, resize: 'vertical', marginBottom: '0.6rem', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {(isConsent
+                      ? [['yes', 'Consent'], ['abstain', 'Stand Aside'], ['no', 'Block']] as [VoteChoice, string][]
+                      : (['yes', 'no', 'abstain'] as VoteChoice[]).map((c) => [c, c] as [VoteChoice, string])
+                    ).map(([choice, label]) => (
+                      <button
+                        key={choice}
+                        onClick={() => (myVote ? changeVote(choice) : castVote(choice))}
+                        disabled={voting}
+                        style={{
+                          fontSize: 13,
+                          padding: '0.35rem 1rem',
+                          cursor: 'pointer',
+                          background: choice === 'no' && isConsent ? '#d94040' : choiceColors[choice],
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 4,
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    {changingVote && (
+                      <button
+                        onClick={() => setChangingVote(false)}
+                        style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd' }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}

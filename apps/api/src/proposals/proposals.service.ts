@@ -399,7 +399,7 @@ export class ProposalsService {
   async tally(proposalId: string): Promise<TallyResult> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
 
-    if (proposal.proposal_type === 'multiple_choice') {
+    if (['multiple_choice', 'approval'].includes(proposal.proposal_type)) {
       const options = await this.dataSource.getRepository(ProposalOption).find({
         where: { proposal_id: proposalId },
         order: { position: 'ASC' },
@@ -411,8 +411,10 @@ export class ProposalsService {
           countMap.set(v.option_id, countMap.get(v.option_id)! + 1);
         }
       }
+      const uniqueVoters = new Set(votes.map((v) => v.user_id)).size;
       return {
-        yes: 0, no: 0, abstain: 0, total: votes.length,
+        yes: 0, no: 0, abstain: 0,
+        total: proposal.proposal_type === 'approval' ? uniqueVoters : votes.length,
         eligible_count: null, quorum_met: null,
         options: options.map((o) => ({ id: o.id, text: o.text, count: countMap.get(o.id)!, position: o.position })),
       };
@@ -481,7 +483,7 @@ export class ProposalsService {
       : [];
     const userMap = new Map(users.map((u) => [u.id, u]));
 
-    if (proposal.proposal_type === 'multiple_choice') {
+    if (['multiple_choice', 'approval'].includes(proposal.proposal_type)) {
       const options = await this.dataSource.getRepository(ProposalOption).find({
         where: { proposal_id: proposalId }, order: { position: 'ASC' },
       });

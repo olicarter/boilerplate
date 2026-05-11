@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { VotesService } from './votes.service';
 import { VoteChoice } from './vote.entity';
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 
 @Controller('votes')
 export class VotesController {
@@ -33,5 +33,15 @@ export class VotesController {
   @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {
     return this.votesService.delete(id);
+  }
+
+  @Post('proposals/:proposalId/approvals')
+  @UseGuards(AuthGuard)
+  setApprovals(
+    @Param('proposalId') proposalId: string,
+    @Body() body: { option_ids: string[] },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.votesService.setApprovals(proposalId, req.user!.id, body.option_ids);
   }
 }

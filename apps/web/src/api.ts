@@ -444,4 +444,6 @@ export const votesApi = {
     request<MutationResult<Vote>>(`/votes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/votes/${id}`, { method: 'DELETE' }),
+  setApprovals: (proposalId: string, optionIds: string[]) =>
+    request<{ txid: number }>(`/votes/proposals/${proposalId}/approvals`, { method: 'POST', body: JSON.stringify({ option_ids: optionIds }) }),
 };

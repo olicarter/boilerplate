@@ -43,8 +43,9 @@ export class VotesService {
     if (proposal.deliberation_ends_at && new Date(proposal.deliberation_ends_at) > new Date()) {
       throw new BadRequestException('This proposal is in the deliberation phase — voting opens after deliberation ends');
     }
-    if (proposal.proposal_type === 'multiple_choice') {
-      if (!data.option_id) throw new BadRequestException('option_id is required for multiple choice proposals');
+    const optionBasedTypes = ['multiple_choice', 'approval', 'score_voting', 'ranked_choice'];
+    if (optionBasedTypes.includes(proposal.proposal_type)) {
+      if (!data.option_id) throw new BadRequestException('option_id is required for this proposal type');
     } else {
       if (!data.choice) throw new BadRequestException('choice is required');
     }
@@ -118,6 +119,32 @@ export class VotesService {
   async delete(id: string): Promise<{ txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       await manager.delete(Vote, id);
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { txid: parseInt(row.txid, 10) };
+    });
+  }
+
+  async setApprovals(proposalId: string, userId: string, optionIds: string[]): Promise<{ txid: number }> {
+    const proposal = await this.proposalRepo.findOneBy({ id: proposalId });
+    if (!proposal || proposal.status !== 'open') throw new BadRequestException('Voting is closed');
+    if (proposal.proposal_type !== 'approval') throw new BadRequestException('Not an approval proposal');
+
+    return this.dataSource.transaction(async (manager) => {
+      await manager.delete(Vote, { proposal_id: proposalId, user_id: userId });
+      if (optionIds.length > 0) {
+        const votes = optionIds.map((optionId) =>
+          manager.create(Vote, {
+            id: `${userId}-${proposalId}-${optionId}`,
+            proposal_id: proposalId,
+            user_id: userId,
+            organisation_id: proposal.organisation_id,
+            choice: null,
+            option_id: optionId,
+            reason: null,
+          }),
+        );
+        await manager.save(votes);
+      }
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { txid: parseInt(row.txid, 10) };
     });
