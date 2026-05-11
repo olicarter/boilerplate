@@ -7,6 +7,7 @@ import { ProposalOption } from './proposal-option.entity';
 import { ProposalReaction } from './proposal-reaction.entity';
 import { ProposalSignature } from './proposal-signature.entity';
 import { ProposalVersion } from './proposal-version.entity';
+import { ProposalLink, ProposalLinkType } from './proposal-link.entity';
 import { Endorsement } from '../endorsements/endorsement.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
@@ -791,6 +792,74 @@ export class ProposalsService {
     );
 
     return { count: nonVoters.length };
+  }
+
+  async listLinks(proposalId: string): Promise<Array<{ id: string; link_type: string; direction: 'outgoing' | 'incoming'; other_proposal_id: string; other_proposal_title: string; other_proposal_status: string }>> {
+    const repo = this.dataSource.getRepository(ProposalLink);
+    const [outgoing, incoming] = await Promise.all([
+      repo.find({ where: { source_proposal_id: proposalId } }),
+      repo.find({ where: { target_proposal_id: proposalId } }),
+    ]);
+
+    const ids = [
+      ...outgoing.map((l) => l.target_proposal_id),
+      ...incoming.map((l) => l.source_proposal_id),
+    ];
+    const proposals = ids.length > 0
+      ? await this.proposalRepo.findBy(ids.map((id) => ({ id })))
+      : [];
+    const propMap = new Map(proposals.map((p) => [p.id, p]));
+
+    const INVERSE: Record<string, string> = {
+      supersedes: 'superseded by',
+      related_to: 'related to',
+      blocks: 'blocked by',
+      depends_on: 'depended on by',
+    };
+
+    return [
+      ...outgoing.map((l) => ({
+        id: l.id,
+        link_type: l.link_type,
+        direction: 'outgoing' as const,
+        other_proposal_id: l.target_proposal_id,
+        other_proposal_title: propMap.get(l.target_proposal_id)?.title ?? l.target_proposal_id,
+        other_proposal_status: propMap.get(l.target_proposal_id)?.status ?? 'unknown',
+      })),
+      ...incoming.map((l) => ({
+        id: l.id,
+        link_type: INVERSE[l.link_type] ?? l.link_type,
+        direction: 'incoming' as const,
+        other_proposal_id: l.source_proposal_id,
+        other_proposal_title: propMap.get(l.source_proposal_id)?.title ?? l.source_proposal_id,
+        other_proposal_status: propMap.get(l.source_proposal_id)?.status ?? 'unknown',
+      })),
+    ];
+  }
+
+  async addLink(proposalId: string, userId: string, data: { target_proposal_id: string; link_type: ProposalLinkType }): Promise<ProposalLink> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    const target = await this.proposalRepo.findOneByOrFail({ id: data.target_proposal_id });
+    if (proposal.organisation_id !== target.organisation_id) {
+      throw new BadRequestException('Cannot link proposals from different organisations');
+    }
+    if (proposalId === data.target_proposal_id) {
+      throw new BadRequestException('Cannot link a proposal to itself');
+    }
+    const repo = this.dataSource.getRepository(ProposalLink);
+    const existing = await repo.findOneBy({ source_proposal_id: proposalId, target_proposal_id: data.target_proposal_id, link_type: data.link_type });
+    if (existing) return existing;
+    return repo.save(repo.create({ id: randomUUID(), source_proposal_id: proposalId, target_proposal_id: data.target_proposal_id, link_type: data.link_type, organisation_id: proposal.organisation_id, created_by: userId }));
+  }
+
+  async removeLink(linkId: string, userId: string): Promise<void> {
+    const repo = this.dataSource.getRepository(ProposalLink);
+    const link = await repo.findOneByOrFail({ id: linkId });
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: link.source_proposal_id });
+    if (link.created_by !== userId && !(await this.canModerate(proposal.organisation_id, userId))) {
+      throw new ForbiddenException('Only the link creator or moderators can remove links');
+    }
+    await repo.delete(linkId);
   }
 
   async listSignatures(proposalId: string): Promise<{ signatures: ProposalSignature[]; count: number }> {

@@ -121,7 +121,7 @@ Current state: users can register with passkeys, create proposals under topics, 
 ### Amendments
 - [x] **Amendment proposals** — a member can propose an amendment to an open proposal. If the amendment passes (simple majority), the parent proposal description is updated and the vote resets. Creates a clear history.
 - [x] **Proposal versions** — every edit to a proposal title/description creates a version in `proposal_versions`; users can see the edit history on the proposal detail page.
-- [ ] **Proposal linking** — proposals can be linked as: supersedes / related to / blocks / depends on. Displayed as a relationship section on the detail page.
+- [x] **Proposal linking** — proposals can be linked as: supersedes / related to / blocks / depends on. Displayed as a relationship section on the detail page.
 
 ---
 

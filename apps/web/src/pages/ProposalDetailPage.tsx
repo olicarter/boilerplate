@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, votesApi, proposalSignaturesApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -126,6 +126,11 @@ export function ProposalDetailPage() {
   const [amendText, setAmendText] = useState('');
   const [amendDeadline, setAmendDeadline] = useState('');
   const [submittingAmend, setSubmittingAmend] = useState(false);
+  const [links, setLinks] = useState<ProposalLinkItem[]>([]);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkTargetId, setLinkTargetId] = useState('');
+  const [linkType, setLinkType] = useState<'supersedes' | 'related_to' | 'blocks' | 'depends_on'>('related_to');
+  const [addingLink, setAddingLink] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -206,6 +211,7 @@ export function ProposalDetailPage() {
     orgsApi.get(org.slug).then((o) => setMinEndorsementsLive(o.min_endorsements ?? 0)).catch(() => {});
     proposalsApi.listReactions(id).then(setReactions).catch(() => {});
     proposalSignaturesApi.list(id).then((r) => { setSignatures(r.signatures); setSignatureCount(r.count); }).catch(() => {});
+    proposalLinksApi.list(id).then(setLinks).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -536,6 +542,33 @@ export function ProposalDetailPage() {
       addToast('Failed to react', 'error');
     } finally {
       setReactingEmoji(null);
+    }
+  }
+
+  async function handleAddLink() {
+    if (!linkTargetId.trim() || addingLink) return;
+    setAddingLink(true);
+    try {
+      await proposalLinksApi.add(id, { target_proposal_id: linkTargetId.trim(), link_type: linkType });
+      const updated = await proposalLinksApi.list(id);
+      setLinks(updated);
+      setLinkTargetId('');
+      setShowLinkForm(false);
+      addToast('Link added', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to add link', 'error');
+    } finally {
+      setAddingLink(false);
+    }
+  }
+
+  async function handleRemoveLink(linkId: string) {
+    try {
+      await proposalLinksApi.remove(id, linkId);
+      setLinks((prev) => prev.filter((l) => l.id !== linkId));
+      addToast('Link removed', 'info');
+    } catch {
+      addToast('Failed to remove link', 'error');
     }
   }
 
@@ -2125,6 +2158,93 @@ export function ProposalDetailPage() {
           </form>
         )}
       </div>
+
+      {/* Related proposals (links) */}
+      {(links.length > 0 || (currentUser && myMembership)) && (
+        <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: links.length > 0 || showLinkForm ? '0.75rem' : 0 }}>
+            <h3 style={{ margin: 0, fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Related {links.length > 0 && `(${links.length})`}
+            </h3>
+            {currentUser && myMembership && !showLinkForm && (
+              <button
+                type="button"
+                onClick={() => setShowLinkForm(true)}
+                style={{ fontSize: 13, padding: '0.2rem 0.6rem', cursor: 'pointer', border: '1px solid #ddd', borderRadius: 4, background: 'none', color: '#666' }}
+              >
+                + Add link
+              </button>
+            )}
+          </div>
+          {links.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: showLinkForm ? '0.75rem' : 0 }}>
+              {links.map((l) => (
+                <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: 13 }}>
+                  <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 8, background: '#f0f0f0', color: '#666', border: '1px solid #ddd', whiteSpace: 'nowrap' }}>
+                    {l.link_type.replace(/_/g, ' ')}
+                  </span>
+                  <Link
+                    to="/orgs/$slug/proposals/$id"
+                    params={{ slug: org.slug, id: l.other_proposal_id }}
+                    style={{ color: '#1a56d6', textDecoration: 'none' }}
+                  >
+                    {l.other_proposal_title}
+                  </Link>
+                  <span style={{ fontSize: 11, color: '#aaa' }}>({l.other_proposal_status})</span>
+                  {l.direction === 'outgoing' && currentUser && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveLink(l.id)}
+                      style={{ fontSize: 11, color: '#aaa', border: 'none', background: 'none', cursor: 'pointer', padding: '0 0.2rem' }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {showLinkForm && (
+            <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.75rem 1rem', background: '#fafafa' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <select
+                  value={linkType}
+                  onChange={(e) => setLinkType(e.target.value as typeof linkType)}
+                  style={{ padding: '0.3rem 0.5rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+                >
+                  <option value="supersedes">Supersedes</option>
+                  <option value="related_to">Related to</option>
+                  <option value="blocks">Blocks</option>
+                  <option value="depends_on">Depends on</option>
+                </select>
+                <input
+                  type="text"
+                  value={linkTargetId}
+                  onChange={(e) => setLinkTargetId(e.target.value)}
+                  placeholder="Target proposal ID"
+                  style={{ flex: 1, minWidth: 200, padding: '0.3rem 0.5rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddLink}
+                  disabled={addingLink || !linkTargetId.trim()}
+                  style={{ fontSize: 13, padding: '0.3rem 0.75rem', cursor: 'pointer', background: '#222', color: '#fff', border: 'none', borderRadius: 4 }}
+                >
+                  {addingLink ? '…' : 'Link'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowLinkForm(false)}
+                  style={{ fontSize: 13, padding: '0.3rem 0.75rem', cursor: 'pointer', border: '1px solid #ddd', background: 'none', borderRadius: 4, color: '#555' }}
+                >
+                  Cancel
+                </button>
+              </div>
+              <p style={{ margin: '0.3rem 0 0', fontSize: 11, color: '#aaa' }}>Enter the UUID of the proposal you want to link to.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Amendments */}
       {!isAmendment && isOpen && (

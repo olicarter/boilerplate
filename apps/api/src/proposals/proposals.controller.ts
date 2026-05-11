@@ -186,4 +186,25 @@ export class ProposalsController {
   unsign(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.proposalsService.unsign(id, req.user!.id);
   }
+
+  @Get(':id/links')
+  listLinks(@Param('id') id: string) {
+    return this.proposalsService.listLinks(id);
+  }
+
+  @Post(':id/links')
+  @UseGuards(AuthGuard)
+  addLink(
+    @Param('id') id: string,
+    @Body() body: { target_proposal_id: string; link_type: 'supersedes' | 'related_to' | 'blocks' | 'depends_on' },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.addLink(id, req.user!.id, body);
+  }
+
+  @Delete(':id/links/:linkId')
+  @UseGuards(AuthGuard)
+  removeLink(@Param('linkId') linkId: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.removeLink(linkId, req.user!.id);
+  }
 }

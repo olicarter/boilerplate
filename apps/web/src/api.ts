@@ -272,6 +272,24 @@ export interface ProposalSignature {
   created_at: string;
 }
 
+export interface ProposalLinkItem {
+  id: string;
+  link_type: string;
+  direction: 'outgoing' | 'incoming';
+  other_proposal_id: string;
+  other_proposal_title: string;
+  other_proposal_status: string;
+}
+
+export const proposalLinksApi = {
+  list: (proposalId: string) =>
+    request<ProposalLinkItem[]>(`/proposals/${proposalId}/links`),
+  add: (proposalId: string, data: { target_proposal_id: string; link_type: 'supersedes' | 'related_to' | 'blocks' | 'depends_on' }) =>
+    request<{ id: string }>(`/proposals/${proposalId}/links`, { method: 'POST', body: JSON.stringify(data) }),
+  remove: (proposalId: string, linkId: string) =>
+    request<void>(`/proposals/${proposalId}/links/${linkId}`, { method: 'DELETE' }),
+};
+
 export const proposalSignaturesApi = {
   list: (proposalId: string) =>
     request<{ signatures: ProposalSignature[]; count: number }>(`/proposals/${proposalId}/signatures`),
