@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLiveQuery } from '@tanstack/react-db';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { usersCollection, membershipsCollection } from '../collections';
@@ -91,6 +91,13 @@ export function MembersPage() {
       addToast(err instanceof Error ? err.message : 'Failed to leave organisation', 'error');
     }
   }
+
+  const [delegationWeights, setDelegationWeights] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    orgsApi.getDelegationWeights(org.slug).then((data) => {
+      setDelegationWeights(new Map(data.map((d) => [d.user_id, d.carried_weight])));
+    }).catch(() => {});
+  }, [org.slug]);
 
   const [generatingToken, setGeneratingToken] = useState(false);
   const [revokingToken, setRevokingToken] = useState(false);
@@ -223,6 +230,14 @@ export function MembersPage() {
                       const voted = votesByUser.get(m.user_id)?.size ?? 0;
                       const pct = Math.round((voted / eligibleProposalCount) * 100);
                       return <span style={{ marginLeft: '0.5rem', color: pct >= 70 ? '#2d9a4e' : pct >= 30 ? '#888' : '#b45309' }}>· {pct}% participation</span>;
+                    })()}
+                    {(() => {
+                      const carried = delegationWeights.get(m.user_id);
+                      const ownWeight = (m as { weight?: number }).weight ?? 1;
+                      if (carried !== undefined && carried > ownWeight) {
+                        return <span style={{ marginLeft: '0.5rem', color: '#1a56d6' }}>· carries {carried} votes</span>;
+                      }
+                      return null;
                     })()}
                   </div>
                 </div>

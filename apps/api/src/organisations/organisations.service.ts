@@ -12,6 +12,8 @@ import { Organisation } from './organisation.entity';
 import { Membership, MemberRole, MemberStatus } from './membership.entity';
 import { Proposal } from '../proposals/proposal.entity';
 import { User } from '../users/user.entity';
+import { Delegation } from '../delegations/delegation.entity';
+import { DelegationsService } from '../delegations/delegations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -415,6 +417,28 @@ export class OrganisationsService {
       .where('u.id IN (:...ids)', { ids: userIds })
       .getMany();
     return users.map((u) => ({ userId: u.id, name: u.name }));
+  }
+
+  async getDelegationWeights(slug: string): Promise<Array<{ user_id: string; carried_weight: number }>> {
+    const org = await this.findBySlug(slug);
+    const memberships = await this.memberRepo.find({ where: { organisation_id: org.id, status: 'approved' as MemberStatus } });
+    const ROLE_WEIGHT: Record<string, number> = { admin: 3, moderator: 2, member: 1, observer: 0 };
+    const memberWeight = new Map<string, number>(memberships.map((m) => {
+      const w = org.weight_mode === 'by_role' ? (ROLE_WEIGHT[m.role] ?? 1) : ((m as any).weight ?? 1);
+      return [m.user_id, w];
+    }));
+
+    const allDelegations = await this.dataSource.getRepository(Delegation).find({ where: { organisation_id: org.id } });
+    const active = DelegationsService.activeDelegations(allDelegations);
+
+    const carriedWeight = new Map<string, number>(memberships.map((m) => [m.user_id, memberWeight.get(m.user_id) ?? 1]));
+    for (const d of active) {
+      const delegatorWeight = memberWeight.get(d.delegator_id) ?? 1;
+      const current = carriedWeight.get(d.delegate_id) ?? 0;
+      carriedWeight.set(d.delegate_id, current + delegatorWeight);
+    }
+
+    return [...carriedWeight.entries()].map(([user_id, carried_weight]) => ({ user_id, carried_weight }));
   }
 
   async getPublicResults(slug: string): Promise<{ org: Organisation; proposals: Proposal[] }> {

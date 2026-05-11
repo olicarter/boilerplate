@@ -246,6 +246,8 @@ export const orgsApi = {
   getPublicResults: (slug: string) => request<{ org: Organisation; proposals: Proposal[] }>(`/orgs/${slug}/results`),
   searchMembers: (slug: string, q: string) =>
     request<{ id: string; name: string }[]>(`/orgs/${slug}/members/search?q=${encodeURIComponent(q)}`),
+  getDelegationWeights: (slug: string) =>
+    request<Array<{ user_id: string; carried_weight: number }>>(`/orgs/${slug}/delegation-weights`),
 };
 
 export const topicsApi = {

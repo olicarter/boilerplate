@@ -168,4 +168,10 @@ export class OrganisationsController {
   async getPublicResults(@Param('slug') slug: string) {
     return this.orgsService.getPublicResults(slug);
   }
+
+  @Get(':slug/delegation-weights')
+  @UseGuards(AuthGuard)
+  getDelegationWeights(@Param('slug') slug: string) {
+    return this.orgsService.getDelegationWeights(slug);
+  }
 }
