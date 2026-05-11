@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { ProposalsService } from './proposals.service';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 
@@ -19,6 +20,15 @@ export class ProposalsController {
   @Get(':id/tally')
   tally(@Param('id') id: string) {
     return this.proposalsService.tally(id);
+  }
+
+  @Get(':id/tally/csv')
+  @UseGuards(AuthGuard)
+  async tallyCsv(@Param('id') id: string, @Res() res: Response) {
+    const csv = await this.proposalsService.exportVotesCsv(id);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="votes-${id}.csv"`);
+    res.send(csv);
   }
 
   @Get(':id/my-delegation-vote')

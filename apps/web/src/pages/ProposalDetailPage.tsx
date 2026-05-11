@@ -1304,6 +1304,16 @@ export function ProposalDetailPage() {
             Manage proposal
           </h3>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {isModerator && !isDiscussion && (
+              <a
+                href={`/api/proposals/${id}/tally/csv`}
+                download={`votes-${id}.csv`}
+                data-testid="export-csv"
+                style={{ fontSize: 13, padding: '0.35rem 0.9rem', border: '1px solid #ddd', borderRadius: 4, color: '#555', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+              >
+                Export CSV
+              </a>
+            )}
             {isModerator && (
               <button
                 data-testid={proposal.pinned ? 'unpin-proposal' : 'pin-proposal'}

@@ -471,6 +471,47 @@ export class ProposalsService {
     return tally;
   }
 
+  async exportVotesCsv(proposalId: string): Promise<string> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+    const userIds = [...new Set(votes.map((v) => v.user_id))];
+    const users = userIds.length > 0
+      ? await this.dataSource.getRepository(User).findBy(userIds.map((id) => ({ id })))
+      : [];
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    if (proposal.proposal_type === 'multiple_choice') {
+      const options = await this.dataSource.getRepository(ProposalOption).find({
+        where: { proposal_id: proposalId }, order: { position: 'ASC' },
+      });
+      const optionMap = new Map(options.map((o) => [o.id, o.text]));
+      const rows = [['user_id', 'name', 'option_id', 'option_text', 'voted_at']];
+      for (const v of votes) {
+        const user = userMap.get(v.user_id);
+        rows.push([
+          v.user_id,
+          user?.name ?? '',
+          v.option_id ?? '',
+          v.option_id ? (optionMap.get(v.option_id) ?? '') : '',
+          v.created_at instanceof Date ? v.created_at.toISOString() : String(v.created_at),
+        ]);
+      }
+      return rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    }
+
+    const rows = [['user_id', 'name', 'choice', 'voted_at']];
+    for (const v of votes) {
+      const user = userMap.get(v.user_id);
+      rows.push([
+        v.user_id,
+        user?.name ?? '',
+        v.choice ?? '',
+        v.created_at instanceof Date ? v.created_at.toISOString() : String(v.created_at),
+      ]);
+    }
+    return rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  }
+
   /** Returns the full delegation chain for userId on this proposal, with each member's name and the final voter's choice. */
   async getMyDelegationChain(proposalId: string, userId: string): Promise<{ chain: { user_id: string; name: string }[]; voter: { user_id: string; name: string; choice: string } | null } | null> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
