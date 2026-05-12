@@ -75,6 +75,40 @@ export class ProposalsService {
     return this.proposalRepo.find({ where: { organisation_id: organisationId }, order: { created_at: 'DESC' } });
   }
 
+  async findPaginated(params: {
+    organisation_id?: string;
+    status?: string;
+    topic_id?: string;
+    author_id?: string;
+    sort?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ items: Proposal[]; total: number; page: number; pageSize: number }> {
+    const page = Math.max(1, params.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 20));
+    const skip = (page - 1) * pageSize;
+
+    const where: Record<string, unknown> = {};
+    if (params.organisation_id) where['organisation_id'] = params.organisation_id;
+    if (params.status) where['status'] = params.status;
+    if (params.topic_id) where['topic_id'] = params.topic_id;
+    if (params.author_id) where['author_id'] = params.author_id;
+
+    const order: Record<string, 'ASC' | 'DESC'> =
+      params.sort === 'closes_at' ? { closes_at: 'ASC' }
+      : params.sort === 'oldest' ? { created_at: 'ASC' }
+      : { created_at: 'DESC' };
+
+    const [items, total] = await this.proposalRepo.findAndCount({
+      where: where as any,
+      order: order as any,
+      skip,
+      take: pageSize,
+    });
+
+    return { items, total, page, pageSize };
+  }
+
   findOne(id: string): Promise<Proposal | null> {
     return this.proposalRepo.findOneBy({ id });
   }

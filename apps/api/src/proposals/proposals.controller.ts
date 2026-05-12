@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ProposalsService } from './proposals.service';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
@@ -8,7 +8,26 @@ export class ProposalsController {
   constructor(private readonly proposalsService: ProposalsService) {}
 
   @Get()
-  findAll() {
+  findAll(
+    @Query('org') organisation_id?: string,
+    @Query('status') status?: string,
+    @Query('topic_id') topic_id?: string,
+    @Query('author_id') author_id?: string,
+    @Query('sort') sort?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    if (page !== undefined || pageSize !== undefined || status || topic_id || author_id || sort) {
+      return this.proposalsService.findPaginated({
+        organisation_id,
+        status,
+        topic_id,
+        author_id,
+        sort,
+        page: page ? parseInt(page, 10) : undefined,
+        pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+      });
+    }
     return this.proposalsService.findAll();
   }
 
