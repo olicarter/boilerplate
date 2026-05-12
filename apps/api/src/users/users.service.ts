@@ -58,6 +58,26 @@ export class UsersService {
     });
   }
 
+  /** Anonymise user PII while preserving structural data (votes, comments) for audit. */
+  async anonymize(id: string): Promise<void> {
+    const anonymizedEmail = `deleted_${id}@deleted.invalid`;
+    await this.dataSource.transaction(async (manager) => {
+      // Overwrite PII fields
+      await manager.update(User, id, {
+        name: 'Deleted User',
+        email: anonymizedEmail,
+        bio: null,
+        avatar_url: null,
+        email_verified: false,
+        email_verification_token: null,
+        notification_preferences: {},
+      });
+      // Remove authentication credentials
+      await manager.query(`DELETE FROM credentials WHERE "userId" = $1`, [id]);
+      await manager.query(`DELETE FROM magic_links WHERE "userId" = $1`, [id]);
+    });
+  }
+
   async getNotificationPreferences(id: string): Promise<Record<string, boolean>> {
     const user = await this.userRepo.findOneBy({ id });
     return user?.notification_preferences ?? {};

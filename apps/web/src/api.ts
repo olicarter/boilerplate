@@ -246,6 +246,8 @@ export const usersApi = {
     }),
   getOrgEmailPreferences: () =>
     request<Array<{ org_id: string; org_name: string; org_slug: string; email_notifications_enabled: boolean; email_digest_enabled: boolean }>>('/users/me/org-email-preferences'),
+  anonymize: () =>
+    request<{ success: boolean }>('/users/me/anonymize', { method: 'POST' }),
 };
 
 export const orgsApi = {

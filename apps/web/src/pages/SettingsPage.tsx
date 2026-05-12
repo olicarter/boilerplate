@@ -56,6 +56,7 @@ export function SettingsPage() {
   const [passkeys, setPasskeys] = useState<Passkey[] | null>(null);
   const [addingPasskey, setAddingPasskey] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [anonymizing, setAnonymizing] = useState(false);
 
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean> | null>(null);
   const [savingNotif, setSavingNotif] = useState(false);
@@ -433,6 +434,32 @@ export function SettingsPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className={styles.section} style={{ borderColor: 'var(--color-error)', borderWidth: 1, borderStyle: 'solid', borderRadius: 'var(--radius-sm)', padding: 'var(--space-4)' }}>
+        <h3 className={styles.sectionTitle} style={{ color: 'var(--color-error)' }}>Delete account</h3>
+        <p className={styles.sectionHint}>
+          Permanently remove your personal information (name, email, avatar). Your votes, comments, and delegation records are retained for organisational integrity but attributed to "Deleted User".
+        </p>
+        <Button
+          variant="danger"
+          size="sm"
+          disabled={anonymizing}
+          onClick={async () => {
+            if (!window.confirm('Are you sure? This will erase your name, email, and profile. It cannot be undone.')) return;
+            setAnonymizing(true);
+            try {
+              await usersApi.anonymize();
+              localStorage.removeItem('ripple_user');
+              window.location.href = '/';
+            } catch {
+              addToast('Failed to delete account', 'error');
+              setAnonymizing(false);
+            }
+          }}
+        >
+          {anonymizing ? 'Deleting…' : 'Delete my account'}
+        </Button>
       </section>
     </div>
   );

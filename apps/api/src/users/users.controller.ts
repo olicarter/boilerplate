@@ -34,6 +34,13 @@ export class UsersController {
     return this.usersService.delete(id);
   }
 
+  @Post('me/anonymize')
+  @UseGuards(AuthGuard)
+  async anonymize(@Req() req: AuthenticatedRequest) {
+    await this.usersService.anonymize(req.user!.id);
+    return { success: true };
+  }
+
   @Get('me/notification-preferences')
   @UseGuards(AuthGuard)
   getNotificationPreferences(@Req() req: AuthenticatedRequest) {
