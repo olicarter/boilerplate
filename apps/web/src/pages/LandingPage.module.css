@@ -54,7 +54,6 @@
 /* ─── Hero ───────────────────────────────────────────────────── */
 .hero {
   background: #0a0a0a;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding: 80px 0 96px;
   position: relative;
   overflow: hidden;
@@ -268,16 +267,16 @@
   font-weight: var(--weight-medium);
 }
 
-/* ─── Stats strip ────────────────────────────────────────────── */
+/* ─── Stats strip — dark, continues hero ─────────────────────── */
 .statsStrip {
-  border-bottom: var(--border);
-  background: var(--color-bg-subtle);
+  background: #111111;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .stats {
   display: flex;
-  gap: var(--space-10);
-  padding: var(--space-7) 0;
+  gap: var(--space-12, 64px);
+  padding: var(--space-8) 0;
   flex-wrap: wrap;
 }
 
@@ -288,32 +287,41 @@
 }
 
 .statNum {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
   font-weight: var(--weight-bold);
   letter-spacing: -0.05em;
-  color: var(--color-fg);
+  color: #ffffff;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .statLabel {
   font-size: var(--text-sm);
-  color: var(--color-fg-muted);
+  color: rgba(255, 255, 255, 0.45);
   letter-spacing: -0.01em;
 }
 
 /* ─── Generic section ────────────────────────────────────────── */
 .section {
-  padding: 72px 0;
+  padding: 80px 0;
   border-bottom: var(--border);
 }
 
 .sectionTitle {
   margin: 0 0 var(--space-8);
   font-size: var(--text-2xl);
-  font-weight: var(--weight-semibold);
-  letter-spacing: -0.03em;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.04em;
   color: var(--color-fg);
+}
+
+.sectionTitle::before {
+  content: '';
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--color-fg);
+  margin-bottom: var(--space-4);
 }
 
 .sectionSub {
@@ -341,16 +349,18 @@
   pointer-events: none;
 }
 
-.sectionDark .sectionTitle {
-  position: relative;
-}
-
-.sectionDark .sectionSub {
+.sectionDark .sectionTitle,
+.sectionDark .sectionSub,
+.sectionDark .features {
   position: relative;
 }
 
 .sectionTitleLight {
   color: #ffffff;
+}
+
+.sectionTitleLight::before {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .sectionSubLight {
@@ -361,48 +371,61 @@
 .steps {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-6);
+  gap: var(--space-5);
 }
 
 .step {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: var(--space-5);
   border: var(--border);
   border-radius: var(--radius-md);
-  background: var(--color-bg-subtle);
+  background: var(--color-bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.step:hover {
+  border-color: var(--color-fg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .stepNum {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--color-fg-subtle);
-  letter-spacing: 0.04em;
-  margin-bottom: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-fg);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
 .stepTitle {
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   color: var(--color-fg);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .stepDesc {
   margin: 0;
   font-size: var(--text-base);
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--color-fg-muted);
 }
 
 /* ─── Feature highlights ─────────────────────────────────────── */
 .features {
-  position: relative;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-px, 1px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -412,14 +435,12 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-6);
-  background: rgba(255, 255, 255, 0.03);
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: #0a0a0a;
   transition: background 0.15s;
 }
 
 .feature:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: #141414;
 }
 
 .featureTitle {
@@ -432,31 +453,39 @@
 .featureDesc {
   margin: 0;
   font-size: var(--text-base);
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 /* ─── Use cases ──────────────────────────────────────────────── */
 .useCases {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-5);
+  gap: 1px;
+  background: var(--color-border);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .useCase {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-5);
-  border: var(--border);
-  border-radius: var(--radius-md);
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-5);
+  background: var(--color-bg);
+  transition: background 0.12s;
+}
+
+.useCase:hover {
+  background: var(--color-bg-subtle);
 }
 
 .useCaseLabel {
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   color: var(--color-fg);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .useCaseDesc {
@@ -482,11 +511,13 @@
   border-radius: var(--radius-md);
   text-decoration: none;
   color: inherit;
-  transition: background 0.1s, border-color 0.1s;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 .orgCard:hover {
   background: var(--color-bg-subtle);
-  border-color: var(--color-border-strong);
+  border-color: var(--color-fg);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .orgName {
@@ -517,36 +548,52 @@
 
 /* ─── Bottom CTA strip ──────────────────────────────────────── */
 .ctaStrip {
-  padding: 80px 0;
-  background: var(--color-fg);
-  color: var(--color-bg);
+  padding: 96px 0;
+  background: #0a0a0a;
+  position: relative;
+  overflow: hidden;
+}
+
+.ctaStrip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+
+.ctaStrip .inner {
+  position: relative;
 }
 
 .ctaStripTitle {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-semibold);
-  letter-spacing: -0.03em;
-  color: var(--color-bg);
+  margin: 0 0 var(--space-3);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.04em;
+  color: #ffffff;
 }
 
 .ctaStripSub {
-  margin: 0 0 var(--space-6);
+  margin: 0 0 var(--space-7);
   font-size: var(--text-lg);
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .ctaStripBtn {
   display: inline-flex;
   align-items: center;
-  height: 40px;
-  padding: 0 var(--space-5);
+  height: 44px;
+  padding: 0 var(--space-6);
   font-family: var(--font-sans);
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   letter-spacing: -0.01em;
-  background: var(--color-bg);
-  color: var(--color-fg);
+  background: #ffffff;
+  color: #0a0a0a;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -557,7 +604,8 @@
 /* ─── Footer ─────────────────────────────────────────────────── */
 .footer {
   padding: var(--space-6) 0;
-  border-top: var(--border);
+  background: #0a0a0a;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .footer .inner {
@@ -565,7 +613,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: var(--text-sm);
-  color: var(--color-fg-subtle);
+  color: rgba(255, 255, 255, 0.3);
 }
 
 /* ─── Responsive ─────────────────────────────────────────────── */
