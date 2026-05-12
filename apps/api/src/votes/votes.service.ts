@@ -47,6 +47,7 @@ export class VotesService {
     choice?: VoteChoice | null;
     option_id?: string | null;
     reason?: string | null;
+    vote_count?: number;
   }): Promise<{ item: Vote; txid: number }> {
     const proposal = await this.proposalRepo.findOneBy({ id: data.proposal_id });
     if (!proposal || proposal.status !== 'open') {
@@ -62,6 +63,19 @@ export class VotesService {
       if (!data.choice) throw new BadRequestException('choice is required');
     }
 
+    const voteCount = Math.max(1, Math.min(10, data.vote_count ?? 1));
+    const creditCost = voteCount * voteCount;
+
+    if ((proposal as any).quadratic_voting && voteCount > 1) {
+      const [membership] = await this.dataSource.query(
+        `SELECT credits_balance FROM memberships WHERE organisation_id = $1 AND user_id = $2`,
+        [proposal.organisation_id, data.user_id],
+      );
+      const balance = membership?.credits_balance ?? null;
+      if (balance === null) throw new BadRequestException('Credits not allocated for this period');
+      if (balance < creditCost) throw new BadRequestException(`Insufficient credits: need ${creditCost}, have ${balance}`);
+    }
+
     const result = await this.dataSource.transaction(async (manager) => {
       const vote = manager.create(Vote, {
         id: data.id,
@@ -71,8 +85,15 @@ export class VotesService {
         option_id: data.option_id ?? null,
         reason: data.reason ?? null,
         organisation_id: proposal.organisation_id,
+        vote_count: voteCount,
       });
       const saved = await manager.save(vote);
+      if ((proposal as any).quadratic_voting && voteCount > 1) {
+        await manager.query(
+          `UPDATE memberships SET credits_balance = credits_balance - $1 WHERE organisation_id = $2 AND user_id = $3`,
+          [creditCost, proposal.organisation_id, data.user_id],
+        );
+      }
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };
     });

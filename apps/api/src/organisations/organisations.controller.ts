@@ -72,7 +72,7 @@ export class OrganisationsController {
   @UseGuards(AuthGuard)
   update(
     @Param('slug') slug: string,
-    @Body() body: { name?: string; description?: string; proposal_creation_role?: 'member' | 'moderator' | 'admin'; topic_creation_role?: 'member' | 'moderator' | 'admin'; default_voting_duration_days?: number | null; default_threshold?: number; voting_visibility?: 'public' | 'hidden'; default_quorum?: number | null; is_public?: boolean; veto_role?: 'moderator' | 'admin'; min_endorsements?: number; require_member_approval?: boolean; weight_mode?: 'manual' | 'by_role'; proposal_templates?: Array<{ id: string; name: string; description: string; proposal_type: 'standard' | 'discussion' | 'multiple_choice'; threshold: number }>; allowed_email_domains?: string[]; primary_color?: string | null; logo_url?: string | null; data_retention_months?: number | null; discord_webhook_url?: string | null },
+    @Body() body: { name?: string; description?: string; proposal_creation_role?: 'member' | 'moderator' | 'admin'; topic_creation_role?: 'member' | 'moderator' | 'admin'; default_voting_duration_days?: number | null; default_threshold?: number; voting_visibility?: 'public' | 'hidden'; default_quorum?: number | null; is_public?: boolean; veto_role?: 'moderator' | 'admin'; min_endorsements?: number; require_member_approval?: boolean; weight_mode?: 'manual' | 'by_role'; proposal_templates?: Array<{ id: string; name: string; description: string; proposal_type: 'standard' | 'discussion' | 'multiple_choice'; threshold: number }>; allowed_email_domains?: string[]; primary_color?: string | null; logo_url?: string | null; data_retention_months?: number | null; discord_webhook_url?: string | null; quadratic_credits?: number | null },
     @Req() req: AuthenticatedRequest,
   ) {
     return this.orgsService.update(slug, body, req.user!.id);
@@ -219,6 +219,12 @@ export class OrganisationsController {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${slug}-audit-log.csv"`);
     res.send(csv);
+  }
+
+  @Post(':slug/credits/allocate')
+  @UseGuards(AuthGuard)
+  allocateCredits(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.allocateCredits(slug, req.user!.id);
   }
 
   @Get(':slug/results')

@@ -95,6 +95,7 @@ export interface Organisation {
   logo_url: string | null;
   data_retention_months: number | null;
   discord_webhook_url: string | null;
+  quadratic_credits: number | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -146,6 +147,7 @@ export interface Proposal {
   amendment_text: string | null;
   anonymous_voting: boolean;
   conviction_voting: boolean;
+  quadratic_voting: boolean;
   jury_size: number | null;
   [key: string]: unknown;
 }
@@ -173,6 +175,7 @@ export interface Vote {
   reason: string | null;
   score: number | null;
   rank_position: number | null;
+  vote_count: number;
   created_at: string;
   [key: string]: unknown;
 }
@@ -264,7 +267,7 @@ export const orgsApi = {
   get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
   create: (data: { name: string; slug?: string; description?: string }) =>
     request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
-  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'weight_mode' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url'>>) =>
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'weight_mode' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits'>>) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
   transferOwnership: (slug: string, toUserId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
@@ -320,6 +323,8 @@ export const orgsApi = {
     request<{ sent: number }>(`/orgs/${slug}/send-digest`, { method: 'POST' }),
   unsubscribeByToken: (token: string) =>
     request<{ success: boolean; org_name: string }>(`/orgs/unsubscribe?token=${encodeURIComponent(token)}`),
+  allocateCredits: (slug: string) =>
+    request<{ count: number }>(`/orgs/${slug}/credits/allocate`, { method: 'POST' }),
   exportDecisionRecord: async (slug: string): Promise<void> => {
     const res = await fetch(`/api/orgs/${slug}/decisions/export`, { credentials: 'include' });
     if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -481,7 +486,7 @@ export const proposalOptionsApi = {
 };
 
 export const proposalsApi = {
-  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; opens_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition' | 'amendment'; impact_level?: 'low' | 'medium' | 'high' | 'constitutional' | null; signature_threshold?: number | null; parent_proposal_id?: string | null; amendment_text?: string | null; anonymous_voting?: boolean; conviction_voting?: boolean }) =>
+  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; opens_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition' | 'amendment'; impact_level?: 'low' | 'medium' | 'high' | 'constitutional' | null; signature_threshold?: number | null; parent_proposal_id?: string | null; amendment_text?: string | null; anonymous_voting?: boolean; conviction_voting?: boolean; quadratic_voting?: boolean }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold' | 'tags'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),

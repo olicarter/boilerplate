@@ -123,6 +123,11 @@ export function AdminPage() {
     org.data_retention_months != null ? String(org.data_retention_months) : '',
   );
   const [savingRetention, setSavingRetention] = useState(false);
+  const [quadraticCredits, setQuadraticCredits] = useState<string>(
+    org.quadratic_credits != null ? String(org.quadratic_credits) : '',
+  );
+  const [savingCredits, setSavingCredits] = useState(false);
+  const [allocatingCredits, setAllocatingCredits] = useState(false);
 
   const [importJson, setImportJson] = useState('');
   const [importing, setImporting] = useState(false);
@@ -1516,6 +1521,60 @@ export function AdminPage() {
           />
           <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>months</span>
           <Button type="submit" size="sm" disabled={savingRetention}>{savingRetention ? 'Saving…' : 'Save'}</Button>
+        </form>
+      </section>
+
+      {/* Quadratic voting credits */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Quadratic voting credits</h3>
+        <p className={styles.sectionHint}>
+          Set the number of credits each member receives per allocation period. Click "Allocate now" to reset all member balances to this amount.
+        </p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSavingCredits(true);
+            try {
+              const credits = quadraticCredits.trim() ? parseInt(quadraticCredits, 10) : null;
+              await orgsApi.update(org.slug, { quadratic_credits: credits });
+              addToast('Credit allowance saved', 'success');
+            } catch {
+              addToast('Failed to save credit allowance', 'error');
+            } finally {
+              setSavingCredits(false);
+            }
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}
+        >
+          <input
+            type="number"
+            min={1}
+            value={quadraticCredits}
+            onChange={(e) => setQuadraticCredits(e.target.value)}
+            placeholder="e.g. 100"
+            style={{ width: 80, padding: '0 var(--space-2)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+          />
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>credits per period</span>
+          <Button type="submit" size="sm" disabled={savingCredits}>{savingCredits ? 'Saving…' : 'Save'}</Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={allocatingCredits || !org.quadratic_credits}
+            onClick={async () => {
+              setAllocatingCredits(true);
+              try {
+                const { count } = await orgsApi.allocateCredits(org.slug);
+                addToast(`Credits allocated to ${count} member${count !== 1 ? 's' : ''}`, 'success');
+              } catch {
+                addToast('Failed to allocate credits', 'error');
+              } finally {
+                setAllocatingCredits(false);
+              }
+            }}
+          >
+            {allocatingCredits ? 'Allocating…' : 'Allocate now'}
+          </Button>
         </form>
       </section>
 

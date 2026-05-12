@@ -112,7 +112,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -138,6 +138,7 @@ export class OrganisationsService {
       if (data.logo_url !== undefined) updates.logo_url = data.logo_url;
       if (data.data_retention_months !== undefined) updates.data_retention_months = data.data_retention_months;
       if (data.discord_webhook_url !== undefined) updates.discord_webhook_url = data.discord_webhook_url;
+      if (data.quadratic_credits !== undefined) updates.quadratic_credits = data.quadratic_credits;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -1071,6 +1072,18 @@ export class OrganisationsService {
       votes: votes.map((v) => ({ id: v.id, proposal_id: v.proposal_id, user_id: v.user_id, choice: v.choice, created_at: v.created_at })),
       delegations: delegations.map((d) => ({ id: d.id, delegator_id: d.delegator_id, delegate_id: d.delegate_id, topic_id: d.topic_id, created_at: d.created_at, expires_at: d.expires_at })),
     };
+  }
+
+  async allocateCredits(slug: string, actorId: string): Promise<{ count: number }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin']);
+    if (!org.quadratic_credits) throw new BadRequestException('quadratic_credits not set for this org');
+    const result = await this.dataSource.query(
+      `UPDATE memberships SET credits_balance = $1 WHERE organisation_id = $2 AND status = 'approved'`,
+      [org.quadratic_credits, org.id],
+    );
+    this.auditLog.log(org.id, actorId, 'credits.allocated', 'org', org.id, { credits: org.quadratic_credits });
+    return { count: result[1] ?? 0 };
   }
 
   async purgeExpiredProposals(): Promise<number> {

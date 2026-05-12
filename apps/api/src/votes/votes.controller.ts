@@ -19,7 +19,7 @@ export class VotesController {
 
   @Post()
   @UseGuards(AuthGuard)
-  create(@Body() body: { id: string; proposal_id: string; user_id: string; choice?: VoteChoice | null; option_id?: string | null; reason?: string | null }) {
+  create(@Body() body: { id: string; proposal_id: string; user_id: string; choice?: VoteChoice | null; option_id?: string | null; reason?: string | null; vote_count?: number }) {
     return this.votesService.create(body);
   }
 

@@ -127,6 +127,7 @@ export function ProposalsPage() {
   const [mcOptions, setMcOptions] = useState<string[]>(['', '']);
   const [anonymousVoting, setAnonymousVoting] = useState(false);
   const [convictionVoting, setConvictionVoting] = useState(false);
+  const [quadraticVoting, setQuadraticVoting] = useState(false);
   const [opensAt, setOpensAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -185,6 +186,7 @@ export function ProposalsPage() {
     setMcOptions(['', '']);
     setAnonymousVoting(false);
     setConvictionVoting(false);
+    setQuadraticVoting(false);
     setOpensAt('');
     setShowForm(false);
     setFormError('');
@@ -268,6 +270,7 @@ export function ProposalsPage() {
         closed_at: null,
         anonymous_voting: anonymousVoting,
         conviction_voting: convictionVoting,
+        quadratic_voting: quadraticVoting,
       } as Proposal);
       await proposalTx.isPersisted.promise;
       if (needsOptions) {
@@ -628,6 +631,20 @@ export function ProposalsPage() {
                 <span className={styles.formLabel} style={{ margin: 0 }}>Conviction voting</span>
               </label>
               <p className={styles.formHint}>Vote weight grows with time — the longer a vote is held without changing, the more conviction it carries.</p>
+            </div>
+          )}
+
+          {proposalType === 'standard' && (
+            <div className={styles.formGroup}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={quadraticVoting}
+                  onChange={(e) => setQuadraticVoting(e.target.checked)}
+                />
+                <span className={styles.formLabel} style={{ margin: 0 }}>Quadratic voting</span>
+              </label>
+              <p className={styles.formHint}>Members spend credits to cast multiple votes on the same option — casting K votes costs K² credits, so influence scales with the square root of credits spent.</p>
             </div>
           )}
 

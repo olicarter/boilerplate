@@ -37,4 +37,7 @@ export class Membership {
 
   @Column({ name: 'unsubscribe_token', type: 'text' })
   unsubscribe_token!: string;
+
+  @Column({ name: 'credits_balance', type: 'int', nullable: true, default: null })
+  credits_balance!: number | null;
 }

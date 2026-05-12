@@ -137,6 +137,7 @@ export class ProposalsService {
     amendment_text?: string | null;
     anonymous_voting?: boolean;
     conviction_voting?: boolean;
+    quadratic_voting?: boolean;
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Title is required');
@@ -820,6 +821,7 @@ export class ProposalsService {
     }));
 
     const voteTimeMap = new Map<string, Date>(votes.map((v) => [v.user_id, v.created_at]));
+    const voteCountMap = new Map<string, number>(votes.map((v) => [v.user_id, (v as any).vote_count ?? 1]));
     const convictionNow = new Date();
 
     const tally: TallyResult = { yes: 0, no: 0, abstain: 0, total: 0, eligible_count: null, quorum_met: null, options: [] };
@@ -829,6 +831,9 @@ export class ProposalsService {
       if (proposal.conviction_voting && voteTimeMap.has(userId)) {
         const daysHeld = Math.max(1, Math.ceil((convictionNow.getTime() - voteTimeMap.get(userId)!.getTime()) / 86_400_000));
         weight = weight * daysHeld;
+      }
+      if ((proposal as any).quadratic_voting && voteCountMap.has(userId)) {
+        weight = weight * (voteCountMap.get(userId) ?? 1);
       }
       for (const [choice, fraction] of choices) {
         const contribution = weight * fraction;

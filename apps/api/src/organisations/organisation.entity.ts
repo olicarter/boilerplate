@@ -98,6 +98,9 @@ export class Organisation {
   @Column({ name: 'discord_webhook_url', type: 'text', nullable: true, default: null })
   discord_webhook_url!: string | null;
 
+  @Column({ name: 'quadratic_credits', type: 'int', nullable: true, default: null })
+  quadratic_credits!: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

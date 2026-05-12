@@ -83,4 +83,7 @@ export class Proposal {
 
   @Column({ name: 'conviction_voting', type: 'boolean', default: false })
   conviction_voting!: boolean;
+
+  @Column({ name: 'quadratic_voting', type: 'boolean', default: false })
+  quadratic_voting!: boolean;
 }

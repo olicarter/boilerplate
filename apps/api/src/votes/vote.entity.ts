@@ -31,6 +31,9 @@ export class Vote {
   @Column({ name: 'rank_position', type: 'integer', nullable: true })
   rank_position!: number | null;
 
+  @Column({ name: 'vote_count', type: 'integer', default: 1 })
+  vote_count!: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

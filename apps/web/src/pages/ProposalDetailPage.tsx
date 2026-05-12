@@ -84,6 +84,7 @@ export function ProposalDetailPage() {
   const [voteError, setVoteError] = useState('');
   const [changingVote, setChangingVote] = useState(false);
   const [voteReason, setVoteReason] = useState('');
+  const [voteCount, setVoteCount] = useState(1);
   const [approvalSelections, setApprovalSelections] = useState<Set<string>>(new Set());
   const [submittingApprovals, setSubmittingApprovals] = useState(false);
   const [scoreMap, setScoreMap] = useState<Record<string, number>>({});
@@ -310,12 +311,14 @@ export function ProposalDetailPage() {
         choice: choice ?? null,
         option_id: optionId ?? null,
         reason: voteReason.trim() || null,
+        vote_count: (proposal as any).quadratic_voting ? voteCount : 1,
         created_at: new Date().toISOString(),
       });
       await tx.isPersisted.promise;
       await fetchTally();
       setChangingVote(false);
       setVoteReason('');
+      setVoteCount(1);
       setDelegationVote(null);
       setDelegationChain(null);
       addToast('Vote cast', 'success');
@@ -952,6 +955,7 @@ export function ProposalDetailPage() {
               {isAmendment && <span className={`${styles.badge} ${styles.badgeDefault}`}>Amendment</span>}
               {proposal.anonymous_voting && <span className={`${styles.badge} ${styles.badgeDefault}`}>Anonymous voting</span>}
               {proposal.conviction_voting && <span className={`${styles.badge} ${styles.badgeDefault}`}>Conviction voting</span>}
+              {(proposal as any).quadratic_voting && <span className={`${styles.badge} ${styles.badgeDefault}`}>Quadratic voting</span>}
               {proposal.impact_level && (
                 <span className={`${styles.badge} ${styles.badgeDefault}`}>
                   {proposal.impact_level.charAt(0).toUpperCase() + proposal.impact_level.slice(1)} impact
@@ -2005,6 +2009,22 @@ export function ProposalDetailPage() {
                     rows={2}
                     className={styles.voteReason}
                   />
+                  {(proposal as any).quadratic_voting && (
+                    <div style={{ margin: '0.5rem 0', fontSize: 13, color: 'var(--color-fg-muted)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <span>Votes to cast: <strong style={{ color: 'var(--color-fg)' }}>{voteCount}</strong></span>
+                        <span style={{ color: '#888' }}>(cost: {voteCount * voteCount} credits)</span>
+                      </label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={10}
+                        value={voteCount}
+                        onChange={(e) => setVoteCount(parseInt(e.target.value, 10))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  )}
                   <div className={styles.voteButtons}>
                     {(isConsent
                       ? [['yes', 'Consent'], ['abstain', 'Stand Aside'], ['no', 'Block']] as [VoteChoice, string][]

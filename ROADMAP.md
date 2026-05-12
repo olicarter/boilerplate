@@ -307,7 +307,7 @@ SLACK_SIGNING_SECRET=
 - [ ] **Proposal queue with boosting** — a limited number of proposals can be in "active" voting at once. Members stake tokens (or reputation points) to "boost" a proposal into the active queue. Boosted proposals that pass reward boosters; those that fail penalise them. Based on DAOstack's model.
 
 ### Quadratic voting
-- [ ] **Credit allocation** — each member gets a budget of credits per voting period. Casting K votes on a proposal costs K² credits. Encourages expressing preference intensity, not just direction. Schema needs a `credits_balance` per member per period.
+- [x] **Credit allocation** — each member gets a budget of credits per voting period. Casting K votes on a proposal costs K² credits. Encourages expressing preference intensity, not just direction. Schema needs a `credits_balance` per member per period.
 - [ ] **Credit decay** — unspent credits expire at the end of the period, preventing hoarding.
 
 ### Constitutional proposals
