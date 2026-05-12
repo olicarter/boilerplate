@@ -14,6 +14,9 @@ export class Topic {
   @Column({ type: 'text', default: '' })
   description!: string;
 
+  @Column({ name: 'is_constitutional', type: 'boolean', default: false })
+  is_constitutional!: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

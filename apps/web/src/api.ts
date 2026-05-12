@@ -119,6 +119,7 @@ export interface Topic {
   organisation_id: string;
   name: string;
   description: string;
+  is_constitutional: boolean;
   created_at: string;
   [key: string]: unknown;
 }
@@ -439,7 +440,7 @@ export interface OrgInvite {
 export const topicsApi = {
   create: (data: { id: string; organisation_id: string; name: string; description?: string }) =>
     request<MutationResult<Topic>>('/topics', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: Partial<Pick<Topic, 'name' | 'description'>>) =>
+  update: (id: string, data: Partial<Pick<Topic, 'name' | 'description' | 'is_constitutional'>>) =>
     request<MutationResult<Topic>>(`/topics/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/topics/${id}`, { method: 'DELETE' }),
@@ -540,6 +541,8 @@ export const proposalsApi = {
     request<Array<{ user_id: string; name: string; has_voted: boolean }>>(`/proposals/${id}/jury`),
   selectJury: (id: string, size: number) =>
     request<Array<{ user_id: string; name: string }>>(`/proposals/${id}/jury`, { method: 'POST', body: JSON.stringify({ size }) }),
+  getConstitutionalOutcome: (id: string) =>
+    request<{ outcome: string; hash: string; votes_summary: object; signed_at: string } | null>(`/proposals/${id}/constitutional-outcome`),
 };
 
 export interface ProposalReaction {

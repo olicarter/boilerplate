@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
-import { randomUUID, createHmac } from 'crypto';
+import { randomUUID, createHmac, createHash } from 'crypto';
 import { ImpactLevel, Proposal, ProposalStatus } from './proposal.entity';
 import { ProposalOption } from './proposal-option.entity';
 import { ProposalReaction } from './proposal-reaction.entity';
@@ -9,6 +9,7 @@ import { ProposalSignature } from './proposal-signature.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { ProposalLink, ProposalLinkType } from './proposal-link.entity';
 import { Endorsement } from '../endorsements/endorsement.entity';
+import { Topic } from '../topics/topic.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { Organisation } from '../organisations/organisation.entity';
@@ -161,6 +162,19 @@ export class ProposalsService {
       if (!data.amendment_text?.trim()) throw new BadRequestException('Amendment text is required');
       const parent = await this.proposalRepo.findOneBy({ id: data.parent_proposal_id });
       if (!parent || parent.status !== 'open') throw new BadRequestException('Parent proposal must be open');
+    }
+
+    const topic = await this.dataSource.getRepository(Topic).findOneBy({ id: data.topic_id });
+    if (topic?.is_constitutional) {
+      const threshold = data.threshold ?? org.default_threshold;
+      if (threshold < 66) {
+        throw new BadRequestException('Constitutional topics require a supermajority threshold of at least 66%');
+      }
+      if (!data.deliberation_ends_at) {
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+        (data as Record<string, unknown>).deliberation_ends_at = sevenDaysFromNow.toISOString();
+      }
     }
 
     const result = await this.dataSource.transaction(async (manager) => {
@@ -366,6 +380,7 @@ export class ProposalsService {
     if (result.item.proposal_type === 'amendment') {
       await this.applyAmendmentIfPassed(id).catch(() => {});
     }
+    this.signConstitutionalOutcomeIfNeeded(result.item).catch(() => {});
     const closedOrg = await this.orgRepo.findOneBy({ id: result.item.organisation_id });
     if (closedOrg) {
       const tally = await this.tally(id).catch(() => null);
@@ -376,6 +391,28 @@ export class ProposalsService {
       this.webhooks.dispatch(result.item.organisation_id, 'proposal.closed', { id, title: result.item.title, passed }).catch(() => {});
     }
     return result;
+  }
+
+  private async signConstitutionalOutcomeIfNeeded(proposal: Proposal): Promise<void> {
+    const topic = await this.dataSource.getRepository(Topic).findOneBy({ id: proposal.topic_id });
+    if (!topic?.is_constitutional) return;
+    const tally = await this.tally(proposal.id).catch(() => null);
+    const summary = tally ? { yes: tally.yes, no: tally.no, abstain: tally.abstain, total: tally.total } : {};
+    const outcome = tally ? (tally.yes > tally.no ? 'passed' : 'failed') : 'no-votes';
+    const payload = JSON.stringify({ proposal_id: proposal.id, outcome, closed_at: proposal.closed_at, summary });
+    const hash = createHash('sha256').update(payload).digest('hex');
+    await this.dataSource.query(
+      `INSERT INTO constitutional_outcomes (proposal_id, outcome, hash, votes_summary) VALUES ($1, $2, $3, $4) ON CONFLICT (proposal_id) DO UPDATE SET outcome = $2, hash = $3, votes_summary = $4, signed_at = NOW()`,
+      [proposal.id, outcome, hash, JSON.stringify(summary)],
+    );
+  }
+
+  async getConstitutionalOutcome(proposalId: string): Promise<{ outcome: string; hash: string; votes_summary: object; signed_at: string } | null> {
+    const [row] = await this.dataSource.query(
+      `SELECT outcome, hash, votes_summary, signed_at FROM constitutional_outcomes WHERE proposal_id = $1`,
+      [proposalId],
+    );
+    return row ?? null;
   }
 
   private async applyAmendmentIfPassed(amendmentId: string): Promise<void> {
@@ -490,6 +527,7 @@ export class ProposalsService {
         if (p.proposal_type === 'amendment') {
           await this.applyAmendmentIfPassed(p.id).catch(() => {});
         }
+        this.signConstitutionalOutcomeIfNeeded(p).catch(() => {});
         this.webhooks.dispatch(p.organisation_id, 'proposal.closed', { id: p.id, title: p.title }).catch(() => {});
       }),
     );

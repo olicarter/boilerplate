@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, billingApi, slackApi, webhooksApi, apiKeysApi, proposalsApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint, type ApiKeyRecord } from '../api';
+import { orgsApi, billingApi, slackApi, webhooksApi, apiKeysApi, proposalsApi, topicsApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint, type ApiKeyRecord, type Topic } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -19,7 +19,7 @@ const ROLE_LABELS: Record<CreationRole, string> = {
 };
 
 export function AdminPage() {
-  const { org } = useOrg();
+  const { org, collections: { topicsCollection } } = useOrg();
   const currentUser = useCurrentUser();
   const navigate = useNavigate();
   const addToast = useToast();
@@ -91,6 +91,10 @@ export function AdminPage() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<import('../api').OrgInvite[]>([]);
   const [cancellingInviteId, setCancellingInviteId] = useState<string | null>(null);
+
+  const { data: allTopics } = useLiveQuery(topicsCollection);
+  const orgTopics = (allTopics ?? []).filter((t: Topic) => t.organisation_id === org.id);
+  const [togglingConstitutional, setTogglingConstitutional] = useState<string | null>(null);
 
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [auditLogLoading, setAuditLogLoading] = useState(true);
@@ -1525,6 +1529,44 @@ export function AdminPage() {
           <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>months</span>
           <Button type="submit" size="sm" disabled={savingRetention}>{savingRetention ? 'Saving…' : 'Save'}</Button>
         </form>
+      </section>
+
+      {/* Protected topics */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Protected topics</h3>
+        <p className={styles.sectionHint}>
+          Mark topics as constitutional to require a supermajority (≥66%) and automatic 7-day deliberation period for all proposals in those topics.
+        </p>
+        {orgTopics.length === 0 ? (
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>No topics yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            {orgTopics.map((topic: Topic) => (
+              <label key={topic.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>
+                <input
+                  type="checkbox"
+                  checked={!!topic.is_constitutional}
+                  disabled={togglingConstitutional === topic.id}
+                  onChange={async (e) => {
+                    setTogglingConstitutional(topic.id);
+                    try {
+                      await topicsApi.update(topic.id, { is_constitutional: e.target.checked });
+                      addToast(e.target.checked ? `"${topic.name}" is now constitutional` : `"${topic.name}" is no longer constitutional`, 'success');
+                    } catch {
+                      addToast('Failed to update topic', 'error');
+                    } finally {
+                      setTogglingConstitutional(null);
+                    }
+                  }}
+                />
+                <span>{topic.name}</span>
+                {topic.is_constitutional && (
+                  <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-muted)', border: 'var(--border)', color: 'var(--color-fg-muted)' }}>Constitutional</span>
+                )}
+              </label>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Quadratic voting credits */}

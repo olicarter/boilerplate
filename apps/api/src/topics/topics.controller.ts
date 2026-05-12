@@ -22,7 +22,7 @@ export class TopicsController {
 
   @Patch(':id')
   @UseGuards(AuthGuard)
-  update(@Param('id') id: string, @Body() body: { name?: string; description?: string }, @Req() req: AuthenticatedRequest) {
+  update(@Param('id') id: string, @Body() body: { name?: string; description?: string; is_constitutional?: boolean }, @Req() req: AuthenticatedRequest) {
     return this.topicsService.update(id, body, req.user!.id);
   }
 

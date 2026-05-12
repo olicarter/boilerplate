@@ -138,6 +138,7 @@ export function ProposalDetailPage() {
   const [watchLoading, setWatchLoading] = useState(false);
   const [voteCarrying, setVoteCarrying] = useState<Array<{ voter: { user_id: string; name: string }; carrying: Array<{ user_id: string; name: string }> }>>([]);
   const [jury, setJury] = useState<Array<{ user_id: string; name: string; has_voted: boolean }> | null>(null);
+  const [constitutionalOutcome, setConstitutionalOutcome] = useState<{ outcome: string; hash: string; votes_summary: object; signed_at: string } | null>(null);
   const [selectingJury, setSelectingJury] = useState(false);
   const [jurySize, setJurySize] = useState('5');
 
@@ -223,6 +224,7 @@ export function ProposalDetailPage() {
     proposalLinksApi.list(id).then(setLinks).catch(() => {});
     proposalsApi.getCarrying(id).then(setVoteCarrying).catch(() => {});
     proposalsApi.getJury(id).then(setJury).catch(() => {});
+    proposalsApi.getConstitutionalOutcome(id).then(setConstitutionalOutcome).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -1602,6 +1604,17 @@ export function ProposalDetailPage() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Constitutional outcome seal */}
+      {constitutionalOutcome && (
+        <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '1rem 1.25rem', marginBottom: '1.5rem', background: '#fafafa' }}>
+          <p style={{ margin: '0 0 0.5rem', fontSize: 13, fontWeight: 600 }}>Constitutional outcome seal</p>
+          <p style={{ margin: '0 0 0.25rem', fontSize: 12, color: '#555' }}>
+            Outcome: <strong>{constitutionalOutcome.outcome}</strong> · signed {new Date(constitutionalOutcome.signed_at).toLocaleString()}
+          </p>
+          <p style={{ margin: 0, fontSize: 11, color: '#888', fontFamily: 'monospace', wordBreak: 'break-all' }}>SHA-256: {constitutionalOutcome.hash}</p>
         </div>
       )}
 

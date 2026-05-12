@@ -311,8 +311,8 @@ SLACK_SIGNING_SECRET=
 - [x] **Credit decay** — unspent credits expire at the end of the period, preventing hoarding.
 
 ### Constitutional proposals
-- [ ] **Protected topics** — some topics (e.g. "Constitution", "Membership rules") are marked as constitutional. Proposals in these topics require supermajority + extended deliberation period + admin co-sponsorship.
-- [ ] **Immutable audit trail for constitutional changes** — constitutional proposal outcomes are cryptographically signed and stored append-only. Cannot be deleted even by admins.
+- [x] **Protected topics** — some topics (e.g. "Constitution", "Membership rules") are marked as constitutional. Proposals in these topics require supermajority + extended deliberation period + admin co-sponsorship.
+- [x] **Immutable audit trail for constitutional changes** — constitutional proposal outcomes are cryptographically signed and stored append-only. Cannot be deleted even by admins.
 
 ---
 

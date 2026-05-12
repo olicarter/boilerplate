@@ -54,7 +54,7 @@ export class TopicsService {
     });
   }
 
-  async update(id: string, data: Partial<Pick<Topic, 'name' | 'description'>>, actorId: string): Promise<{ item: Topic; txid: number }> {
+  async update(id: string, data: Partial<Pick<Topic, 'name' | 'description' | 'is_constitutional'>>, actorId: string): Promise<{ item: Topic; txid: number }> {
     const topic = await this.topicRepo.findOneByOrFail({ id });
     const m = await this.memberRepo.findOneBy({ organisation_id: topic.organisation_id, user_id: actorId });
     if (!m || (ROLE_RANK[m.role] ?? 0) < ROLE_RANK['moderator']) {

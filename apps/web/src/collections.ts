@@ -80,7 +80,7 @@ export function createOrgCollections(orgId: string) {
       },
       onUpdate: async ({ transaction }) => {
         const topic = transaction.mutations[0].modified as Topic;
-        const result = await topicsApi.update(topic.id, { name: topic.name, description: topic.description });
+        const result = await topicsApi.update(topic.id, { name: topic.name, description: topic.description, is_constitutional: topic.is_constitutional });
         return { txid: result.txid };
       },
       onDelete: async ({ transaction }) => {

@@ -262,6 +262,11 @@ export class ProposalsController {
     return this.proposalsService.getVoteReceipt(id, req.user!.id);
   }
 
+  @Get(':id/constitutional-outcome')
+  getConstitutionalOutcome(@Param('id') id: string) {
+    return this.proposalsService.getConstitutionalOutcome(id);
+  }
+
   @Get(':id/watch')
   @UseGuards(AuthGuard)
   async getWatchStatus(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
