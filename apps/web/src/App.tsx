@@ -34,6 +34,7 @@ import { DelegationNetworkPage } from './pages/DelegationNetworkPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { PricingPage } from './pages/PricingPage';
 import { DecisionRecordPage } from './pages/DecisionRecordPage';
+import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { OrgProvider } from './OrgContext';
 import styles from './styles/Shell.module.css';
 
@@ -600,12 +601,19 @@ const pricingRoute = createRoute({
   component: PricingPage,
 });
 
+const acceptInviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accept-invite',
+  component: AcceptInvitePage,
+});
+
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
   orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute, decisionRecordRoute]),
   publicResultsRoute,
   verifyEmailRoute,
   pricingRoute,
+  acceptInviteRoute,
 ]);
 
 const router = createRouter({ routeTree });

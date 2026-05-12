@@ -94,7 +94,7 @@ SLACK_SIGNING_SECRET=
 
 ### Membership
 - [x] **Membership model** — `memberships` table: `id`, `organisation_id`, `user_id`, `role` (admin | moderator | member | observer), `joined_at`, `invited_by`.
-- [ ] **Invite by email** — admins can invite people by email; a signed token is emailed with a link to join. Pending invites are listed in org settings.
+- [x] **Invite by email** — admins can invite people by email; a signed token is emailed with a link to join. Pending invites are listed in org settings.
 - [x] **Invite link** — generate a shareable invite link with a token; anyone with the link can join (can be disabled or made single-use).
 - [ ] **Email domain restriction** — optional: restrict membership to users whose email matches one or more domains (e.g. `@acme.com`).
 - [x] **Member approval** — optional: new members must be approved by an admin before they can vote. Shows a pending queue in org settings.
@@ -194,7 +194,7 @@ SLACK_SIGNING_SECRET=
 - [x] **Notification preferences** — per-user settings for which notification types are enabled. Managed from account settings.
 
 ### Email notifications
-- [ ] **Transactional emails** — integrate a mail provider (Resend or Postmark). Templates for: welcome, invite, magic-link, proposal opened, deadline reminder, result announced.
+- [x] **Transactional emails** — integrate a mail provider (Resend or Postmark). Templates for: welcome, invite, magic-link, proposal opened, deadline reminder, result announced.
 - [ ] **Digest emails** — weekly or daily digest summarising open proposals, upcoming deadlines, and recent results. Users opt in/out per org.
 - [ ] **Proposal watching** — users can "watch" a proposal to receive notifications even if they haven't voted. Watch is auto-set when you comment or vote.
 - [ ] **Unsubscribe handling** — one-click unsubscribe in every email, per the CAN-SPAM/GDPR requirements.

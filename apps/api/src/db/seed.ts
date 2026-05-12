@@ -20,12 +20,13 @@ import { CommentReaction } from '../comments/comment-reaction.entity';
 import { Notification } from '../notifications/notification.entity';
 import { AuditLogEntry } from '../audit-log/audit-log.entity';
 import { Credential } from '../auth/credential.entity';
+import { OrgInvite } from '../organisations/org-invite.entity';
 
 const dataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL ?? 'postgresql://postgres:password@localhost:5432/ripple',
   entities: [
-    User, Organisation, Membership, Topic, Proposal, ProposalOption,
+    User, Organisation, Membership, OrgInvite, Topic, Proposal, ProposalOption,
     ProposalReaction, ProposalLink, Delegation, Vote, Endorsement,
     Veto, Argument, Comment, CommentReaction, Notification, AuditLogEntry, Credential,
   ],

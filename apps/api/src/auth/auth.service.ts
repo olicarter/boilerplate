@@ -111,9 +111,11 @@ export class AuthService {
 
     req.session!.userId = user.id;
 
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:5173';
     if (!user.email_verified) {
       await this.sendVerificationEmail(user);
     }
+    this.emailService.sendWelcome(user.email, user.name, baseUrl).catch(() => { /* non-critical */ });
 
     return user;
   }

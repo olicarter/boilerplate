@@ -84,6 +84,11 @@ export function AdminPage() {
 
   const [deleting, setDeleting] = useState(false);
 
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<import('../api').OrgInvite[]>([]);
+  const [cancellingInviteId, setCancellingInviteId] = useState<string | null>(null);
+
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [auditLogLoading, setAuditLogLoading] = useState(true);
   const [analytics, setAnalytics] = useState<OrgAnalytics | null>(null);
@@ -101,6 +106,7 @@ export function AdminPage() {
     orgsApi.listAuditLog(org.slug).then(setAuditLog).catch(() => {}).finally(() => setAuditLogLoading(false));
     orgsApi.getAnalytics(org.slug).then(setAnalytics).catch(() => {}).finally(() => setAnalyticsLoading(false));
     billingApi.getStatus(org.id).then(setBillingStatus).catch(() => {});
+    orgsApi.listInvites(org.slug).then(setPendingInvites).catch(() => {});
     if (org.slack_team_id) {
       slackApi.listChannels(org.id).then(setSlackChannels).catch(() => {});
     }
@@ -298,6 +304,36 @@ export function AdminPage() {
       addToast(err instanceof Error ? err.message : 'Failed to reject member', 'error');
     } finally {
       setRejectingId(null);
+    }
+  }
+
+  async function handleSendInvite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setSendingInvite(true);
+    try {
+      await orgsApi.sendInvite(org.slug, inviteEmail.trim());
+      addToast(`Invite sent to ${inviteEmail.trim()}`, 'success');
+      setInviteEmail('');
+      const updated = await orgsApi.listInvites(org.slug);
+      setPendingInvites(updated);
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to send invite', 'error');
+    } finally {
+      setSendingInvite(false);
+    }
+  }
+
+  async function handleCancelInvite(inviteId: string) {
+    setCancellingInviteId(inviteId);
+    try {
+      await orgsApi.cancelInvite(org.slug, inviteId);
+      setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId));
+      addToast('Invite cancelled', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to cancel invite', 'error');
+    } finally {
+      setCancellingInviteId(null);
     }
   }
 
@@ -748,6 +784,51 @@ export function AdminPage() {
           </div>
         </section>
       )}
+
+      {/* Invite by email */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Invite members</h3>
+        <p className={styles.sectionHint}>Send a personal invite link via email. The recipient gets 7 days to accept.</p>
+        <form onSubmit={handleSendInvite} style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+          <input
+            type="email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            placeholder="colleague@example.com"
+            required
+            className={styles.formInput}
+            style={{ flex: 1 }}
+            data-testid="invite-email-input"
+          />
+          <Button type="submit" size="sm" disabled={sendingInvite || !inviteEmail.trim()}>
+            {sendingInvite ? 'Sending…' : 'Send invite'}
+          </Button>
+        </form>
+        {pendingInvites.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <p className={styles.sectionHint} style={{ margin: 0 }}>Pending invites</p>
+            {pendingInvites.map((invite) => (
+              <div key={invite.id} className={styles.pendingRow} data-testid="pending-invite-row">
+                <div>
+                  <span className={styles.pendingName}>{invite.email}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-fg-muted)', marginLeft: 'var(--space-3)' }}>
+                    sent by {invite.invited_by_name ?? 'admin'} · expires {new Date(invite.expires_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={cancellingInviteId === invite.id}
+                  onClick={() => handleCancelInvite(invite.id)}
+                  data-testid="cancel-invite-btn"
+                >
+                  {cancellingInviteId === invite.id ? 'Cancelling…' : 'Cancel'}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Transfer ownership */}
       {nonAdminMembers.length > 0 && (

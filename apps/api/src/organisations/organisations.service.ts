@@ -7,9 +7,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 import { Organisation } from './organisation.entity';
 import { Membership, MemberRole, MemberStatus } from './membership.entity';
+import { OrgInvite } from './org-invite.entity';
 import { Proposal } from '../proposals/proposal.entity';
 import { Vote } from '../votes/vote.entity';
 import { User } from '../users/user.entity';
@@ -18,6 +19,7 @@ import { Delegation } from '../delegations/delegation.entity';
 import { DelegationsService } from '../delegations/delegations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../email/email.service';
 
 function toSlug(value: string): string {
   return value
@@ -36,9 +38,12 @@ export class OrganisationsService {
     private readonly memberRepo: Repository<Membership>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(OrgInvite)
+    private readonly inviteRepo: Repository<OrgInvite>,
     private readonly dataSource: DataSource,
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
+    private readonly email: EmailService,
   ) {}
 
   async findAll(): Promise<Organisation[]> {
@@ -629,6 +634,116 @@ export class OrganisationsService {
         tally,
         result,
       };
+    });
+  }
+
+  async inviteByEmail(slug: string, email: string, actorId: string): Promise<{ id: string }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin', 'moderator']);
+
+    const normalised = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalised)) {
+      throw new BadRequestException('Invalid email address');
+    }
+
+    // Check if already a member
+    const existingUser = await this.userRepo.findOneBy({ email: normalised });
+    if (existingUser) {
+      const existing = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: existingUser.id });
+      if (existing) throw new ConflictException('This person is already a member');
+    }
+
+    // Check for pending unexpired invite
+    const pending = await this.inviteRepo.findOne({
+      where: { org_id: org.id, email: normalised, accepted_at: undefined as any },
+    });
+    if (pending && pending.accepted_at === null && pending.expires_at > new Date()) {
+      throw new ConflictException('An invite has already been sent to this address');
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const invite = await this.inviteRepo.save(
+      this.inviteRepo.create({ id: randomUUID(), org_id: org.id, email: normalised, token, invited_by: actorId, expires_at: expires }),
+    );
+
+    const inviter = await this.userRepo.findOneBy({ id: actorId });
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:5173';
+    this.email.sendInvite(normalised, inviter?.name ?? 'Someone', org.name, `${baseUrl}/accept-invite?token=${token}`)
+      .catch(() => { /* non-critical */ });
+
+    return { id: invite.id };
+  }
+
+  async listPendingInvites(slug: string, actorId: string): Promise<Array<{ id: string; email: string; created_at: Date; expires_at: Date; invited_by_name: string | null }>> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin', 'moderator']);
+
+    const invites = await this.inviteRepo.find({
+      where: { org_id: org.id },
+      order: { created_at: 'DESC' },
+    });
+    const pending = invites.filter((i) => i.accepted_at === null && i.expires_at > new Date());
+
+    const inviterIds = [...new Set(pending.map((i) => i.invited_by).filter(Boolean) as string[])];
+    const inviters = inviterIds.length > 0
+      ? await this.userRepo.findBy(inviterIds.map((id) => ({ id })))
+      : [];
+    const inviterMap = new Map(inviters.map((u) => [u.id, u.name]));
+
+    return pending.map((i) => ({
+      id: i.id,
+      email: i.email,
+      created_at: i.created_at,
+      expires_at: i.expires_at,
+      invited_by_name: i.invited_by ? (inviterMap.get(i.invited_by) ?? null) : null,
+    }));
+  }
+
+  async cancelInvite(slug: string, inviteId: string, actorId: string): Promise<void> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin', 'moderator']);
+    const invite = await this.inviteRepo.findOneBy({ id: inviteId, org_id: org.id });
+    if (!invite) throw new NotFoundException('Invite not found');
+    await this.inviteRepo.delete(inviteId);
+  }
+
+  async getInviteInfo(token: string): Promise<{ org: { id: string; name: string; description: string; slug: string }; email: string }> {
+    const invite = await this.inviteRepo.findOneBy({ token });
+    if (!invite || invite.accepted_at !== null || invite.expires_at < new Date()) {
+      throw new NotFoundException('This invitation is invalid or has expired');
+    }
+    const org = await this.orgRepo.findOneBy({ id: invite.org_id });
+    if (!org) throw new NotFoundException('Organisation not found');
+    return { org: { id: org.id, name: org.name, description: org.description, slug: org.slug }, email: invite.email };
+  }
+
+  async acceptEmailInvite(token: string, userId: string): Promise<{ item: Membership; txid: number }> {
+    const invite = await this.inviteRepo.findOneBy({ token });
+    if (!invite || invite.accepted_at !== null || invite.expires_at < new Date()) {
+      throw new BadRequestException('This invitation is invalid or has expired');
+    }
+    const user = await this.userRepo.findOneByOrFail({ id: userId });
+    if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
+      throw new ForbiddenException('This invitation was sent to a different email address');
+    }
+    const existing = await this.memberRepo.findOneBy({ organisation_id: invite.org_id, user_id: userId });
+    if (existing) {
+      await this.inviteRepo.update(invite.id, { accepted_at: new Date() });
+      return { item: existing, txid: 0 };
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const membership = manager.create(Membership, {
+        id: randomUUID(),
+        organisation_id: invite.org_id,
+        user_id: userId,
+        role: 'member',
+      });
+      const saved = await manager.save(membership);
+      await manager.update(OrgInvite, invite.id, { accepted_at: new Date() });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item: saved, txid: parseInt(row.txid, 10) };
     });
   }
 

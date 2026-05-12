@@ -275,6 +275,16 @@ export const orgsApi = {
     request<OrgAnalytics>(`/orgs/${slug}/analytics`),
   getDecisionRecord: (slug: string) =>
     request<DecisionEntry[]>(`/orgs/${slug}/decisions`),
+  listInvites: (slug: string) =>
+    request<OrgInvite[]>(`/orgs/${slug}/invites`),
+  sendInvite: (slug: string, email: string) =>
+    request<{ id: string }>(`/orgs/${slug}/invites`, { method: 'POST', body: JSON.stringify({ email }) }),
+  cancelInvite: (slug: string, inviteId: string) =>
+    request<void>(`/orgs/${slug}/invites/${inviteId}`, { method: 'DELETE' }),
+  getInviteInfo: (token: string) =>
+    request<{ org: { id: string; name: string; description: string; slug: string }; email: string }>(`/orgs/invites/accept?token=${encodeURIComponent(token)}`),
+  acceptInvite: (token: string) =>
+    request<{ item: unknown; txid: number }>(`/orgs/invites/accept?token=${encodeURIComponent(token)}`, { method: 'POST' }),
   exportDecisionRecord: async (slug: string): Promise<void> => {
     const res = await fetch(`/api/orgs/${slug}/decisions/export`, { credentials: 'include' });
     if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -336,6 +346,14 @@ export interface DecisionEntry {
   };
   tally: { yes: number; no: number; abstain: number } | null;
   result: 'passed' | 'failed' | 'no-votes' | 'withdrawn';
+}
+
+export interface OrgInvite {
+  id: string;
+  email: string;
+  created_at: string;
+  expires_at: string;
+  invited_by_name: string | null;
 }
 
 export const topicsApi = {

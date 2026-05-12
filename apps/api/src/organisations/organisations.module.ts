@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organisation } from './organisation.entity';
 import { Membership } from './membership.entity';
+import { OrgInvite } from './org-invite.entity';
 import { Proposal } from '../proposals/proposal.entity';
 import { User } from '../users/user.entity';
 import { OrganisationsService } from './organisations.service';
@@ -10,7 +11,7 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organisation, Membership, Proposal, User]), AuditLogModule, NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Organisation, Membership, OrgInvite, Proposal, User]), AuditLogModule, NotificationsModule],
   providers: [OrganisationsService],
   controllers: [OrganisationsController],
   exports: [OrganisationsService],

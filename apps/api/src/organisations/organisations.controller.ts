@@ -196,6 +196,47 @@ export class OrganisationsController {
     return this.orgsService.getPublicResults(slug);
   }
 
+  // --- Email invites ---
+
+  @Get(':slug/invites')
+  @UseGuards(AuthGuard)
+  listInvites(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.listPendingInvites(slug, req.user!.id);
+  }
+
+  @Post(':slug/invites')
+  @UseGuards(AuthGuard)
+  sendInvite(
+    @Param('slug') slug: string,
+    @Body() body: { email: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.orgsService.inviteByEmail(slug, body.email, req.user!.id);
+  }
+
+  @Delete(':slug/invites/:inviteId')
+  @UseGuards(AuthGuard)
+  cancelInvite(
+    @Param('slug') slug: string,
+    @Param('inviteId') inviteId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.orgsService.cancelInvite(slug, inviteId, req.user!.id);
+  }
+
+  // --- Accept email invite (token-based, no org slug needed) ---
+
+  @Get('invites/accept')
+  getInviteInfo(@Query('token') token: string) {
+    return this.orgsService.getInviteInfo(token);
+  }
+
+  @Post('invites/accept')
+  @UseGuards(AuthGuard)
+  acceptInvite(@Query('token') token: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.acceptEmailInvite(token, req.user!.id);
+  }
+
   @Get(':slug/delegation-weights')
   @UseGuards(AuthGuard)
   getDelegationWeights(@Param('slug') slug: string) {

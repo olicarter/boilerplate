@@ -25,6 +25,7 @@ import { CommentReaction } from './comments/comment-reaction.entity';
 import { ProposalVersion } from './proposals/proposal-version.entity';
 import { Organisation } from './organisations/organisation.entity';
 import { Membership } from './organisations/membership.entity';
+import { OrgInvite } from './organisations/org-invite.entity';
 import { Argument } from './arguments/argument.entity';
 import { AuditLogEntry } from './audit-log/audit-log.entity';
 import { Veto } from './vetoes/veto.entity';
@@ -45,7 +46,7 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
-      entities: [User, Topic, Proposal, ProposalOption, ProposalReaction, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, Argument, AuditLogEntry, Veto, Endorsement, Notification],
+      entities: [User, Topic, Proposal, ProposalOption, ProposalReaction, Delegation, Vote, Credential, Comment, CommentReaction, ProposalVersion, Organisation, Membership, OrgInvite, Argument, AuditLogEntry, Veto, Endorsement, Notification],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,
