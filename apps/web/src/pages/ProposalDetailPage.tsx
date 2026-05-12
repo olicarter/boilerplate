@@ -133,6 +133,8 @@ export function ProposalDetailPage() {
   const [linkTargetId, setLinkTargetId] = useState('');
   const [linkType, setLinkType] = useState<'supersedes' | 'related_to' | 'blocks' | 'depends_on'>('related_to');
   const [addingLink, setAddingLink] = useState(false);
+  const [watching, setWatching] = useState(false);
+  const [watchLoading, setWatchLoading] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -215,6 +217,12 @@ export function ProposalDetailPage() {
     proposalSignaturesApi.list(id).then((r) => { setSignatures(r.signatures); setSignatureCount(r.count); }).catch(() => {});
     proposalLinksApi.list(id).then(setLinks).catch(() => {});
   }, [id]);
+
+  useEffect(() => {
+    if (currentUser) {
+      proposalsApi.getWatchStatus(id).then((r) => setWatching(r.watching)).catch(() => {});
+    }
+  }, [id, currentUser?.id]);
 
   useEffect(() => {
     if (currentUser && !myVote) {
@@ -347,6 +355,26 @@ export function ProposalDetailPage() {
       setVoteError(err instanceof Error ? err.message : 'Failed to remove vote.');
     } finally {
       setVoting(false);
+    }
+  }
+
+  async function toggleWatch() {
+    if (!currentUser) return;
+    setWatchLoading(true);
+    try {
+      if (watching) {
+        await proposalsApi.unwatch(id);
+        setWatching(false);
+        addToast('Unwatched proposal', 'info');
+      } else {
+        await proposalsApi.watch(id);
+        setWatching(true);
+        addToast('Watching proposal', 'success');
+      }
+    } catch {
+      addToast('Failed to update watch', 'error');
+    } finally {
+      setWatchLoading(false);
     }
   }
 
@@ -890,11 +918,20 @@ export function ProposalDetailPage() {
             <h1 className={styles.title}>
               {proposal.title}
             </h1>
-            {(isAuthor || isModerator) && (isDraft || isOpen) && (
-              <Button type="button" variant="secondary" size="sm" onClick={startEditing} style={{ flexShrink: 0 }}>
-                Edit
-              </Button>
-            )}
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexShrink: 0 }}>
+              {currentUser && (
+                <Button type="button" variant="ghost" size="sm" onClick={toggleWatch} disabled={watchLoading}
+                  title={watching ? 'Stop receiving notifications for this proposal' : 'Get notified about new comments on this proposal'}
+                >
+                  {watching ? '★ Watching' : '☆ Watch'}
+                </Button>
+              )}
+              {(isAuthor || isModerator) && (isDraft || isOpen) && (
+                <Button type="button" variant="secondary" size="sm" onClick={startEditing}>
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
           {(isDiscussion || isMultipleChoice || isApproval || isScoreVoting || isRankedChoice || isTemperatureCheck || isConsent || isPetition || isAmendment || proposal.impact_level || proposal.anonymous_voting) && (
             <div className={styles.headerMeta} style={{ marginBottom: 'var(--space-4)' }}>

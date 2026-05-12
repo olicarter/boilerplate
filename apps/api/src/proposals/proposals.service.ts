@@ -944,4 +944,34 @@ export class ProposalsService {
     const count = await repo.count({ where: { proposal_id: proposalId } });
     return { count };
   }
+
+  async watchProposal(proposalId: string, userId: string): Promise<void> {
+    await this.dataSource.query(
+      `INSERT INTO proposal_watches (proposal_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [proposalId, userId],
+    );
+  }
+
+  async unwatchProposal(proposalId: string, userId: string): Promise<void> {
+    await this.dataSource.query(
+      `DELETE FROM proposal_watches WHERE proposal_id = $1 AND user_id = $2`,
+      [proposalId, userId],
+    );
+  }
+
+  async isWatching(proposalId: string, userId: string): Promise<boolean> {
+    const rows = await this.dataSource.query<{ exists: boolean }[]>(
+      `SELECT EXISTS(SELECT 1 FROM proposal_watches WHERE proposal_id = $1 AND user_id = $2) AS exists`,
+      [proposalId, userId],
+    );
+    return rows[0]?.exists ?? false;
+  }
+
+  async getWatcherIds(proposalId: string): Promise<string[]> {
+    const rows = await this.dataSource.query<{ user_id: string }[]>(
+      `SELECT user_id FROM proposal_watches WHERE proposal_id = $1`,
+      [proposalId],
+    );
+    return rows.map((r) => r.user_id);
+  }
 }

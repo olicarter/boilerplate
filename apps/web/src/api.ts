@@ -466,6 +466,12 @@ export const proposalsApi = {
     request<ProposalReaction>(`/proposals/${id}/reactions`, { method: 'POST', body: JSON.stringify({ emoji }) }),
   removeReaction: (id: string) =>
     request<void>(`/proposals/${id}/reactions`, { method: 'DELETE' }),
+  getWatchStatus: (id: string) =>
+    request<{ watching: boolean }>(`/proposals/${id}/watch`),
+  watch: (id: string) =>
+    request<void>(`/proposals/${id}/watch`, { method: 'PUT' }),
+  unwatch: (id: string) =>
+    request<void>(`/proposals/${id}/watch`, { method: 'DELETE' }),
 };
 
 export interface ProposalReaction {

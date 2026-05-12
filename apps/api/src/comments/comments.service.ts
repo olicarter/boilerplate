@@ -54,6 +54,13 @@ export class CommentsService {
       return { item: saved, txid: parseInt(row.txid, 10) };
     });
 
+    try {
+      await this.dataSource.query(
+        `INSERT INTO proposal_watches (proposal_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [data.proposal_id, data.author_id],
+      );
+    } catch { /* non-critical */ }
+
     await this.notifyMentions(data.body, data.author_id, proposal.organisation_id, data.proposal_id, result.item.id);
     await this.notifyCommented(data.body, data.author_id, proposal, result.item.id);
     return result;
@@ -113,10 +120,17 @@ export class CommentsService {
         'SELECT DISTINCT user_id FROM votes WHERE proposal_id = $1',
         [proposal.id],
       );
+      const watchers = await this.dataSource.query<{ user_id: string }[]>(
+        'SELECT user_id FROM proposal_watches WHERE proposal_id = $1',
+        [proposal.id],
+      );
       const interested = new Set<string>();
       if (proposal.author_id && proposal.author_id !== authorId) interested.add(proposal.author_id);
       for (const v of votes) {
         if (v.user_id !== authorId) interested.add(v.user_id);
+      }
+      for (const w of watchers) {
+        if (w.user_id !== authorId) interested.add(w.user_id);
       }
       for (const id of mentionedIds) interested.delete(id);
       if (interested.size === 0) return;

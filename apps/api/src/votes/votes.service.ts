@@ -79,6 +79,13 @@ export class VotesService {
       await this.notifyDelegators(data.user_id, proposal, data.choice!);
     }
 
+    try {
+      await this.dataSource.query(
+        `INSERT INTO proposal_watches (proposal_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [data.proposal_id, data.user_id],
+      );
+    } catch { /* non-critical */ }
+
     return result;
   }
 

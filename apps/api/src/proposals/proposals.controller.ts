@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ProposalsService } from './proposals.service';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
@@ -206,5 +206,24 @@ export class ProposalsController {
   @UseGuards(AuthGuard)
   removeLink(@Param('linkId') linkId: string, @Req() req: AuthenticatedRequest) {
     return this.proposalsService.removeLink(linkId, req.user!.id);
+  }
+
+  @Get(':id/watch')
+  @UseGuards(AuthGuard)
+  async getWatchStatus(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const watching = await this.proposalsService.isWatching(id, req.user!.id);
+    return { watching };
+  }
+
+  @Put(':id/watch')
+  @UseGuards(AuthGuard)
+  watchProposal(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.watchProposal(id, req.user!.id);
+  }
+
+  @Delete(':id/watch')
+  @UseGuards(AuthGuard)
+  unwatchProposal(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.unwatchProposal(id, req.user!.id);
   }
 }
