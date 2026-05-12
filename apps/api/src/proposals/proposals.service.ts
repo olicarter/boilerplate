@@ -112,6 +112,15 @@ export class ProposalsService {
     return { items, total, page, pageSize };
   }
 
+  async getEmbedData(id: string): Promise<{ proposal: Proposal; tally: object; org: { slug: string; name: string } } | null> {
+    const proposal = await this.proposalRepo.findOneBy({ id });
+    if (!proposal) return null;
+    const org = await this.orgRepo.findOneBy({ id: proposal.organisation_id });
+    if (!org) return null;
+    const tally = await this.tally(id).catch(() => null);
+    return { proposal, tally: tally ?? {}, org: { slug: org.slug, name: org.name } };
+  }
+
   findOne(id: string): Promise<Proposal | null> {
     return this.proposalRepo.findOneBy({ id });
   }

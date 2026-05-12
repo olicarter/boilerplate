@@ -278,7 +278,7 @@ SLACK_SIGNING_SECRET=
 - [x] **Filtering & sorting** — proposals endpoint accepts query params: `status`, `topic_id`, `author_id`, `sort` (created_at, closes_at, votes). Votes endpoint accepts `proposal_id`, `user_id`.
 
 ### Embeds
-- [ ] **Embeddable vote widget** — a tiny `<iframe>` embed (or Web Component) that shows a proposal's current tally and lets a logged-in user cast a vote. Designed to be dropped into Notion, Confluence, or a company intranet.
+- [x] **Embeddable vote widget** — a tiny `<iframe>` embed (or Web Component) that shows a proposal's current tally and lets a logged-in user cast a vote. Designed to be dropped into Notion, Confluence, or a company intranet.
 - [ ] **OG / social preview images** — dynamically generated Open Graph images for proposals (title, tally bars, deadline) so links shared on Slack/Twitter look informative.
 
 ### Import / export

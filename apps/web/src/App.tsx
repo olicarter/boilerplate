@@ -38,6 +38,7 @@ import { DecisionRecordPage } from './pages/DecisionRecordPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { MagicLinkPage } from './pages/MagicLinkPage';
 import { UnsubscribePage } from './pages/UnsubscribePage';
+import { EmbedProposalPage } from './pages/EmbedProposalPage';
 import { OrgProvider } from './OrgContext';
 import styles from './styles/Shell.module.css';
 
@@ -702,6 +703,12 @@ const unsubscribeRoute = createRoute({
   component: UnsubscribePage,
 });
 
+const embedProposalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/embed/proposals/$id',
+  component: EmbedProposalPage,
+});
+
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
   orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute, decisionRecordRoute]),
@@ -711,6 +718,7 @@ const routeTree = rootRoute.addChildren([
   acceptInviteRoute,
   magicLinkRoute,
   unsubscribeRoute,
+  embedProposalRoute,
 ]);
 
 const router = createRouter({ routeTree });

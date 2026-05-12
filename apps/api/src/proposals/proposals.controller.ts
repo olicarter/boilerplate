@@ -41,6 +41,11 @@ export class ProposalsController {
     return this.proposalsService.tally(id);
   }
 
+  @Get(':id/embed')
+  async embed(@Param('id') id: string) {
+    return this.proposalsService.getEmbedData(id);
+  }
+
   @Get(':id/tally/csv')
   @UseGuards(AuthGuard)
   async tallyCsv(@Param('id') id: string, @Res() res: Response) {
