@@ -76,7 +76,9 @@ export function SettingsPage() {
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed || trimmed === currentUser!.name) return;
+    if (!trimmed) { addToast('Name is required.', 'error'); return; }
+    if (trimmed.length < 2) { addToast('Name must be at least 2 characters.', 'error'); return; }
+    if (trimmed === currentUser!.name) return;
     setSavingName(true);
     try {
       await usersApi.update(currentUser!.id, { name: trimmed });

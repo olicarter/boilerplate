@@ -191,6 +191,16 @@ export function ProposalsPage() {
   async function handleCreate(asDraft = false) {
     if (!currentUser) return;
     setFormError('');
+
+    if (!title.trim()) {
+      setFormError('Title is required.');
+      return;
+    }
+    if (title.trim().length < 3) {
+      setFormError('Title must be at least 3 characters.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       let resolvedTopicId = topicId;
@@ -328,7 +338,6 @@ export function ProposalsPage() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
-              required
               maxLength={TITLE_MAX}
               className={styles.formInput}
             />

@@ -309,7 +309,12 @@ export function AdminPage() {
 
   async function handleSendInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    const email = inviteEmail.trim();
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      addToast('Please enter a valid email address.', 'error');
+      return;
+    }
     setSendingInvite(true);
     try {
       await orgsApi.sendInvite(org.slug, inviteEmail.trim());

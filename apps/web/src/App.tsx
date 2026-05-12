@@ -104,11 +104,17 @@ function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDi
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedName) { setError('Name is required.'); return; }
+    if (trimmedName.length < 2) { setError('Name must be at least 2 characters.'); return; }
+    if (!trimmedEmail) { setError('Email is required.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { setError('Please enter a valid email address.'); return; }
     setLoading(true);
     try {
       const options = await request<never>('/auth/register/begin', {
         method: 'POST',
-        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+        body: JSON.stringify({ name: trimmedName, email: trimmedEmail }),
       });
       const credential = await startRegistration({ optionsJSON: options });
       const user = await request<User>('/auth/register/finish', {

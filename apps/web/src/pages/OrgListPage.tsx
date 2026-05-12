@@ -52,6 +52,7 @@ export function OrgListPage() {
   const hasOrgs = myOrgs.length > 0;
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [inviteInput, setInviteInput] = useState('');
@@ -90,7 +91,15 @@ export function OrgListPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed) return;
+    setNameError('');
+    if (!trimmed) {
+      setNameError('Organisation name is required.');
+      return;
+    }
+    if (trimmed.length < 2) {
+      setNameError('Name must be at least 2 characters.');
+      return;
+    }
     setCreating(true);
     try {
       const result = await orgsApi.create({ name: trimmed, description: description.trim() });
@@ -124,11 +133,12 @@ export function OrgListPage() {
               id="org-name"
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
+              onChange={(e) => { setName(e.target.value); setNameError(''); }}
               autoFocus
               className={styles.formInput}
+              aria-describedby={nameError ? 'org-name-error' : undefined}
             />
+            {nameError && <p id="org-name-error" className={styles.fieldError} role="alert">{nameError}</p>}
           </div>
           <div className={styles.formField}>
             <label htmlFor="org-desc" className={styles.formLabel}>
