@@ -19,4 +19,10 @@ export class ProposalsScheduler {
     const opened = await this.proposalsService.autoOpenScheduled();
     if (opened > 0) this.logger.log(`Auto-opened ${opened} scheduled proposal(s)`);
   }
+
+  @Cron('0 3 * * *')
+  async purgeByRetentionPolicy() {
+    const purged = await this.proposalsService.purgeByRetentionPolicy();
+    if (purged > 0) this.logger.log(`Purged ${purged} proposal(s) by retention policy`);
+  }
 }

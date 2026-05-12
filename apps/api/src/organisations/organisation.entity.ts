@@ -92,6 +92,9 @@ export class Organisation {
   @Column({ name: 'logo_url', type: 'text', nullable: true, default: null })
   logo_url!: string | null;
 
+  @Column({ name: 'data_retention_months', type: 'int', nullable: true, default: null })
+  data_retention_months!: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

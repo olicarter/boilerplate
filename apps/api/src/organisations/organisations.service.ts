@@ -112,7 +112,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -136,6 +136,7 @@ export class OrganisationsService {
       if (data.allowed_email_domains !== undefined) updates.allowed_email_domains = data.allowed_email_domains;
       if (data.primary_color !== undefined) updates.primary_color = data.primary_color;
       if (data.logo_url !== undefined) updates.logo_url = data.logo_url;
+      if (data.data_retention_months !== undefined) updates.data_retention_months = data.data_retention_months;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -1069,5 +1070,22 @@ export class OrganisationsService {
       votes: votes.map((v) => ({ id: v.id, proposal_id: v.proposal_id, user_id: v.user_id, choice: v.choice, created_at: v.created_at })),
       delegations: delegations.map((d) => ({ id: d.id, delegator_id: d.delegator_id, delegate_id: d.delegate_id, topic_id: d.topic_id, created_at: d.created_at, expires_at: d.expires_at })),
     };
+  }
+
+  async purgeExpiredProposals(): Promise<number> {
+    const orgs = await this.dataSource.query<Array<{ id: string; data_retention_months: number }>>(
+      `SELECT id, data_retention_months FROM organisations WHERE data_retention_months IS NOT NULL`,
+    );
+    let total = 0;
+    for (const org of orgs) {
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - org.data_retention_months);
+      const result = await this.dataSource.query(
+        `DELETE FROM proposals WHERE organisation_id = $1 AND status = 'closed' AND closed_at < $2`,
+        [org.id, cutoff],
+      );
+      total += result[1] ?? 0;
+    }
+    return total;
   }
 }

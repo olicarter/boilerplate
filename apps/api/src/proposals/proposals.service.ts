@@ -453,6 +453,23 @@ export class ProposalsService {
     return scheduled.length;
   }
 
+  async purgeByRetentionPolicy(): Promise<number> {
+    const orgs = await this.dataSource.query<Array<{ id: string; data_retention_months: number }>>(
+      `SELECT id, data_retention_months FROM organisations WHERE data_retention_months IS NOT NULL`,
+    );
+    let total = 0;
+    for (const org of orgs) {
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - org.data_retention_months);
+      const result = await this.dataSource.query(
+        `DELETE FROM proposals WHERE organisation_id = $1 AND status = 'closed' AND closed_at < $2`,
+        [org.id, cutoff],
+      );
+      total += result[1] ?? 0;
+    }
+    return total;
+  }
+
   async autoCloseExpired(): Promise<number> {
     const expired = await this.proposalRepo.find({
       where: { status: 'open', closes_at: LessThanOrEqual(new Date()) },

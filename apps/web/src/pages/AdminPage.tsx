@@ -116,6 +116,11 @@ export function AdminPage() {
   const [newApiKeyValue, setNewApiKeyValue] = useState<string | null>(null);
   const [revokingApiKeyId, setRevokingApiKeyId] = useState<string | null>(null);
 
+  const [retentionMonths, setRetentionMonths] = useState<string>(
+    org.data_retention_months != null ? String(org.data_retention_months) : '',
+  );
+  const [savingRetention, setSavingRetention] = useState(false);
+
   const [importJson, setImportJson] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ created: number; errors: Array<{ index: number; message: string }> } | null>(null);
@@ -1420,6 +1425,42 @@ export function AdminPage() {
           <Button type="submit" size="sm" disabled={creatingApiKey || !newApiKeyName.trim()}>
             {creatingApiKey ? 'Creating…' : 'Create key'}
           </Button>
+        </form>
+      </section>
+
+      {/* Data retention */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Data retention</h3>
+        <p className={styles.sectionHint}>
+          Automatically delete closed proposals after a set number of months. Leave blank to keep proposals indefinitely.
+        </p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSavingRetention(true);
+            try {
+              const months = retentionMonths.trim() ? parseInt(retentionMonths, 10) : null;
+              await orgsApi.update(org.slug, { data_retention_months: months });
+              addToast('Retention policy saved', 'success');
+            } catch {
+              addToast('Failed to save retention policy', 'error');
+            } finally {
+              setSavingRetention(false);
+            }
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}
+        >
+          <input
+            type="number"
+            min={1}
+            max={120}
+            value={retentionMonths}
+            onChange={(e) => setRetentionMonths(e.target.value)}
+            placeholder="e.g. 12"
+            style={{ width: 80, padding: '0 var(--space-2)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+          />
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>months</span>
+          <Button type="submit" size="sm" disabled={savingRetention}>{savingRetention ? 'Saving…' : 'Save'}</Button>
         </form>
       </section>
 
