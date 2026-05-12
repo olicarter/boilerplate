@@ -66,8 +66,8 @@ SLACK_SIGNING_SECRET=
 - [x] **Delegation expiry** — optional `expires_at` on delegations; expired delegations are ignored in tally resolution. Show expiry date in the delegation list.
 
 ### Auth & identity
-- [ ] **Email magic-link fallback** — not every device supports passkeys. Add an email-based sign-in flow (send a one-time link) as a fallback. The user can then add a passkey from their profile settings.
-- [ ] **Avatar upload** — profile photo as URL or base64 thumbnail. Display name change is already in Settings.
+- [x] **Email magic-link fallback** — not every device supports passkeys. Add an email-based sign-in flow (send a one-time link) as a fallback. The user can then add a passkey from their profile settings.
+- [x] **Avatar upload** — profile photo as URL or base64 thumbnail. Display name change is already in Settings.
 - [x] **Account settings page** — `/settings` page for changing display name and managing registered passkeys (list, add, remove).
 
 ### UI / UX
@@ -96,7 +96,7 @@ SLACK_SIGNING_SECRET=
 - [x] **Membership model** — `memberships` table: `id`, `organisation_id`, `user_id`, `role` (admin | moderator | member | observer), `joined_at`, `invited_by`.
 - [x] **Invite by email** — admins can invite people by email; a signed token is emailed with a link to join. Pending invites are listed in org settings.
 - [x] **Invite link** — generate a shareable invite link with a token; anyone with the link can join (can be disabled or made single-use).
-- [ ] **Email domain restriction** — optional: restrict membership to users whose email matches one or more domains (e.g. `@acme.com`).
+- [x] **Email domain restriction** — optional: restrict membership to users whose email matches one or more domains (e.g. `@acme.com`).
 - [x] **Member approval** — optional: new members must be approved by an admin before they can vote. Shows a pending queue in org settings.
 - [x] **Member directory** — `/orgs/:slug/members` page listing all members with their role, join date, and a link to their profile. Sortable by name / join date / participation.
 - [x] **Leave organisation** — members can leave; the final admin cannot leave until they transfer ownership.
@@ -195,15 +195,15 @@ SLACK_SIGNING_SECRET=
 
 ### Email notifications
 - [x] **Transactional emails** — integrate a mail provider (Resend or Postmark). Templates for: welcome, invite, magic-link, proposal opened, deadline reminder, result announced.
-- [ ] **Digest emails** — weekly or daily digest summarising open proposals, upcoming deadlines, and recent results. Users opt in/out per org.
-- [ ] **Proposal watching** — users can "watch" a proposal to receive notifications even if they haven't voted. Watch is auto-set when you comment or vote.
-- [ ] **Unsubscribe handling** — one-click unsubscribe in every email, per the CAN-SPAM/GDPR requirements.
+- [x] **Digest emails** — weekly or daily digest summarising open proposals, upcoming deadlines, and recent results. Users opt in/out per org.
+- [x] **Proposal watching** — users can "watch" a proposal to receive notifications even if they haven't voted. Watch is auto-set when you comment or vote.
+- [x] **Unsubscribe handling** — one-click unsubscribe in every email, per the CAN-SPAM/GDPR requirements.
 
 ### External integrations
-- [ ] **Slack integration** — connect an org to a Slack workspace. Post new proposals and results to a configured channel. Optional: create a Slack command `/ripple vote [proposal]` to cast votes from Slack.
+- [x] **Slack integration** — connect an org to a Slack workspace. Post new proposals and results to a configured channel. Optional: create a Slack command `/ripple vote [proposal]` to cast votes from Slack.
 - [ ] **Discord integration** — similar to Slack: post to a channel, optionally react with emoji to vote on simple proposals.
-- [ ] **Webhooks** — org admins can register HTTP webhook URLs for events (proposal.opened, proposal.closed, vote.cast, member.joined). Payload is JSON. Used to connect Ripple to Zapier, Make, or custom tooling.
-- [ ] **Calendar export** — proposal voting deadlines exported as an `.ics` feed (or Google Calendar link) so members see deadlines in their calendar.
+- [x] **Webhooks** — org admins can register HTTP webhook URLs for events (proposal.opened, proposal.closed, vote.cast, member.joined). Payload is JSON. Used to connect Ripple to Zapier, Make, or custom tooling.
+- [x] **Calendar export** — proposal voting deadlines exported as an `.ics` feed (or Google Calendar link) so members see deadlines in their calendar.
 
 ---
 
@@ -212,20 +212,20 @@ SLACK_SIGNING_SECRET=
 > Trust in a governance system comes from being able to verify what happened and why.
 
 ### Participation analytics
-- [ ] **Org dashboard** — graphs showing: proposals over time, participation rate per proposal, average turnout, most active topics. Filterable by date range.
+- [x] **Org dashboard** — graphs showing: proposals over time, participation rate per proposal, average turnout, most active topics. Filterable by date range.
 - [x] **Member engagement score** — per-member score based on: proposals voted on / total open proposals × 100. Shown on member directory and their profile. Not competitive, just for self-awareness.
 - [x] **Proposal outcome tracking** — tag closed proposals with whether the resulting decision was implemented. Lets the org track follow-through on their own decisions.
-- [ ] **Topic-level stats** — for each topic: number of proposals, average participation, pass rate, most active members.
+- [x] **Topic-level stats** — for each topic: number of proposals, average participation, pass rate, most active members.
 
 ### Audit & transparency
 - [x] **Audit log** — immutable append-only log of all significant actions: proposal created/edited/closed/withdrawn, vote cast/changed, delegation added/removed, member invited/removed, role changed, org setting changed. Stored in `audit_log` (id, org_id, actor_id, action, target_type, target_id, metadata jsonb, created_at).
 - [x] **Public results page** — for public organisations, a read-only page at `/orgs/:slug/results` showing all closed proposals and their outcomes. No login required. Good for community groups publishing governance decisions.
-- [ ] **Vote receipt** — after voting, users can download a signed receipt (JSON + signature) proving their vote was recorded correctly. Useful for high-stakes decisions.
+- [x] **Vote receipt** — after voting, users can download a signed receipt (JSON + signature) proving their vote was recorded correctly. Useful for high-stakes decisions.
 - [x] **Export** — moderators can export vote tallies for any proposal as CSV (includes voter names, choices, and rationales).
 
 ### Delegation transparency
-- [ ] **Who carries my vote** — on any open proposal, show members exactly how many votes a person is currently carrying and on whose behalf, visible to all org members.
-- [ ] **Delegation history** — full history of delegation changes (added, removed, expired) visible to the member on their profile.
+- [x] **Who carries my vote** — on any open proposal, show members exactly how many votes a person is currently carrying and on whose behalf, visible to all org members.
+- [x] **Delegation history** — full history of delegation changes (added, removed, expired) visible to the member on their profile.
 
 ---
 
@@ -236,14 +236,14 @@ SLACK_SIGNING_SECRET=
 ### Design system
 - [ ] **Design tokens** — replace inline `style` objects with CSS custom properties (colour, spacing, radius, shadow tokens). This is the prerequisite for all visual work below.
 - [ ] **Component library** — extract Button, Badge, Card, Input, Select, Modal, Toast, Skeleton into reusable components with consistent props. Stop copy-pasting inline styles.
-- [ ] **Dark mode** — use `prefers-color-scheme` media query + a manual toggle stored in `localStorage`. All tokens have dark variants.
+- [x] **Dark mode** — use `prefers-color-scheme` media query + a manual toggle stored in `localStorage`. All tokens have dark variants.
 - [ ] **Typography system** — consistent type scale (rem-based), line heights, and weight usage. Replace ad hoc `fontSize: 13` everywhere.
 - [ ] **Illustration set** — a small set of consistent SVG illustrations for empty states, error pages, onboarding steps.
 
 ### Accessibility
-- [ ] **WCAG 2.1 AA audit** — run axe-core against all pages, fix all critical issues: colour contrast, focus ring visibility, skip-to-content link, landmark roles.
+- [x] **WCAG 2.1 AA audit** — run axe-core against all pages, fix all critical issues: colour contrast, focus ring visibility, skip-to-content link, landmark roles.
 - [ ] **Keyboard navigation** — all interactive elements reachable and operable by keyboard. Dropdown menus, modals, and the UserSearch component need special attention.
-- [ ] **Screen reader labels** — all icon-only buttons have `aria-label`. Dynamic content changes (vote counts, notification badge) use `aria-live`.
+- [x] **Screen reader labels** — all icon-only buttons have `aria-label`. Dynamic content changes (vote counts, notification badge) use `aria-live`.
 - [ ] **Focus management** — when a modal opens, focus moves into it; when it closes, focus returns to the trigger.
 
 ### Performance
@@ -260,9 +260,9 @@ SLACK_SIGNING_SECRET=
 
 ### Error handling
 - [ ] **Global error boundary** — React error boundary at the root that catches JS errors and shows a friendly "something went wrong" page with a reload button, rather than a blank screen.
-- [ ] **API error messages** — standardise API error response shape (`{ statusCode, message, code }`). Display user-readable messages in the UI instead of generic "Failed to create proposal."
+- [x] **API error messages** — standardise API error response shape (`{ statusCode, message, code }`). Display user-readable messages in the UI instead of generic "Failed to create proposal."
 - [ ] **Offline detection** — detect when the Electric sync connection drops and show a banner "You're offline — changes may not be saved" rather than silently failing.
-- [ ] **Form validation** — client-side validation with clear inline error messages before any API call. Currently most forms rely on `required` HTML5 validation which is inconsistent across browsers.
+- [x] **Form validation** — client-side validation with clear inline error messages before any API call. Currently most forms rely on `required` HTML5 validation which is inconsistent across browsers.
 
 ---
 
@@ -271,19 +271,19 @@ SLACK_SIGNING_SECRET=
 > Make Ripple the governance layer that can be wired into any existing toolchain.
 
 ### Public API
-- [ ] **API keys** — admins can generate long-lived API keys scoped to an org. Keys are stored hashed. Used to authenticate server-to-server API calls.
-- [ ] **REST API documentation** — generate OpenAPI 3.0 spec from the NestJS controllers (using `@nestjs/swagger`). Host interactive docs at `/api/docs`.
+- [x] **API keys** — admins can generate long-lived API keys scoped to an org. Keys are stored hashed. Used to authenticate server-to-server API calls.
+- [x] **REST API documentation** — generate OpenAPI 3.0 spec from the NestJS controllers (using `@nestjs/swagger`). Host interactive docs at `/api/docs`.
 - [ ] **API rate limiting** — per-IP and per-key rate limiting using `@nestjs/throttler`. Return `429` with `Retry-After` header.
-- [ ] **Pagination** — all list endpoints return paginated responses (`{ items, total, page, pageSize }`). Currently they return unbounded arrays.
-- [ ] **Filtering & sorting** — proposals endpoint accepts query params: `status`, `topic_id`, `author_id`, `sort` (created_at, closes_at, votes). Votes endpoint accepts `proposal_id`, `user_id`.
+- [x] **Pagination** — all list endpoints return paginated responses (`{ items, total, page, pageSize }`). Currently they return unbounded arrays.
+- [x] **Filtering & sorting** — proposals endpoint accepts query params: `status`, `topic_id`, `author_id`, `sort` (created_at, closes_at, votes). Votes endpoint accepts `proposal_id`, `user_id`.
 
 ### Embeds
 - [ ] **Embeddable vote widget** — a tiny `<iframe>` embed (or Web Component) that shows a proposal's current tally and lets a logged-in user cast a vote. Designed to be dropped into Notion, Confluence, or a company intranet.
 - [ ] **OG / social preview images** — dynamically generated Open Graph images for proposals (title, tally bars, deadline) so links shared on Slack/Twitter look informative.
 
 ### Import / export
-- [ ] **Bulk import proposals** — admins can import proposals from a CSV or JSON file. Useful when migrating from another tool or seeding a new org.
-- [ ] **Export org data** — full export of org data as JSON (proposals, votes, delegations, members). For data portability and backups.
+- [x] **Bulk import proposals** — admins can import proposals from a CSV or JSON file. Useful when migrating from another tool or seeding a new org.
+- [x] **Export org data** — full export of org data as JSON (proposals, votes, delegations, members). For data portability and backups.
 - [ ] **Snapshot voting compatibility** — export proposals and results in Snapshot.org-compatible JSON format. Lets DAOs move decisions between Ripple and Snapshot.
 
 ---
