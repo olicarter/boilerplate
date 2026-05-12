@@ -18,9 +18,10 @@ import { ProposalsService } from './proposals.service';
 import { ProposalsScheduler } from './proposals.scheduler';
 import { AuditLogModule } from '../audit-log/audit-log.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SlackModule } from '../slack/slack.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalOption, ProposalReaction, ProposalVersion, ProposalSignature, ProposalLink, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule],
+  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalOption, ProposalReaction, ProposalVersion, ProposalSignature, ProposalLink, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule, SlackModule],
   controllers: [ProposalsController],
   providers: [ProposalsService, ProposalsScheduler],
 })

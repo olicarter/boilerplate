@@ -76,6 +76,10 @@ export interface Organisation {
   allowed_email_domains: string[];
   plan: 'free' | 'pro';
   stripe_customer_id: string | null;
+  slack_team_id: string | null;
+  slack_team_name: string | null;
+  slack_channel_id: string | null;
+  slack_channel_name: string | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -269,6 +273,17 @@ export const orgsApi = {
     request<Array<{ user_id: string; carried_weight: number }>>(`/orgs/${slug}/delegation-weights`),
   getAnalytics: (slug: string) =>
     request<OrgAnalytics>(`/orgs/${slug}/analytics`),
+};
+
+export const slackApi = {
+  getConnectUrl: (orgSlug: string) =>
+    request<{ url: string }>(`/slack/connect/${orgSlug}`),
+  listChannels: (orgId: string) =>
+    request<Array<{ id: string; name: string }>>(`/slack/${orgId}/channels`),
+  setChannel: (orgId: string, channelId: string) =>
+    request<{ ok: boolean }>(`/slack/${orgId}/channel`, { method: 'POST', body: JSON.stringify({ channel_id: channelId }) }),
+  disconnect: (orgId: string) =>
+    request<{ ok: boolean }>(`/slack/${orgId}/disconnect`, { method: 'DELETE' }),
 };
 
 export const billingApi = {

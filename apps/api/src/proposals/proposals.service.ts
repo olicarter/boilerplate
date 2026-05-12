@@ -16,6 +16,7 @@ import { Membership } from '../organisations/membership.entity';
 import { DelegationsService } from '../delegations/delegations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SlackService } from '../slack/slack.service';
 import { User } from '../users/user.entity';
 
 const TITLE_MAX = 200;
@@ -61,6 +62,7 @@ export class ProposalsService {
     private readonly dataSource: DataSource,
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
+    private readonly slack: SlackService,
   ) {}
 
   findAll(): Promise<Proposal[]> {
@@ -258,6 +260,8 @@ export class ProposalsService {
       targetId: id,
       metadata: { title: result.item.title },
     });
+    const appUrl = process.env.APP_URL ?? 'http://localhost:5173';
+    this.slack.postProposalOpened(org.id, result.item.title, `${appUrl}/orgs/${org.slug}/proposals/${id}`).catch(() => {});
     return result;
   }
 
@@ -267,6 +271,13 @@ export class ProposalsService {
     await this.notifyVoters(id, result.item.organisation_id, userId, result.item.title);
     if (result.item.proposal_type === 'amendment') {
       await this.applyAmendmentIfPassed(id).catch(() => {});
+    }
+    const closedOrg = await this.orgRepo.findOneBy({ id: result.item.organisation_id });
+    if (closedOrg) {
+      const tally = await this.tally(id).catch(() => null);
+      const passed = tally ? tally.yes > tally.no : false;
+      const appUrl = process.env.APP_URL ?? 'http://localhost:5173';
+      this.slack.postProposalClosed(closedOrg.id, result.item.title, passed ? 'passed' : 'failed', `${appUrl}/orgs/${closedOrg.slug}/proposals/${id}`).catch(() => {});
     }
     return result;
   }

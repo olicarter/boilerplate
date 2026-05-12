@@ -65,6 +65,21 @@ export class Organisation {
   @Column({ type: 'text', default: 'free' })
   plan!: 'free' | 'pro';
 
+  @Column({ name: 'slack_team_id', type: 'text', nullable: true, default: null })
+  slack_team_id!: string | null;
+
+  @Column({ name: 'slack_team_name', type: 'text', nullable: true, default: null })
+  slack_team_name!: string | null;
+
+  @Column({ name: 'slack_bot_token', type: 'text', nullable: true, default: null })
+  slack_bot_token!: string | null;
+
+  @Column({ name: 'slack_channel_id', type: 'text', nullable: true, default: null })
+  slack_channel_id!: string | null;
+
+  @Column({ name: 'slack_channel_name', type: 'text', nullable: true, default: null })
+  slack_channel_name!: string | null;
+
   @Column({ name: 'stripe_customer_id', type: 'text', nullable: true, default: null })
   stripe_customer_id!: string | null;
 

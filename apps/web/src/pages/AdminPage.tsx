@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, billingApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics } from '../api';
+import { orgsApi, billingApi, slackApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -91,12 +91,26 @@ export function AdminPage() {
   const [billingStatus, setBillingStatus] = useState<{ plan: 'free' | 'pro'; memberCount: number; memberLimit: number | null; canUpgrade: boolean } | null>(null);
   const [upgradingToStripe, setUpgradingToStripe] = useState(false);
   const [managingBilling, setManagingBilling] = useState(false);
+  const [slackChannels, setSlackChannels] = useState<Array<{ id: string; name: string }> | null>(null);
+  const [selectedSlackChannel, setSelectedSlackChannel] = useState('');
+  const [savingSlackChannel, setSavingSlackChannel] = useState(false);
+  const [connectingSlack, setConnectingSlack] = useState(false);
+  const [disconnectingSlack, setDisconnectingSlack] = useState(false);
 
   useEffect(() => {
     orgsApi.listAuditLog(org.slug).then(setAuditLog).catch(() => {}).finally(() => setAuditLogLoading(false));
     orgsApi.getAnalytics(org.slug).then(setAnalytics).catch(() => {}).finally(() => setAnalyticsLoading(false));
     billingApi.getStatus(org.id).then(setBillingStatus).catch(() => {});
-  }, [org.slug, org.id]);
+    if (org.slack_team_id) {
+      slackApi.listChannels(org.id).then(setSlackChannels).catch(() => {});
+    }
+    // Show toast if returning from Slack OAuth
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('slack') === 'connected') {
+      addToast('Slack connected!', 'success');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [org.slug, org.id, org.slack_team_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isAdmin) {
     return <p className={styles.denied}>Access denied — admins only.</p>;
@@ -368,6 +382,43 @@ export function AdminPage() {
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed to open billing portal', 'error');
       setManagingBilling(false);
+    }
+  }
+
+  async function handleConnectSlack() {
+    setConnectingSlack(true);
+    try {
+      const { url } = await slackApi.getConnectUrl(org.slug);
+      window.location.href = url;
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to start Slack connection', 'error');
+      setConnectingSlack(false);
+    }
+  }
+
+  async function handleDisconnectSlack() {
+    setDisconnectingSlack(true);
+    try {
+      await slackApi.disconnect(org.id);
+      addToast('Slack disconnected', 'info');
+      setSlackChannels(null);
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to disconnect Slack', 'error');
+    } finally {
+      setDisconnectingSlack(false);
+    }
+  }
+
+  async function handleSaveSlackChannel() {
+    if (!selectedSlackChannel) return;
+    setSavingSlackChannel(true);
+    try {
+      await slackApi.setChannel(org.id, selectedSlackChannel);
+      addToast('Slack channel saved', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to save channel', 'error');
+    } finally {
+      setSavingSlackChannel(false);
     }
   }
 
@@ -916,6 +967,45 @@ export function AdminPage() {
               );
             })}
           </ul>
+        )}
+      </section>
+
+      {/* Slack integration */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Slack integration</h3>
+        <p className={styles.sectionHint}>Post new proposals and results to a Slack channel automatically.</p>
+        {org.slack_team_id ? (
+          <div>
+            <p style={{ fontSize: 13, marginBottom: '0.75rem' }}>
+              Connected to <strong>{org.slack_team_name}</strong>
+              {org.slack_channel_name && <> · posting to <strong>#{org.slack_channel_name}</strong></>}
+            </p>
+            {slackChannels !== null && (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <select
+                  value={selectedSlackChannel || org.slack_channel_id || ''}
+                  onChange={(e) => setSelectedSlackChannel(e.target.value)}
+                  className={styles.formSelect}
+                  style={{ width: 'auto', minWidth: 180 }}
+                >
+                  <option value="">Select a channel…</option>
+                  {slackChannels.map((c) => (
+                    <option key={c.id} value={c.id}>#{c.name}</option>
+                  ))}
+                </select>
+                <Button size="sm" onClick={handleSaveSlackChannel} disabled={savingSlackChannel || !selectedSlackChannel}>
+                  {savingSlackChannel ? 'Saving…' : 'Save channel'}
+                </Button>
+              </div>
+            )}
+            <Button size="sm" variant="danger" onClick={handleDisconnectSlack} disabled={disconnectingSlack}>
+              {disconnectingSlack ? 'Disconnecting…' : 'Disconnect Slack'}
+            </Button>
+          </div>
+        ) : (
+          <Button size="sm" onClick={handleConnectSlack} disabled={connectingSlack}>
+            {connectingSlack ? 'Redirecting…' : 'Connect to Slack'}
+          </Button>
         )}
       </section>
 
