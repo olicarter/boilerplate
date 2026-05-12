@@ -109,6 +109,7 @@ export function createOrgCollections(orgId: string) {
           threshold: p.threshold,
           status: p.status as 'open' | 'draft',
           proposal_type: p.proposal_type,
+          anonymous_voting: p.anonymous_voting,
         });
         return { txid: result.txid };
       },

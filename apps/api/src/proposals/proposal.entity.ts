@@ -71,4 +71,7 @@ export class Proposal {
 
   @Column({ name: 'amendment_text', type: 'text', nullable: true, default: null })
   amendment_text!: string | null;
+
+  @Column({ name: 'anonymous_voting', type: 'boolean', default: false })
+  anonymous_voting!: boolean;
 }

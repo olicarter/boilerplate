@@ -31,7 +31,11 @@ export class VotesService {
       const org = await this.dataSource.getRepository(Organisation).findOneBy({ id: proposal.organisation_id });
       if (org?.voting_visibility === 'hidden') return [];
     }
-    return this.voteRepo.findBy({ proposal_id: proposalId });
+    const votes = await this.voteRepo.findBy({ proposal_id: proposalId });
+    if (proposal?.anonymous_voting) {
+      return votes.map((v) => ({ ...v, user_id: null as unknown as string }));
+    }
+    return votes;
   }
 
   async create(data: {

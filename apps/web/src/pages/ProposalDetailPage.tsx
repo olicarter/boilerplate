@@ -891,7 +891,7 @@ export function ProposalDetailPage() {
               </Button>
             )}
           </div>
-          {(isDiscussion || isMultipleChoice || isApproval || isScoreVoting || isRankedChoice || isTemperatureCheck || isConsent || isPetition || isAmendment || proposal.impact_level) && (
+          {(isDiscussion || isMultipleChoice || isApproval || isScoreVoting || isRankedChoice || isTemperatureCheck || isConsent || isPetition || isAmendment || proposal.impact_level || proposal.anonymous_voting) && (
             <div className={styles.headerMeta} style={{ marginBottom: 'var(--space-4)' }}>
               {isDiscussion && <span className={`${styles.badge} ${styles.badgeDefault}`}>Discussion</span>}
               {isMultipleChoice && <span className={`${styles.badge} ${styles.badgeDefault}`}>Multiple choice</span>}
@@ -902,6 +902,7 @@ export function ProposalDetailPage() {
               {isConsent && <span className={`${styles.badge} ${styles.badgeDefault}`}>Consent</span>}
               {isPetition && <span className={`${styles.badge} ${styles.badgeDefault}`}>Petition</span>}
               {isAmendment && <span className={`${styles.badge} ${styles.badgeDefault}`}>Amendment</span>}
+              {proposal.anonymous_voting && <span className={`${styles.badge} ${styles.badgeDefault}`}>Anonymous voting</span>}
               {proposal.impact_level && (
                 <span className={`${styles.badge} ${styles.badgeDefault}`}>
                   {proposal.impact_level.charAt(0).toUpperCase() + proposal.impact_level.slice(1)} impact
@@ -1479,7 +1480,7 @@ export function ProposalDetailPage() {
             <h3 style={{ margin: '0 0 0.75rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vote statements</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {proposalVotes.map((v: Vote) => {
-                const voter = (allUsers ?? []).find((u: User) => u.id === v.user_id);
+                const voter = proposal.anonymous_voting ? null : (allUsers ?? []).find((u: User) => u.id === v.user_id);
                 return (
                   <div key={v.id} data-testid="vote-statement" style={{ fontSize: 13, display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
                     <span style={{ color: choiceColors[(v.choice as VoteChoice) ?? 'abstain'], fontWeight: 600, minWidth: 48, textTransform: 'capitalize' }}>
@@ -1487,7 +1488,7 @@ export function ProposalDetailPage() {
                       ? (v.choice === 'yes' ? 'Consent' : v.choice === 'no' ? 'Block' : 'Stand aside')
                       : (v.choice ?? 'voted')}
                   </span>
-                    <span style={{ color: '#888' }}><strong style={{ color: '#444' }}>{voter?.name ?? 'Unknown'}</strong>: <em>{v.reason as string}</em></span>
+                    <span style={{ color: '#888' }}><strong style={{ color: '#444' }}>{proposal.anonymous_voting ? 'Anonymous member' : (voter?.name ?? 'Unknown')}</strong>: <em>{v.reason as string}</em></span>
                   </div>
                 );
               })}

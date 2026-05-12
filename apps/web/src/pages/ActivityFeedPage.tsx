@@ -119,9 +119,13 @@ export function ActivityFeedPage() {
       icon = '🗳️';
       content = (
         <>
-          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.vote.user_id }} className={styles.eventLink}>
-            {event.user?.name ?? 'Someone'}
-          </Link>
+          {event.proposal?.anonymous_voting ? (
+            <span className={styles.eventLink}>Anonymous member</span>
+          ) : (
+            <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.vote.user_id }} className={styles.eventLink}>
+              {event.user?.name ?? 'Someone'}
+            </Link>
+          )}
           {' voted '}
           {event.vote.choice ? (
             <span className={choiceClass}>{event.vote.choice}</span>

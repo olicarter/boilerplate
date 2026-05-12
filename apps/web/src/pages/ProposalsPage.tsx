@@ -125,6 +125,7 @@ export function ProposalsPage() {
   const [proposalType, setProposalType] = useState<'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition'>('standard');
   const [signatureThreshold, setSignatureThreshold] = useState<string>('');
   const [mcOptions, setMcOptions] = useState<string[]>(['', '']);
+  const [anonymousVoting, setAnonymousVoting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -180,6 +181,7 @@ export function ProposalsPage() {
     setImpactLevel(null);
     setProposalType('standard');
     setMcOptions(['', '']);
+    setAnonymousVoting(false);
     setShowForm(false);
     setFormError('');
   }
@@ -249,6 +251,7 @@ export function ProposalsPage() {
         closes_at: noDeadline ? null : (closesAt ? new Date(closesAt).toISOString() : null),
         deliberation_ends_at: noDeadline ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
         closed_at: null,
+        anonymous_voting: anonymousVoting,
       } as Proposal);
       await proposalTx.isPersisted.promise;
       if (needsOptions) {
@@ -569,6 +572,20 @@ export function ProposalsPage() {
                 </div>
               )}
             </>
+          )}
+
+          {proposalType !== 'discussion' && (
+            <div className={styles.formField} style={{ marginBottom: 'var(--space-4)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={anonymousVoting}
+                  onChange={(e) => setAnonymousVoting(e.target.checked)}
+                />
+                <span className={styles.formLabel} style={{ margin: 0 }}>Anonymous voting</span>
+              </label>
+              <p className={styles.formHint}>Voter identities will not be shown to anyone, including admins.</p>
+            </div>
           )}
 
           {formError && <p className={styles.formError}>{formError}</p>}

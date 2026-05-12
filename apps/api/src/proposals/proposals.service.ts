@@ -94,6 +94,7 @@ export class ProposalsService {
     signature_threshold?: number | null;
     parent_proposal_id?: string | null;
     amendment_text?: string | null;
+    anonymous_voting?: boolean;
   }): Promise<{ item: Proposal; txid: number }> {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Title is required');
@@ -139,7 +140,7 @@ export class ProposalsService {
 
   async update(
     id: string,
-    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'deliberation_ends_at' | 'threshold' | 'outcome' | 'pinned' | 'tags'>>,
+    data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'deliberation_ends_at' | 'threshold' | 'outcome' | 'pinned' | 'tags' | 'anonymous_voting'>>,
   ): Promise<{ item: Proposal; txid: number }> {
     return this.dataSource.transaction(async (manager) => {
       await manager.update(Proposal, id, data);
@@ -654,7 +655,9 @@ export class ProposalsService {
   async exportVotesCsv(proposalId: string): Promise<string> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
     const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
-    const userIds = [...new Set(votes.map((v) => v.user_id))];
+    const isAnon = proposal.anonymous_voting;
+
+    const userIds = isAnon ? [] : [...new Set(votes.map((v) => v.user_id))];
     const users = userIds.length > 0
       ? await this.dataSource.getRepository(User).findBy(userIds.map((id) => ({ id })))
       : [];
@@ -665,29 +668,24 @@ export class ProposalsService {
         where: { proposal_id: proposalId }, order: { position: 'ASC' },
       });
       const optionMap = new Map(options.map((o) => [o.id, o.text]));
-      const rows = [['user_id', 'name', 'option_id', 'option_text', 'voted_at']];
+      const rows = isAnon
+        ? [['option_id', 'option_text', 'voted_at']]
+        : [['user_id', 'name', 'option_id', 'option_text', 'voted_at']];
       for (const v of votes) {
-        const user = userMap.get(v.user_id);
-        rows.push([
-          v.user_id,
-          user?.name ?? '',
-          v.option_id ?? '',
-          v.option_id ? (optionMap.get(v.option_id) ?? '') : '',
-          v.created_at instanceof Date ? v.created_at.toISOString() : String(v.created_at),
-        ]);
+        const row = isAnon
+          ? [v.option_id ?? '', v.option_id ? (optionMap.get(v.option_id) ?? '') : '', v.created_at instanceof Date ? v.created_at.toISOString() : String(v.created_at)]
+          : [v.user_id, userMap.get(v.user_id)?.name ?? '', v.option_id ?? '', v.option_id ? (optionMap.get(v.option_id) ?? '') : '', v.created_at instanceof Date ? v.created_at.toISOString() : String(v.created_at)];
+        rows.push(row);
       }
       return rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     }
 
-    const rows = [['user_id', 'name', 'choice', 'voted_at']];
+    const rows = isAnon ? [['choice', 'voted_at']] : [['user_id', 'name', 'choice', 'voted_at']];
     for (const v of votes) {
-      const user = userMap.get(v.user_id);
-      rows.push([
-        v.user_id,
-        user?.name ?? '',
-        v.choice ?? '',
-        v.created_at instanceof Date ? v.created_at.toISOString() : String(v.created_at),
-      ]);
+      const row = isAnon
+        ? [v.choice ?? '', v.created_at instanceof Date ? v.created_at.toISOString() : String(v.created_at)]
+        : [v.user_id, userMap.get(v.user_id)?.name ?? '', v.choice ?? '', v.created_at instanceof Date ? v.created_at.toISOString() : String(v.created_at)];
+      rows.push(row);
     }
     return rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   }
