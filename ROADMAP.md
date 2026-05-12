@@ -247,7 +247,7 @@ SLACK_SIGNING_SECRET=
 - [x] **Focus management** — when a modal opens, focus moves into it; when it closes, focus returns to the trigger.
 
 ### Performance
-- [ ] **Virtualised proposal list** — use a virtual list (e.g. TanStack Virtual) for the proposals page when there are hundreds of proposals, avoiding DOM bloat.
+- [x] **Virtualised proposal list** — use a virtual list (e.g. TanStack Virtual) for the proposals page when there are hundreds of proposals, avoiding DOM bloat.
 - [x] **Optimistic updates** — votes and delegations should feel instant. TanStack DB optimistic mutations are already partially there; audit and fix any cases where the UI waits for server confirmation before updating.
 - [ ] **Image optimisation** — avatar images served via a CDN with responsive sizes. Lazy-loaded.
 - [x] **Bundle analysis** — run `vite-bundle-visualizer`, identify and eliminate large unused dependencies.

@@ -18,7 +18,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
-          'vendor-tanstack': ['@tanstack/react-router', '@tanstack/react-db', '@tanstack/db'],
+          'vendor-tanstack': ['@tanstack/react-router', '@tanstack/react-db', '@tanstack/db', '@tanstack/react-virtual'],
           'vendor-electric': ['@electric-sql/client', '@tanstack/electric-db-collection'],
           'vendor-markdown': ['marked', 'dompurify'],
           'vendor-auth': ['@simplewebauthn/browser'],

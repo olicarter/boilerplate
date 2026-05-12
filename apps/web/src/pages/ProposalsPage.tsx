@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
@@ -163,6 +164,14 @@ export function ProposalsPage() {
 
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useWindowVirtualizer({
+    count: proposals.length,
+    estimateSize: () => 100,
+    overscan: 8,
+    scrollMargin: listRef.current?.offsetTop ?? 0,
+  });
 
   function resetForm() {
     setTitle('');
@@ -763,8 +772,13 @@ export function ProposalsPage() {
           <EmptyState variant="proposals" title="No proposals yet" description={currentUser ? 'Be the first to start a discussion.' : 'Sign in to create the first proposal.'} />
         )
       ) : (
-        <div className={styles.list}>
-          {proposals.map((p: Proposal) => {
+        <div
+          ref={listRef}
+          className={styles.list}
+          style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}
+        >
+          {virtualizer.getVirtualItems().map((vItem) => {
+            const p = proposals[vItem.index] as Proposal;
             const topic = topicMap[p.topic_id];
             const author = p.author_id ? userMap[p.author_id] : undefined;
             const votes = (allVotes ?? []).filter((v: Vote) => v.proposal_id === p.id);
@@ -788,8 +802,20 @@ export function ProposalsPage() {
             ].filter(Boolean).join(' ');
 
             return (
+              <div
+                key={vItem.key}
+                data-index={vItem.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${vItem.start - virtualizer.options.scrollMargin}px)`,
+                  paddingBottom: 'var(--space-2)',
+                }}
+              >
               <Link
-                key={p.id}
                 to="/orgs/$slug/proposals/$id"
                 params={{ slug: org.slug, id: p.id }}
                 className={styles.card}
@@ -880,6 +906,7 @@ export function ProposalsPage() {
                   </div>
                 </div>
               </Link>
+              </div>
             );
           })}
         </div>
