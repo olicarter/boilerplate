@@ -810,6 +810,57 @@ export class ProposalsService {
     }
   }
 
+  /** Returns for each direct voter, the list of delegators whose vote they carry. Public (not shown for anonymous proposals). */
+  async getVoteCarrying(proposalId: string): Promise<Array<{ voter: { user_id: string; name: string }; carrying: Array<{ user_id: string; name: string }> }>> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    if (proposal.anonymous_voting) return [];
+
+    const votes = await this.dataSource.getRepository(Vote).find({ where: { proposal_id: proposalId } });
+    const allDelegations = await this.dataSource.getRepository(Delegation).find({ where: { organisation_id: proposal.organisation_id } });
+    const delegations = DelegationsService.activeDelegations(allDelegations);
+
+    const directVoterIds = new Set(votes.map((v) => v.user_id));
+    const delegationMap = this.buildDelegationMap(delegations);
+
+    // For each delegator, find who ultimately votes on their behalf
+    const carried = new Map<string, string[]>(); // voterUserId -> [delegatorUserIds]
+
+    const resolveTerminalVoter = (userId: string, visited: Set<string>): string | null => {
+      if (directVoterIds.has(userId)) return userId;
+      if (visited.has(userId) || visited.size >= 10) return null;
+      const userDelegations = delegationMap.get(userId);
+      if (!userDelegations) return null;
+      const next = userDelegations.get(proposal.topic_id) ?? userDelegations.get(null);
+      if (!next) return null;
+      const visited2 = new Set(visited);
+      visited2.add(userId);
+      return resolveTerminalVoter(next, visited2);
+    };
+
+    // All delegators (people who delegated and didn't vote directly)
+    const delegatorIds = new Set(delegations.map((d) => d.delegator_id));
+    for (const delegatorId of delegatorIds) {
+      if (directVoterIds.has(delegatorId)) continue;
+      const terminal = resolveTerminalVoter(delegatorId, new Set([delegatorId]));
+      if (terminal) {
+        if (!carried.has(terminal)) carried.set(terminal, []);
+        carried.get(terminal)!.push(delegatorId);
+      }
+    }
+
+    if (carried.size === 0) return [];
+
+    // Resolve names
+    const allIds = new Set<string>([...carried.keys(), ...Array.from(carried.values()).flat()]);
+    const users = await this.dataSource.getRepository(User).findBy(Array.from(allIds).map((id) => ({ id })));
+    const nameMap = new Map(users.map((u) => [u.id, u.name]));
+
+    return Array.from(carried.entries()).map(([voterId, delegatorIds]) => ({
+      voter: { user_id: voterId, name: nameMap.get(voterId) ?? 'Unknown' },
+      carrying: delegatorIds.map((id) => ({ user_id: id, name: nameMap.get(id) ?? 'Unknown' })),
+    }));
+  }
+
   async sendVoteReminder(proposalId: string, requesterId: string): Promise<{ count: number }> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
     if (proposal.status !== 'open') throw new BadRequestException('Can only send reminders for open proposals');

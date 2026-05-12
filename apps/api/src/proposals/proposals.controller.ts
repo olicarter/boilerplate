@@ -125,6 +125,11 @@ export class ProposalsController {
     return this.proposalsService.delete(id);
   }
 
+  @Get(':id/carrying')
+  getVoteCarrying(@Param('id') id: string) {
+    return this.proposalsService.getVoteCarrying(id);
+  }
+
   @Get(':id/reactions')
   listReactions(@Param('id') id: string) {
     return this.proposalsService.listReactions(id);

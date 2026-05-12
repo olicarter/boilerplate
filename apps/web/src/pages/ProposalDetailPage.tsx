@@ -135,6 +135,7 @@ export function ProposalDetailPage() {
   const [addingLink, setAddingLink] = useState(false);
   const [watching, setWatching] = useState(false);
   const [watchLoading, setWatchLoading] = useState(false);
+  const [voteCarrying, setVoteCarrying] = useState<Array<{ voter: { user_id: string; name: string }; carrying: Array<{ user_id: string; name: string }> }>>([]);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -216,6 +217,7 @@ export function ProposalDetailPage() {
     proposalsApi.listReactions(id).then(setReactions).catch(() => {});
     proposalSignaturesApi.list(id).then((r) => { setSignatures(r.signatures); setSignatureCount(r.count); }).catch(() => {});
     proposalLinksApi.list(id).then(setLinks).catch(() => {});
+    proposalsApi.getCarrying(id).then(setVoteCarrying).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -1512,6 +1514,28 @@ export function ProposalDetailPage() {
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Could not load tally.</p>
         )}
       </div>}
+
+      {/* Delegation carrying */}
+      {!isDiscussion && !proposal.anonymous_voting && voteCarrying.length > 0 && (
+        <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '1rem 1.25rem', marginBottom: '1.5rem', background: 'var(--color-bg-muted)' }}>
+          <h3 style={{ margin: '0 0 0.75rem', fontSize: 14, color: 'var(--color-fg-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delegation carrying</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {voteCarrying.map(({ voter, carrying }) => (
+              <div key={voter.user_id} style={{ fontSize: 13, color: 'var(--color-fg-muted)' }}>
+                <strong style={{ color: 'var(--color-fg)' }}>{voter.name}</strong>
+                {' '}carries {carrying.length} delegated vote{carrying.length !== 1 ? 's' : ''}
+                {' '}on behalf of{' '}
+                {carrying.map((d, i) => (
+                  <span key={d.user_id}>
+                    <strong style={{ color: 'var(--color-fg)' }}>{d.name}</strong>
+                    {i < carrying.length - 2 ? ', ' : i === carrying.length - 2 ? ' and ' : ''}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Vote statements */}
       {!isDiscussion && !isPetition && org.voting_visibility !== 'hidden' && (() => {

@@ -492,6 +492,8 @@ export const proposalsApi = {
     request<void>(`/proposals/${id}/watch`, { method: 'DELETE' }),
   getReceipt: (id: string) =>
     request<Record<string, unknown>>(`/proposals/${id}/receipt`),
+  getCarrying: (id: string) =>
+    request<Array<{ voter: { user_id: string; name: string }; carrying: Array<{ user_id: string; name: string }> }>>(`/proposals/${id}/carrying`),
 };
 
 export interface ProposalReaction {
