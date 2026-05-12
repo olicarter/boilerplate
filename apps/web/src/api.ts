@@ -273,6 +273,19 @@ export const orgsApi = {
     request<Array<{ user_id: string; carried_weight: number }>>(`/orgs/${slug}/delegation-weights`),
   getAnalytics: (slug: string) =>
     request<OrgAnalytics>(`/orgs/${slug}/analytics`),
+  getDecisionRecord: (slug: string) =>
+    request<DecisionEntry[]>(`/orgs/${slug}/decisions`),
+  exportDecisionRecord: async (slug: string): Promise<void> => {
+    const res = await fetch(`/api/orgs/${slug}/decisions/export`, { credentials: 'include' });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `decisions-${slug}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 export const slackApi = {
@@ -306,6 +319,23 @@ export interface OrgAnalytics {
   proposalsByMonth: Array<{ month: string; count: number }>;
   topVoters: Array<{ user_id: string; name: string; voteCount: number }>;
   proposalOutcomes: { passed: number; failed: number; withdrawn: number };
+}
+
+export interface DecisionEntry {
+  proposal: {
+    id: string;
+    title: string;
+    proposal_type: string;
+    topic_name: string;
+    author_name: string | null;
+    closed_at: string | null;
+    threshold: number;
+    outcome: 'implemented' | 'not_implemented' | 'in_progress' | null;
+    status: string;
+    anonymous_voting: boolean;
+  };
+  tally: { yes: number; no: number; abstain: number } | null;
+  result: 'passed' | 'failed' | 'no-votes' | 'withdrawn';
 }
 
 export const topicsApi = {

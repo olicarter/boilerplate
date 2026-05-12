@@ -33,6 +33,7 @@ import { ActivityFeedPage } from './pages/ActivityFeedPage';
 import { DelegationNetworkPage } from './pages/DelegationNetworkPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { PricingPage } from './pages/PricingPage';
+import { DecisionRecordPage } from './pages/DecisionRecordPage';
 import { OrgProvider } from './OrgContext';
 import styles from './styles/Shell.module.css';
 
@@ -264,6 +265,7 @@ function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlu
           <Link to="/orgs/$slug/delegations" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Delegations</Link>
           <Link to="/orgs/$slug/members" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Members</Link>
           <Link to="/orgs/$slug/activity" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Activity</Link>
+          <Link to="/orgs/$slug/decisions" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Decisions</Link>
           {isAdmin && (
             <Link to="/orgs/$slug/admin" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Admin</Link>
           )}
@@ -574,6 +576,12 @@ const delegationNetworkRoute = createRoute({
   component: DelegationNetworkPage,
 });
 
+const decisionRecordRoute = createRoute({
+  getParentRoute: () => orgLayout,
+  path: '/decisions',
+  component: DecisionRecordPage,
+});
+
 const publicResultsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/orgs/$slug/results',
@@ -594,7 +602,7 @@ const pricingRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
-  orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute]),
+  orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute, decisionRecordRoute]),
   publicResultsRoute,
   verifyEmailRoute,
   pricingRoute,

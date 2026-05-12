@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { OrganisationsService } from './organisations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
@@ -35,6 +36,21 @@ export class OrganisationsController {
   @UseGuards(AuthGuard)
   getAnalytics(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
     return this.orgsService.getAnalytics(slug, req.user!.id);
+  }
+
+  @Get(':slug/decisions')
+  @UseGuards(AuthGuard)
+  getDecisionRecord(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.getDecisionRecord(slug, req.user!.id);
+  }
+
+  @Get(':slug/decisions/export')
+  @UseGuards(AuthGuard)
+  async exportDecisionRecord(@Param('slug') slug: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const csv = await this.orgsService.exportDecisionRecordCsv(slug, req.user!.id);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="decisions-${slug}.csv"`);
+    res.send(csv);
   }
 
   @Get(':slug')

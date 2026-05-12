@@ -13,6 +13,7 @@ import { Membership, MemberRole, MemberStatus } from './membership.entity';
 import { Proposal } from '../proposals/proposal.entity';
 import { Vote } from '../votes/vote.entity';
 import { User } from '../users/user.entity';
+import { Topic } from '../topics/topic.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { DelegationsService } from '../delegations/delegations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
@@ -565,5 +566,98 @@ export class OrganisationsService {
       order: { closed_at: 'DESC', created_at: 'DESC' },
     });
     return { org, proposals };
+  }
+
+  async getDecisionRecord(slug: string, actorId: string): Promise<Array<{
+    proposal: { id: string; title: string; proposal_type: string; topic_name: string; author_name: string | null; closed_at: string | null; threshold: number; outcome: string | null; status: string; anonymous_voting: boolean };
+    tally: { yes: number; no: number; abstain: number } | null;
+    result: 'passed' | 'failed' | 'no-votes' | 'withdrawn';
+  }>> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin', 'moderator', 'member', 'observer']);
+
+    const proposals = await this.dataSource.getRepository(Proposal).find({
+      where: [
+        { organisation_id: org.id, status: 'closed' as any },
+        { organisation_id: org.id, status: 'withdrawn' as any },
+      ],
+      order: { closed_at: 'DESC', created_at: 'DESC' },
+    });
+
+    if (proposals.length === 0) return [];
+
+    const proposalIds = proposals.map((p) => p.id);
+    const [votes, topics, users] = await Promise.all([
+      this.dataSource.getRepository(Vote).find({ where: proposalIds.map((id) => ({ proposal_id: id })) }),
+      this.dataSource.getRepository(Topic).find({ where: { organisation_id: org.id } }),
+      this.dataSource.getRepository(User).find(),
+    ]);
+
+    const topicMap = new Map(topics.map((t) => [t.id, t.name]));
+    const userMap = new Map(users.map((u) => [u.id, u.name]));
+
+    return proposals.map((p) => {
+      const pVotes = votes.filter((v) => v.proposal_id === p.id);
+      const yes = pVotes.filter((v) => v.choice === 'yes').length;
+      const no = pVotes.filter((v) => v.choice === 'no').length;
+      const abstain = pVotes.filter((v) => v.choice === 'abstain').length;
+      const tally = p.anonymous_voting ? null : { yes, no, abstain };
+      const nonAnonTally = { yes, no, abstain };
+
+      let result: 'passed' | 'failed' | 'no-votes' | 'withdrawn';
+      if (p.status === 'withdrawn') {
+        result = 'withdrawn';
+      } else if (nonAnonTally.yes + nonAnonTally.no === 0) {
+        result = 'no-votes';
+      } else {
+        result = (nonAnonTally.yes / (nonAnonTally.yes + nonAnonTally.no)) * 100 >= (p.threshold ?? 50) ? 'passed' : 'failed';
+      }
+
+      return {
+        proposal: {
+          id: p.id,
+          title: p.title,
+          proposal_type: p.proposal_type,
+          topic_name: topicMap.get(p.topic_id) ?? 'Unknown',
+          author_name: p.author_id ? (userMap.get(p.author_id) ?? null) : null,
+          closed_at: p.closed_at ? p.closed_at.toISOString() : null,
+          threshold: p.threshold ?? 50,
+          outcome: p.outcome ?? null,
+          status: p.status,
+          anonymous_voting: p.anonymous_voting,
+        },
+        tally,
+        result,
+      };
+    });
+  }
+
+  async exportDecisionRecordCsv(slug: string, actorId: string): Promise<string> {
+    const records = await this.getDecisionRecord(slug, actorId);
+    const headers = ['Title', 'Topic', 'Type', 'Status', 'Result', 'Closed Date', 'Yes', 'No', 'Abstain', 'Yes %', 'Threshold %', 'Implementation Status'];
+    const rows = records.map(({ proposal, tally, result }) => {
+      const yesCount = tally?.yes ?? '';
+      const noCount = tally?.no ?? '';
+      const abstainCount = tally?.abstain ?? '';
+      const yesPct = tally && (tally.yes + tally.no) > 0
+        ? Math.round((tally.yes / (tally.yes + tally.no)) * 100)
+        : '';
+      const closedDate = proposal.closed_at ? new Date(proposal.closed_at).toISOString().slice(0, 10) : '';
+      return [
+        `"${proposal.title.replace(/"/g, '""')}"`,
+        `"${proposal.topic_name.replace(/"/g, '""')}"`,
+        proposal.proposal_type,
+        proposal.status,
+        result,
+        closedDate,
+        yesCount,
+        noCount,
+        abstainCount,
+        yesPct,
+        proposal.threshold,
+        proposal.outcome ?? '',
+      ].join(',');
+    });
+    return [headers.join(','), ...rows].join('\n');
   }
 }
