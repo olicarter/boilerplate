@@ -31,6 +31,12 @@ export class OrganisationsController {
     return this.orgsService.getStats();
   }
 
+  @Get(':slug/analytics')
+  @UseGuards(AuthGuard)
+  getAnalytics(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.getAnalytics(slug, req.user!.id);
+  }
+
   @Get(':slug')
   getBySlug(@Param('slug') slug: string) {
     return this.orgsService.findBySlug(slug);

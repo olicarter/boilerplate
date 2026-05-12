@@ -265,7 +265,22 @@ export const orgsApi = {
     request<{ id: string; name: string }[]>(`/orgs/${slug}/members/search?q=${encodeURIComponent(q)}`),
   getDelegationWeights: (slug: string) =>
     request<Array<{ user_id: string; carried_weight: number }>>(`/orgs/${slug}/delegation-weights`),
+  getAnalytics: (slug: string) =>
+    request<OrgAnalytics>(`/orgs/${slug}/analytics`),
 };
+
+export interface OrgAnalytics {
+  totalProposals: number;
+  openProposals: number;
+  closedProposals: number;
+  totalVotes: number;
+  totalMembers: number;
+  participationRate: number;
+  avgVotesPerProposal: number;
+  proposalsByMonth: Array<{ month: string; count: number }>;
+  topVoters: Array<{ user_id: string; name: string; voteCount: number }>;
+  proposalOutcomes: { passed: number; failed: number; withdrawn: number };
+}
 
 export const topicsApi = {
   create: (data: { id: string; organisation_id: string; name: string; description?: string }) =>

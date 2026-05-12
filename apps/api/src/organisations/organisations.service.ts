@@ -466,6 +466,94 @@ export class OrganisationsService {
     return [...carriedWeight.entries()].map(([user_id, carried_weight]) => ({ user_id, carried_weight }));
   }
 
+  async getAnalytics(slug: string, actorId: string): Promise<{
+    totalProposals: number;
+    openProposals: number;
+    closedProposals: number;
+    totalVotes: number;
+    totalMembers: number;
+    participationRate: number;
+    avgVotesPerProposal: number;
+    proposalsByMonth: Array<{ month: string; count: number }>;
+    topVoters: Array<{ user_id: string; name: string; voteCount: number }>;
+    proposalOutcomes: { passed: number; failed: number; withdrawn: number };
+  }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin', 'moderator']);
+
+    const [proposals, members, votes] = await Promise.all([
+      this.dataSource.getRepository(Proposal).find({ where: { organisation_id: org.id } }),
+      this.memberRepo.find({ where: { organisation_id: org.id, status: 'approved' as any } }),
+      this.dataSource.getRepository(Vote).find({ where: { organisation_id: org.id } }),
+    ]);
+
+    const totalProposals = proposals.length;
+    const openProposals = proposals.filter((p) => p.status === 'open').length;
+    const closedProposals = proposals.filter((p) => p.status === 'closed').length;
+    const totalVotes = votes.length;
+    const totalMembers = members.length;
+
+    const closedWithVotes = proposals.filter((p) => p.status === 'closed' && p.proposal_type !== 'discussion');
+    const votersPerProposal = closedWithVotes.map((p) =>
+      new Set(votes.filter((v) => v.proposal_id === p.id).map((v) => v.user_id)).size,
+    );
+    const avgVotersPerProposal = votersPerProposal.length > 0
+      ? votersPerProposal.reduce((a, b) => a + b, 0) / votersPerProposal.length
+      : 0;
+    const participationRate = totalMembers > 0 ? Math.round((avgVotersPerProposal / totalMembers) * 100) : 0;
+    const avgVotesPerProposal = closedProposals > 0 ? Math.round(totalVotes / closedProposals) : 0;
+
+    // Proposals by month (last 12 months)
+    const now = new Date();
+    const proposalsByMonth: Array<{ month: string; count: number }> = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const count = proposals.filter((p) => {
+        const created = new Date(p.created_at);
+        return created.getFullYear() === d.getFullYear() && created.getMonth() === d.getMonth();
+      }).length;
+      proposalsByMonth.push({ month: label, count });
+    }
+
+    // Top voters
+    const votesByUser = new Map<string, number>();
+    for (const v of votes) {
+      votesByUser.set(v.user_id, (votesByUser.get(v.user_id) ?? 0) + 1);
+    }
+    const topUserIds = [...votesByUser.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id]) => id);
+    const topUsers = topUserIds.length > 0
+      ? await this.dataSource.getRepository(User).findBy(topUserIds.map((id) => ({ id })))
+      : [];
+    const topVoters = topUserIds.map((id) => ({
+      user_id: id,
+      name: topUsers.find((u) => u.id === id)?.name ?? 'Unknown',
+      voteCount: votesByUser.get(id) ?? 0,
+    }));
+
+    const proposalOutcomes = {
+      passed: proposals.filter((p) => p.outcome === 'implemented' || p.outcome === 'in_progress').length,
+      failed: proposals.filter((p) => p.outcome === 'not_implemented').length,
+      withdrawn: proposals.filter((p) => p.status === 'withdrawn').length,
+    };
+
+    return {
+      totalProposals,
+      openProposals,
+      closedProposals,
+      totalVotes,
+      totalMembers,
+      participationRate,
+      avgVotesPerProposal,
+      proposalsByMonth,
+      topVoters,
+      proposalOutcomes,
+    };
+  }
+
   async getPublicResults(slug: string): Promise<{ org: Organisation; proposals: Proposal[] }> {
     const org = await this.findBySlug(slug);
     if (!org.is_public) throw new ForbiddenException('This organisation does not have a public results page');

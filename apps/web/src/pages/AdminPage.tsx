@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, type AuditLogEntry, type Membership, type User, type Organisation } from '../api';
+import { orgsApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -86,9 +86,12 @@ export function AdminPage() {
 
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [auditLogLoading, setAuditLogLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<OrgAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
   useEffect(() => {
     orgsApi.listAuditLog(org.slug).then(setAuditLog).catch(() => {}).finally(() => setAuditLogLoading(false));
+    orgsApi.getAnalytics(org.slug).then(setAnalytics).catch(() => {}).finally(() => setAnalyticsLoading(false));
   }, [org.slug]);
 
   if (!isAdmin) {
@@ -780,6 +783,85 @@ export function AdminPage() {
             {savingTemplate ? 'Adding…' : '+ Add template'}
           </Button>
         </div>
+      </section>
+
+      {/* Analytics */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Participation analytics</h3>
+        {analyticsLoading ? (
+          <p className={styles.sectionHint}>Loading…</p>
+        ) : !analytics ? (
+          <p className={styles.sectionHint}>Could not load analytics.</p>
+        ) : (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              {[
+                { label: 'Total proposals', value: analytics.totalProposals },
+                { label: 'Open proposals', value: analytics.openProposals },
+                { label: 'Closed proposals', value: analytics.closedProposals },
+                { label: 'Total votes', value: analytics.totalVotes },
+                { label: 'Members', value: analytics.totalMembers },
+                { label: 'Participation rate', value: `${analytics.participationRate}%` },
+                { label: 'Avg votes/proposal', value: analytics.avgVotesPerProposal },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '0.75rem 1rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{value}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-fg-muted)', marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-fg-muted)' }}>Proposals per month (last 12 months)</p>
+            {(() => {
+              const max = Math.max(...analytics.proposalsByMonth.map((m) => m.count), 1);
+              return (
+                <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 80, marginBottom: '1.5rem' }}>
+                  {analytics.proposalsByMonth.map(({ month, count }) => (
+                    <div key={month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      <div
+                        title={`${count} proposal${count !== 1 ? 's' : ''}`}
+                        style={{ width: '100%', height: `${Math.max((count / max) * 64, count > 0 ? 4 : 0)}px`, background: 'var(--color-fg)', borderRadius: 2, transition: 'height 0.2s' }}
+                      />
+                      <span style={{ fontSize: 9, color: 'var(--color-fg-muted)', whiteSpace: 'nowrap' }}>{month}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-fg-muted)' }}>Top voters</p>
+                {analytics.topVoters.length === 0 ? (
+                  <p className={styles.sectionHint}>No votes recorded yet.</p>
+                ) : (
+                  <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {analytics.topVoters.map((v, i) => (
+                      <li key={v.user_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: '1px solid var(--color-border)' }}>
+                        <span style={{ color: 'var(--color-fg-muted)', marginRight: 8, minWidth: 16 }}>{i + 1}.</span>
+                        <span style={{ flex: 1 }}>{v.name}</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{v.voteCount}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-fg-muted)' }}>Proposal outcomes</p>
+                {[
+                  { label: 'Passed', value: analytics.proposalOutcomes.passed },
+                  { label: 'Failed', value: analytics.proposalOutcomes.failed },
+                  { label: 'Withdrawn', value: analytics.proposalOutcomes.withdrawn },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', borderBottom: '1px solid var(--color-border)' }}>
+                    <span>{label}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Audit log */}
