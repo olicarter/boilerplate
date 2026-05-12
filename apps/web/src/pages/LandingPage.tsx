@@ -5,29 +5,62 @@ import { organisationsCollection } from '../collections';
 import type { Organisation } from '../api';
 import styles from './LandingPage.module.css';
 
+const WHY = [
+  {
+    title: 'Direct democracy doesn\'t scale',
+    desc: 'Asking every member to vote on every issue produces fatigue, not wisdom. Participation drops off. The people who stay engaged aren\'t necessarily the most informed.',
+  },
+  {
+    title: 'Representative democracy loses signal',
+    desc: 'One representative for all your views, chosen once, for everything. But your opinion on planning isn\'t your opinion on finance. Nuance collapses into a single vote every few years.',
+  },
+  {
+    title: 'Corporate governance is participation theatre',
+    desc: 'AGMs, shareholder votes, all-hands surveys. They create the appearance of participation. Rarely do they change outcomes. Most voices stay advisory at best.',
+  },
+];
+
 const STEPS = [
-  { n: '01', title: 'Create an org', desc: 'Set up your group in seconds — name, description, and privacy settings.' },
-  { n: '02', title: 'Invite members', desc: 'Share an invite link or open your org to the public.' },
-  { n: '03', title: 'Open a proposal', desc: 'Start a vote on any decision that matters to your group.' },
-  { n: '04', title: 'See results live', desc: 'Transparent outcomes updated in real time as votes arrive.' },
+  { n: '01', title: 'Create an org', desc: 'Set up in minutes. Name it, describe it, choose whether it\'s public or invite-only. Your governance structure, not ours.' },
+  { n: '02', title: 'Invite members', desc: 'Share a private invite link or open your org publicly. Members set their own delegation preferences from day one.' },
+  { n: '03', title: 'Open a proposal', desc: 'State the question, set a pass threshold, pick a closing date. Discussion opens immediately. Members are notified.' },
+  { n: '04', title: 'Decisions, transparent', desc: 'Votes arrive in real time. Delegated votes flow automatically through chains. Results are final, visible, and permanent.' },
 ];
 
 const FEATURES = [
-  { title: 'Liquid delegation', desc: 'Delegate your vote to someone you trust on any topic — and reclaim it any time without asking permission.' },
-  { title: 'Weighted voting', desc: 'Assign vote power by role, seniority, or stake. Every voice counted fairly.' },
-  { title: 'Live results', desc: 'Tallies and vote counts update in real time as members vote. No waiting for the count.' },
-  { title: 'Threaded discussion', desc: 'Comment, reply, and @mention before and after a vote closes. Full context, always.' },
-  { title: 'Full audit trail', desc: 'Every action logged and visible to admins. Nothing hidden, nothing lost.' },
-  { title: 'Public or private', desc: 'Open your org to anyone on the internet, or keep it invite-only with a secret link.' },
+  {
+    title: 'Liquid delegation',
+    desc: 'Delegate to someone you trust on any topic. They can delegate further — chains carry expertise to where it\'s needed. Reclaim your vote any time, on any proposal, without asking permission.',
+  },
+  {
+    title: 'Weighted voting',
+    desc: 'Not all votes have to be equal. Assign weight by role, seniority, or stake — whatever your group decides is fair. Works alongside delegation.',
+  },
+  {
+    title: 'Live results',
+    desc: 'Every vote and delegation update appears instantly. No end-of-day tallies, no admin counting. The outcome is visible the moment it\'s determined.',
+  },
+  {
+    title: 'Threaded discussion',
+    desc: 'Every proposal has its own comment thread. @mention colleagues, reply to specific arguments, pin the context worth surfacing. Vote informed.',
+  },
+  {
+    title: 'Full audit trail',
+    desc: 'Every vote, delegation, edit, and comment is permanently logged — who did what, when, and on which proposal. Nothing disappears. Nothing is hidden.',
+  },
+  {
+    title: 'Public or private',
+    desc: 'Invite-only with a secret link, or open to the world. Public organisations appear on Ripple for anyone to discover and join.',
+  },
 ];
 
 const USE_CASES = [
-  { label: 'Neighbourhood groups', desc: "Residents' associations, street committees, local communities." },
-  { label: 'Worker cooperatives', desc: 'One-member-one-vote or weighted decisions for equal-stake orgs.' },
-  { label: 'Local councils', desc: 'Public motions, planning applications, and emergency debates.' },
-  { label: 'National governments', desc: 'Citizen assemblies and large-scale participatory democracy.' },
-  { label: 'Companies', desc: 'Async decisions across teams without the meeting overhead.' },
-  { label: 'DAOs & web3 orgs', desc: 'Off-chain deliberation to complement on-chain governance.' },
+  { label: 'Neighbourhood groups', desc: "Residents' associations, street committees, planning consultations. Give every neighbour a real voice, not just the ones who show up." },
+  { label: 'Worker cooperatives', desc: 'One-member-one-vote, or weighted by stake. Ripple handles the mechanics so you can focus on the work.' },
+  { label: 'Local councils', desc: 'Public motions, planning applications, emergency debates. Full transparency, full record.' },
+  { label: 'National governments', desc: 'Citizen assemblies, participatory budgeting, large-scale policy consultation. Tested infrastructure for real democratic scale.' },
+  { label: 'Companies', desc: 'Async decisions across teams without the meeting overhead. No more threads that go nowhere.' },
+  { label: 'DAOs & web3 orgs', desc: 'Off-chain deliberation and delegation to complement on-chain execution. Governance that reflects real opinion, not just token weight.' },
 ];
 
 interface Stats { orgs: number; members: number; votes: number }
@@ -62,6 +95,51 @@ function VoteMock() {
       <div className={styles.vmFooter}>
         <span>4 votes via delegation</span>
         <span className={styles.vmPassing}>Passing ✓</span>
+      </div>
+    </div>
+  );
+}
+
+function DelegationMock() {
+  return (
+    <div className={styles.delegMock}>
+      <div className={styles.delegMockHeader}>
+        <span>Members</span>
+        <span className={styles.delegMockHeaderNote}>Planning proposal · 4 participants</span>
+      </div>
+      <div className={styles.delegMockList}>
+        <div className={`${styles.delegMockRow} ${styles.delegMockRowActive}`}>
+          <div className={styles.delegMockAvatar}>A</div>
+          <div className={styles.delegMockInfo}>
+            <span className={styles.delegMockName}>Alice Chen</span>
+            <span className={styles.delegMockSub}>Voting directly · planning expert</span>
+          </div>
+          <span className={styles.delegMockWeight}>4×</span>
+        </div>
+        <div className={styles.delegMockRow}>
+          <div className={styles.delegMockAvatar}>B</div>
+          <div className={styles.delegMockInfo}>
+            <span className={styles.delegMockName}>Bob Martinez</span>
+            <span className={styles.delegMockSub}>→ Alice Chen</span>
+          </div>
+        </div>
+        <div className={styles.delegMockRow}>
+          <div className={styles.delegMockAvatar}>C</div>
+          <div className={styles.delegMockInfo}>
+            <span className={styles.delegMockName}>Carol Osei</span>
+            <span className={styles.delegMockSub}>→ Alice Chen</span>
+          </div>
+        </div>
+        <div className={styles.delegMockRow}>
+          <div className={styles.delegMockAvatar}>D</div>
+          <div className={styles.delegMockInfo}>
+            <span className={styles.delegMockName}>David Park</span>
+            <span className={styles.delegMockSub}>→ Bob → Alice Chen</span>
+          </div>
+        </div>
+      </div>
+      <div className={styles.delegMockFooter}>
+        Alice carries 4 votes into this proposal
       </div>
     </div>
   );
@@ -150,10 +228,65 @@ export function LandingPage({ onSignIn }: Props) {
         </div>
       )}
 
+      {/* Why this exists */}
+      <section className={styles.section}>
+        <div className={styles.inner}>
+          <p className={styles.eyebrow}>The problem</p>
+          <h2 className={styles.sectionTitle}>Participation at scale is an unsolved problem.</h2>
+          <p className={styles.sectionSub}>Every existing model makes a compromise. Liquid democracy is a different bet.</p>
+          <div className={styles.whyGrid}>
+            {WHY.map((w) => (
+              <div key={w.title} className={styles.whyCard}>
+                <strong className={styles.whyTitle}>{w.title}</strong>
+                <p className={styles.whyDesc}>{w.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Liquid delegation */}
+      <section className={`${styles.section} ${styles.sectionDark}`}>
+        <div className={styles.inner}>
+          <div className={styles.splitLayout}>
+            <div className={styles.splitContent}>
+              <p className={`${styles.eyebrow} ${styles.eyebrowLight}`}>Liquid delegation</p>
+              <h2 className={`${styles.sectionTitle} ${styles.sectionTitleLight}`}>
+                Vote on what you care about.<br />Trust someone else on the rest.
+              </h2>
+              <p className={styles.splitBody}>
+                In a liquid democracy, you don't have to be an expert on everything. Vote directly on the topics you know well. On everything else, delegate your vote to someone you trust — a colleague, a neighbour, a specialist.
+              </p>
+              <p className={styles.splitBody}>
+                Delegation chains. Your delegate can delegate further, and their weight carries through. If they ever vote against your values on something that matters to you, take your vote back instantly — no forms, no approval, no delay.
+              </p>
+              <div className={styles.splitPillars}>
+                <div className={styles.splitPillar}>
+                  <strong>Instant</strong>
+                  <span>No forms or approval needed to delegate or reclaim</span>
+                </div>
+                <div className={styles.splitPillar}>
+                  <strong>Reversible</strong>
+                  <span>Change your delegate at any time on any proposal</span>
+                </div>
+                <div className={styles.splitPillar}>
+                  <strong>Transitive</strong>
+                  <span>Chains carry expertise to where it's needed most</span>
+                </div>
+              </div>
+            </div>
+            <div className={styles.splitVisual}>
+              <DelegationMock />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className={styles.section}>
         <div className={styles.inner}>
           <h2 className={styles.sectionTitle}>How it works</h2>
+          <p className={styles.sectionSub}>From first proposal to final decision in a matter of days, not months.</p>
           <div className={styles.steps}>
             {STEPS.map((s) => (
               <div key={s.n} className={styles.step}>
@@ -185,7 +318,7 @@ export function LandingPage({ onSignIn }: Props) {
       {/* Use cases */}
       <section className={styles.section}>
         <div className={styles.inner}>
-          <h2 className={styles.sectionTitle}>Built for every kind of group</h2>
+          <h2 className={styles.sectionTitle}>The technology to run a referendum.<br />The simplicity to run a book club.</h2>
           <div className={styles.useCases}>
             {USE_CASES.map((u) => (
               <div key={u.label} className={styles.useCase}>
@@ -224,7 +357,7 @@ export function LandingPage({ onSignIn }: Props) {
       {/* Bottom CTA */}
       <section className={styles.ctaStrip}>
         <div className={styles.inner}>
-          <p className={styles.ctaStripTitle}>Start making better decisions.</p>
+          <p className={styles.ctaStripTitle}>Your organisation is ready for this.</p>
           <p className={styles.ctaStripSub}>
             Free to use. No credit card required.
           </p>
