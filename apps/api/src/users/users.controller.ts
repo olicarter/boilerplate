@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { type Response } from 'express';
 import { UsersService } from './users.service';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 
@@ -60,5 +61,15 @@ export class UsersController {
   @UseGuards(AuthGuard)
   getOrgEmailPreferences(@Req() req: AuthenticatedRequest) {
     return this.usersService.getOrgEmailPreferences(req.user!.id);
+  }
+
+  @Get('me/export')
+  @UseGuards(AuthGuard)
+  async exportPersonalData(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const data = await this.usersService.exportPersonalData(req.user!.id);
+    const filename = `ripple-personal-data-${req.user!.id}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(data, null, 2));
   }
 }

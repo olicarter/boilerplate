@@ -102,4 +102,54 @@ export class UsersService {
       ORDER BY o.name
     `, [userId]);
   }
+
+  async exportPersonalData(userId: string): Promise<object> {
+    const [user, memberships, votes, delegationsOut, delegationsIn, comments] = await Promise.all([
+      this.userRepo.findOneBy({ id: userId }),
+      this.dataSource.query(`
+        SELECT m.organisation_id, o.name AS org_name, o.slug AS org_slug,
+               m.role, m.status, m.joined_at
+        FROM memberships m JOIN organisations o ON o.id = m.organisation_id
+        WHERE m.user_id = $1 ORDER BY m.joined_at
+      `, [userId]),
+      this.dataSource.query(`
+        SELECT v.proposal_id, p.title AS proposal_title, v.option, v.weight, v.created_at
+        FROM votes v JOIN proposals p ON p.id = v.proposal_id
+        WHERE v.user_id = $1 ORDER BY v.created_at
+      `, [userId]),
+      this.dataSource.query(`
+        SELECT d.id, d.delegate_id, u.name AS delegate_name, d.topic_id, d.created_at
+        FROM delegations d JOIN users u ON u.id = d.delegate_id
+        WHERE d.delegator_id = $1 ORDER BY d.created_at
+      `, [userId]),
+      this.dataSource.query(`
+        SELECT d.id, d.delegator_id, u.name AS delegator_name, d.topic_id, d.created_at
+        FROM delegations d JOIN users u ON u.id = d.delegator_id
+        WHERE d.delegate_id = $1 ORDER BY d.created_at
+      `, [userId]),
+      this.dataSource.query(`
+        SELECT c.id, c.proposal_id, p.title AS proposal_title, c.body, c.created_at
+        FROM comments c JOIN proposals p ON p.id = c.proposal_id
+        WHERE c.author_id = $1 ORDER BY c.created_at
+      `, [userId]),
+    ]);
+
+    return {
+      exported_at: new Date().toISOString(),
+      profile: user ? {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        bio: user.bio,
+        created_at: user.created_at,
+        email_verified: user.email_verified,
+        notification_preferences: user.notification_preferences,
+      } : null,
+      memberships,
+      votes,
+      delegations_given: delegationsOut,
+      delegations_received: delegationsIn,
+      comments,
+    };
+  }
 }

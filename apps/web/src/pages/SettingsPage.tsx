@@ -57,6 +57,7 @@ export function SettingsPage() {
   const [addingPasskey, setAddingPasskey] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [anonymizing, setAnonymizing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean> | null>(null);
   const [savingNotif, setSavingNotif] = useState(false);
@@ -434,6 +435,35 @@ export function SettingsPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Your data</h3>
+        <p className={styles.sectionHint}>
+          Download a copy of all your personal data: profile, votes, delegations, comments, and memberships.
+        </p>
+        <Button
+          size="sm"
+          disabled={exporting}
+          onClick={async () => {
+            setExporting(true);
+            try {
+              const blob = await usersApi.exportData();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `ripple-personal-data.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            } catch {
+              addToast('Failed to export data', 'error');
+            } finally {
+              setExporting(false);
+            }
+          }}
+        >
+          {exporting ? 'Preparing…' : 'Download my data'}
+        </Button>
       </section>
 
       <section className={styles.section} style={{ borderColor: 'var(--color-error)', borderWidth: 1, borderStyle: 'solid', borderRadius: 'var(--radius-sm)', padding: 'var(--space-4)' }}>
