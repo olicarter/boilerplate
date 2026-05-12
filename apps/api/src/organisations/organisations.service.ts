@@ -11,6 +11,7 @@ import { randomUUID } from 'crypto';
 import { Organisation } from './organisation.entity';
 import { Membership, MemberRole, MemberStatus } from './membership.entity';
 import { Proposal } from '../proposals/proposal.entity';
+import { Vote } from '../votes/vote.entity';
 import { User } from '../users/user.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { DelegationsService } from '../delegations/delegations.service';
@@ -41,6 +42,15 @@ export class OrganisationsService {
 
   async findAll(): Promise<Organisation[]> {
     return this.orgRepo.find({ order: { created_at: 'ASC' } });
+  }
+
+  async getStats(): Promise<{ orgs: number; members: number; votes: number }> {
+    const [orgs, members, votes] = await Promise.all([
+      this.orgRepo.count(),
+      this.memberRepo.count({ where: { status: 'approved' as MemberStatus } }),
+      this.dataSource.getRepository(Vote).count(),
+    ]);
+    return { orgs, members, votes };
   }
 
   async findBySlug(slug: string): Promise<Organisation> {

@@ -117,6 +117,39 @@
 }
 .secondaryCta:hover { background: var(--color-bg-hover); color: var(--color-fg); }
 
+/* ─── Stats strip ────────────────────────────────────────────── */
+.statsStrip {
+  border-bottom: var(--border);
+  background: var(--color-bg-subtle);
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-8);
+  padding: var(--space-6) 0;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statNum {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.04em;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-size: var(--text-sm);
+  color: var(--color-fg-muted);
+  letter-spacing: -0.01em;
+}
+
 /* ─── Generic section ────────────────────────────────────────── */
 .section {
   padding: 72px 0;
@@ -170,6 +203,36 @@
 }
 
 .stepDesc {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: 1.55;
+  color: var(--color-fg-muted);
+}
+
+/* ─── Feature highlights ─────────────────────────────────────── */
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: var(--border);
+  border-radius: var(--radius-md);
+}
+
+.featureTitle {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-fg);
+  letter-spacing: -0.01em;
+}
+
+.featureDesc {
   margin: 0;
   font-size: var(--text-base);
   line-height: 1.55;
@@ -316,6 +379,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .features,
   .useCases {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -329,6 +393,7 @@
   .inner { padding: 0 var(--space-4); }
 
   .steps,
+  .features,
   .useCases,
   .orgs {
     grid-template-columns: 1fr;

@@ -26,6 +26,11 @@ export class OrganisationsController {
     return this.orgsService.create(body, req.user!.id);
   }
 
+  @Get('stats')
+  getStats() {
+    return this.orgsService.getStats();
+  }
+
   @Get(':slug')
   getBySlug(@Param('slug') slug: string) {
     return this.orgsService.findBySlug(slug);

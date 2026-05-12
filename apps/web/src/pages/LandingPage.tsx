@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from '@tanstack/react-db';
 import { Link } from '@tanstack/react-router';
 import { organisationsCollection } from '../collections';
@@ -11,6 +12,15 @@ const STEPS = [
   { n: '04', title: 'See results live', desc: 'Transparent outcomes updated in real time as votes arrive.' },
 ];
 
+const FEATURES = [
+  { title: 'Liquid delegation', desc: 'Delegate your vote to someone you trust on any topic — and reclaim it any time without asking permission.' },
+  { title: 'Weighted voting', desc: 'Assign vote power by role, seniority, or stake. Every voice counted fairly.' },
+  { title: 'Live results', desc: 'Tallies and vote counts update in real time as members vote. No waiting for the count.' },
+  { title: 'Threaded discussion', desc: 'Comment, reply, and @mention before and after a vote closes. Full context, always.' },
+  { title: 'Full audit trail', desc: 'Every action logged and visible to admins. Nothing hidden, nothing lost.' },
+  { title: 'Public or private', desc: 'Open your org to anyone on the internet, or keep it invite-only with a secret link.' },
+];
+
 const USE_CASES = [
   { label: 'Neighbourhood groups', desc: "Residents' associations, street committees, local communities." },
   { label: 'Worker cooperatives', desc: 'One-member-one-vote or weighted decisions for equal-stake orgs.' },
@@ -20,6 +30,8 @@ const USE_CASES = [
   { label: 'DAOs & web3 orgs', desc: 'Off-chain deliberation to complement on-chain governance.' },
 ];
 
+interface Stats { orgs: number; members: number; votes: number }
+
 interface Props {
   onSignIn: () => void;
 }
@@ -27,6 +39,14 @@ interface Props {
 export function LandingPage({ onSignIn }: Props) {
   const { data: allOrgs } = useLiveQuery(organisationsCollection);
   const publicOrgs = ((allOrgs ?? []) as Organisation[]).filter((o) => o.is_public);
+
+  const [stats, setStats] = useState<Stats | null>(null);
+  useEffect(() => {
+    fetch('/api/orgs/stats', { credentials: 'include' })
+      .then((r) => r.json())
+      .then(setStats)
+      .catch(() => {});
+  }, []);
 
   return (
     <div className={styles.page}>
@@ -60,6 +80,34 @@ export function LandingPage({ onSignIn }: Props) {
         </div>
       </section>
 
+      {/* Stats strip */}
+      {stats && (stats.orgs > 0 || stats.votes > 0) && (
+        <div className={styles.statsStrip}>
+          <div className={styles.inner}>
+            <div className={styles.stats}>
+              {stats.orgs > 0 && (
+                <div className={styles.stat}>
+                  <span className={styles.statNum}>{stats.orgs.toLocaleString()}</span>
+                  <span className={styles.statLabel}>{stats.orgs === 1 ? 'organisation' : 'organisations'}</span>
+                </div>
+              )}
+              {stats.members > 0 && (
+                <div className={styles.stat}>
+                  <span className={styles.statNum}>{stats.members.toLocaleString()}</span>
+                  <span className={styles.statLabel}>{stats.members === 1 ? 'member' : 'members'}</span>
+                </div>
+              )}
+              {stats.votes > 0 && (
+                <div className={styles.stat}>
+                  <span className={styles.statNum}>{stats.votes.toLocaleString()}</span>
+                  <span className={styles.statLabel}>votes cast</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* How it works */}
       <section className={styles.section}>
         <div className={styles.inner}>
@@ -70,6 +118,22 @@ export function LandingPage({ onSignIn }: Props) {
                 <span className={styles.stepNum}>{s.n}</span>
                 <strong className={styles.stepTitle}>{s.title}</strong>
                 <p className={styles.stepDesc}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className={styles.section}>
+        <div className={styles.inner}>
+          <h2 className={styles.sectionTitle}>Everything your group needs</h2>
+          <p className={styles.sectionSub}>Built for real decisions, not just polls.</p>
+          <div className={styles.features}>
+            {FEATURES.map((f) => (
+              <div key={f.title} className={styles.feature}>
+                <strong className={styles.featureTitle}>{f.title}</strong>
+                <p className={styles.featureDesc}>{f.desc}</p>
               </div>
             ))}
           </div>
