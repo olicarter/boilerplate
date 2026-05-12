@@ -259,9 +259,9 @@ SLACK_SIGNING_SECRET=
 - [ ] **Date/number localisation** — use `Intl.DateTimeFormat` and `Intl.NumberFormat` everywhere instead of hardcoded format strings.
 
 ### Error handling
-- [ ] **Global error boundary** — React error boundary at the root that catches JS errors and shows a friendly "something went wrong" page with a reload button, rather than a blank screen.
+- [x] **Global error boundary** — React error boundary at the root that catches JS errors and shows a friendly "something went wrong" page with a reload button, rather than a blank screen.
 - [x] **API error messages** — standardise API error response shape (`{ statusCode, message, code }`). Display user-readable messages in the UI instead of generic "Failed to create proposal."
-- [ ] **Offline detection** — detect when the Electric sync connection drops and show a banner "You're offline — changes may not be saved" rather than silently failing.
+- [x] **Offline detection** — detect when the Electric sync connection drops and show a banner "You're offline — changes may not be saved" rather than silently failing.
 - [x] **Form validation** — client-side validation with clear inline error messages before any API call. Currently most forms rely on `required` HTML5 validation which is inconsistent across browsers.
 
 ---
@@ -273,7 +273,7 @@ SLACK_SIGNING_SECRET=
 ### Public API
 - [x] **API keys** — admins can generate long-lived API keys scoped to an org. Keys are stored hashed. Used to authenticate server-to-server API calls.
 - [x] **REST API documentation** — generate OpenAPI 3.0 spec from the NestJS controllers (using `@nestjs/swagger`). Host interactive docs at `/api/docs`.
-- [ ] **API rate limiting** — per-IP and per-key rate limiting using `@nestjs/throttler`. Return `429` with `Retry-After` header.
+- [x] **API rate limiting** — per-IP and per-key rate limiting using `@nestjs/throttler`. Return `429` with `Retry-After` header.
 - [x] **Pagination** — all list endpoints return paginated responses (`{ items, total, page, pageSize }`). Currently they return unbounded arrays.
 - [x] **Filtering & sorting** — proposals endpoint accepts query params: `status`, `topic_id`, `author_id`, `sort` (created_at, closes_at, votes). Votes endpoint accepts `proposal_id`, `user_id`.
 
@@ -326,10 +326,10 @@ SLACK_SIGNING_SECRET=
 - [ ] **Enforce SSO** — org setting to require SSO (disable passkey/magic-link login for that org's members).
 
 ### Compliance
-- [ ] **GDPR data export** — one-click export of all personal data for a user (profile, votes, delegations, comments, audit log entries). Returns a JSON archive.
-- [ ] **Right to erasure** — anonymise a deleted user's data: replace their name/email with "Deleted User" in all records, keeping the structural data (votes, comments) intact for audit purposes.
-- [ ] **Data retention policies** — org setting: auto-delete closed proposals and associated votes after N months.
-- [ ] **SOC 2 audit log** — structured, tamper-evident audit log exportable to a SIEM (Splunk, Datadog). Includes IP addresses, user agents, and action context.
+- [x] **GDPR data export** — one-click export of all personal data for a user (profile, votes, delegations, comments, audit log entries). Returns a JSON archive.
+- [x] **Right to erasure** — anonymise a deleted user's data: replace their name/email with "Deleted User" in all records, keeping the structural data (votes, comments) intact for audit purposes.
+- [x] **Data retention policies** — org setting: auto-delete closed proposals and associated votes after N months.
+- [x] **SOC 2 audit log** — structured, tamper-evident audit log exportable to a SIEM (Splunk, Datadog). Includes IP addresses, user agents, and action context.
 
 ### Scalability
 - [ ] **Horizontal API scaling** — move in-memory challenge store (WebAuthn) to Redis. Move session store to Redis. Both are needed before running more than one API instance.
@@ -339,7 +339,7 @@ SLACK_SIGNING_SECRET=
 
 ### White-label
 - [ ] **Custom domains** — organisations can map their own domain (e.g. `vote.acme.com`) to their Ripple org, with automatic TLS via Let's Encrypt.
-- [ ] **Custom branding** — org-level: primary colour, logo, font choice. Applied via CSS custom properties so all components pick it up.
+- [x] **Custom branding** — org-level: primary colour, logo, font choice. Applied via CSS custom properties so all components pick it up.
 - [ ] **Email white-labelling** — emails sent from the org's own domain using a verified sending address.
 
 ---
