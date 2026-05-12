@@ -63,6 +63,8 @@ export function AdminPage() {
 
   const [requireApproval, setRequireApproval] = useState<boolean>((org as { require_member_approval?: boolean }).require_member_approval ?? false);
   const [savingApproval, setSavingApproval] = useState(false);
+  const [allowedDomains, setAllowedDomains] = useState<string>((org.allowed_email_domains ?? []).join(', '));
+  const [savingDomains, setSavingDomains] = useState(false);
   const [weightMode, setWeightMode] = useState<'manual' | 'by_role'>((org as { weight_mode?: 'manual' | 'by_role' }).weight_mode ?? 'manual');
   const [savingWeightMode, setSavingWeightMode] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -220,6 +222,23 @@ export function AdminPage() {
       setRequireApproval((org as { require_member_approval?: boolean }).require_member_approval ?? false);
     } finally {
       setSavingApproval(false);
+    }
+  }
+
+  async function saveAllowedDomains() {
+    const domains = allowedDomains
+      .split(/[\s,]+/)
+      .map((d) => d.trim().toLowerCase().replace(/^@/, ''))
+      .filter(Boolean);
+    setSavingDomains(true);
+    try {
+      await orgsApi.update(org.slug, { allowed_email_domains: domains });
+      setAllowedDomains(domains.join(', '));
+      addToast('Domain allowlist saved', 'success');
+    } catch {
+      addToast('Failed to save domain allowlist', 'error');
+    } finally {
+      setSavingDomains(false);
     }
   }
 
@@ -571,6 +590,24 @@ export function AdminPage() {
               />
               Require admin approval before new members can participate
             </label>
+          </div>
+          <div>
+            <p className={styles.permQuestion}>Email domain allowlist</p>
+            <p className={styles.formHint}>
+              Restrict membership to specific email domains. Enter domains separated by commas (e.g. <code>acme.com, acme.org</code>). Leave empty to allow any email.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={allowedDomains}
+                onChange={(e) => setAllowedDomains(e.target.value)}
+                placeholder="acme.com, acme.org"
+                style={{ flex: 1, minWidth: 200, padding: '0.4rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: 4, fontSize: 13 }}
+              />
+              <Button size="sm" onClick={saveAllowedDomains} disabled={savingDomains}>
+                {savingDomains ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
           </div>
           <div>
             <p className={styles.permQuestion}>Vote weight mode</p>

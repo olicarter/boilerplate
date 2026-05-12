@@ -103,7 +103,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -124,6 +124,7 @@ export class OrganisationsService {
       if (data.min_endorsements !== undefined) updates.min_endorsements = data.min_endorsements;
       if (data.require_member_approval !== undefined) updates.require_member_approval = data.require_member_approval;
       if (data.proposal_templates !== undefined) updates.proposal_templates = data.proposal_templates;
+      if (data.allowed_email_domains !== undefined) updates.allowed_email_domains = data.allowed_email_domains;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -281,11 +282,24 @@ export class OrganisationsService {
     });
   }
 
+  private async checkEmailDomain(org: Organisation, userId: string): Promise<void> {
+    if (!org.allowed_email_domains || org.allowed_email_domains.length === 0) return;
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new ForbiddenException('User not found');
+    const domain = user.email.split('@')[1]?.toLowerCase();
+    if (!org.allowed_email_domains.map((d) => d.toLowerCase()).includes(domain)) {
+      throw new ForbiddenException(
+        `Your email domain (@${domain}) is not allowed for this organisation. Allowed domains: ${org.allowed_email_domains.join(', ')}`,
+      );
+    }
+  }
+
   async joinViaToken(slug: string, userId: string, token: string): Promise<{ item: Membership; txid: number }> {
     const org = await this.findBySlug(slug);
     if (!org.invite_token || org.invite_token !== token) {
       throw new ForbiddenException('Invalid or expired invite link');
     }
+    await this.checkEmailDomain(org, userId);
     const existing = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: userId });
     if (existing) return { item: existing, txid: 0 };
     return this.dataSource.transaction(async (manager) => {
@@ -304,6 +318,7 @@ export class OrganisationsService {
   async joinPublic(slug: string, userId: string): Promise<{ item: Membership; txid: number }> {
     const org = await this.findBySlug(slug);
     if (!org.is_public) throw new ForbiddenException('This organisation is not open to the public');
+    await this.checkEmailDomain(org, userId);
     const existing = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: userId });
     if (existing) return { item: existing, txid: 0 };
     const status: MemberStatus = org.require_member_approval ? 'pending' : 'approved';

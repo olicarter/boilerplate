@@ -59,6 +59,9 @@ export class Organisation {
     threshold: number;
   }>;
 
+  @Column({ name: 'allowed_email_domains', type: 'text', array: true, default: [] })
+  allowed_email_domains!: string[];
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }
