@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from '@tanstack/react-db';
 import { Link } from '@tanstack/react-router';
 import { v4 as uuid } from 'uuid';
-import { usersCollection } from '../collections';
+import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
 import { UserSearch } from '../components/UserSearch';
 import { ConfirmButton } from '../components/ConfirmButton';
@@ -10,7 +10,7 @@ import { EmptyState } from '../components/EmptyState';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
-import type { User, Delegation, Topic } from '../api';
+import type { User, Delegation, Topic, Membership } from '../api';
 import styles from './DelegationsPage.module.css';
 
 export function DelegationsPage() {
@@ -20,6 +20,7 @@ export function DelegationsPage() {
   const { data: allDelegations } = useLiveQuery(delegationsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
   const { data: allUsers } = useLiveQuery(usersCollection);
+  const { data: allMemberships } = useLiveQuery(membershipsCollection);
 
   const addToast = useToast();
 
@@ -30,6 +31,7 @@ export function DelegationsPage() {
   const [weightPercent, setWeightPercent] = useState<string>('100');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [showForm, setShowForm] = useState(false);
 
   if (!currentUser) {
     return (
@@ -50,15 +52,41 @@ export function DelegationsPage() {
   const topicMap = Object.fromEntries((allTopics ?? []).map((t: Topic) => [t.id, t]));
   const userMap = Object.fromEntries((allUsers ?? []).map((u: User) => [u.id, u]));
 
+  // Members who could be suggested as delegates (not self, not already globally delegated to)
+  const alreadyDelegatedIds = new Set(
+    outgoing.filter((d: Delegation) => d.topic_id === null).map((d: Delegation) => d.delegate_id),
+  );
+  const orgMemberUserIds = new Set(
+    ((allMemberships ?? []) as Membership[])
+      .filter((m) => m.organisation_id === org.id && m.status === 'approved' && m.user_id !== currentUser.id)
+      .map((m) => m.user_id),
+  );
+  const suggestedDelegates = (allUsers ?? [])
+    .filter((u: User) => orgMemberUserIds.has(u.id) && !alreadyDelegatedIds.has(u.id))
+    .slice(0, 4) as User[];
+
+  // Weight allocation per scope
   const allocationByScopeKey = (outgoing as Delegation[]).reduce((acc: Record<string, number>, d: Delegation) => {
     const key = d.topic_id ?? '__global__';
     acc[key] = (acc[key] ?? 0) + (Number(d.weight_fraction) || 1);
     return acc;
   }, {});
 
+  // Total weight carried as delegate
+  const incomingWeight = incoming.reduce((sum: number, d: Delegation) => sum + (Number(d.weight_fraction) || 1), 0);
+
   function scopeLabel(topicId: string | null) {
     if (!topicId) return 'Global';
     return topicMap[topicId]?.name ?? topicId;
+  }
+
+  function resetForm() {
+    setSelectedDelegate(null);
+    setScopeTopicId('__global__');
+    setExpiresAt('');
+    setFallbackHours('');
+    setWeightPercent('100');
+    setFormError('');
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -96,11 +124,8 @@ export function DelegationsPage() {
         created_at: new Date().toISOString(),
       } as Delegation);
       await tx.isPersisted.promise;
-      setSelectedDelegate(null);
-      setScopeTopicId('__global__');
-      setExpiresAt('');
-      setFallbackHours('');
-      setWeightPercent('100');
+      resetForm();
+      setShowForm(false);
       addToast('Delegation added', 'success');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add delegation.');
@@ -132,14 +157,46 @@ export function DelegationsPage() {
         </Link>
       </div>
 
+      {/* Explainer for first-time users */}
+      {outgoing.length === 0 && !showForm && (
+        <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', background: 'var(--color-bg-subtle)' }}>
+          <p style={{ margin: '0 0 0.5rem', fontWeight: 600, fontSize: 15 }}>What is delegation?</p>
+          <p style={{ margin: '0 0 1rem', fontSize: 13, color: 'var(--color-fg-muted)', lineHeight: 1.5 }}>
+            Delegation lets you hand your vote to someone you trust. If you haven't voted when a proposal closes, their vote counts on your behalf. You can always override by voting directly — your vote always takes priority.
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <Button size="sm" onClick={() => setShowForm(true)}>Delegate my vote</Button>
+            {suggestedDelegates.slice(0, 3).map((u) => (
+              <Button
+                key={u.id}
+                size="sm"
+                variant="secondary"
+                onClick={() => { setSelectedDelegate(u); setShowForm(true); }}
+              >
+                Delegate to {u.name.split(' ')[0]}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Outgoing delegations */}
       <section className={styles.section}>
-        <h3 className={styles.sectionHeading}>You are delegating to</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <h3 className={styles.sectionHeading}>You are delegating to</h3>
+          {outgoing.length > 0 && !showForm && (
+            <Button size="sm" onClick={() => setShowForm(true)}>+ Add delegation</Button>
+          )}
+        </div>
+
         {outgoing.length === 0 ? (
-          <EmptyState
-            variant="delegations"
-            title="No delegations set"
-            description="Delegate your vote to someone you trust on all topics or a specific one."
-          />
+          !showForm ? null : (
+            <EmptyState
+              variant="delegations"
+              title="No delegations set"
+              description="Delegate your vote to someone you trust on all topics or a specific one."
+            />
+          )
         ) : (
           <div className={styles.list}>
             {outgoing.map((d: Delegation) => {
@@ -162,14 +219,16 @@ export function DelegationsPage() {
                     <span className={`${styles.scopeBadge} ${d.topic_id ? styles.scopeTopic : styles.scopeGlobal}`}>
                       {scopeLabel(d.topic_id)}
                     </span>
-                    {pct !== 100 && <span className={styles.weightPct}>{pct}%</span>}
-                    {overAllocated && (
-                      <span className={styles.overAlloc}>· over-allocated ({Math.round(totalAlloc * 100)}% total — will be normalised)</span>
+                    {pct !== 100 && (
+                      <span className={styles.weightPct}>
+                        {pct}% of vote
+                        {overAllocated && <span className={styles.overAlloc}> · over-allocated</span>}
+                      </span>
                     )}
                     {expired && <span className={styles.expired}>Expired</span>}
-                    {!expired && expiresDate && <span className={styles.expiresDate}>· expires {expiresDate}</span>}
+                    {!expired && expiresDate && <span className={styles.expiresDate}>expires {expiresDate}</span>}
                     {d.fallback_abstain_hours != null && (
-                      <span className={styles.fallback}>· voids if delegate doesn't vote within {d.fallback_abstain_hours}h of deadline</span>
+                      <span className={styles.fallback}>voids if inactive {d.fallback_abstain_hours}h before deadline</span>
                     )}
                   </div>
                   <ConfirmButton
@@ -186,95 +245,127 @@ export function DelegationsPage() {
         )}
       </section>
 
-      <section className={styles.section}>
-        <h3 className={styles.sectionHeading}>Add delegation</h3>
-        <form className={styles.form} onSubmit={handleAdd}>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Delegate to</label>
-            {selectedDelegate ? (
-              <div className={styles.selectedDelegate}>
-                <span>
-                  <span className={styles.selectedDelegateName}>{selectedDelegate.name}</span>
-                  <span className={styles.selectedDelegateEmail}>{selectedDelegate.email}</span>
-                </span>
-                <button type="button" onClick={() => setSelectedDelegate(null)} className={styles.clearBtn}>✕</button>
+      {/* Add delegation form */}
+      {showForm && (
+        <section className={styles.section}>
+          <h3 className={styles.sectionHeading}>Add delegation</h3>
+          <form className={styles.form} onSubmit={handleAdd}>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>Delegate to</label>
+              {selectedDelegate ? (
+                <div className={styles.selectedDelegate}>
+                  <span>
+                    <span className={styles.selectedDelegateName}>{selectedDelegate.name}</span>
+                    <span className={styles.selectedDelegateEmail}>{selectedDelegate.email}</span>
+                  </span>
+                  <button type="button" onClick={() => setSelectedDelegate(null)} className={styles.clearBtn}>✕</button>
+                </div>
+              ) : (
+                <div>
+                  {suggestedDelegates.length > 0 && (
+                    <div style={{ marginBottom: '0.5rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {suggestedDelegates.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => setSelectedDelegate(u)}
+                          style={{ fontSize: 12, padding: '3px 8px', border: '1px solid var(--color-border)', borderRadius: 20, background: 'var(--color-bg)', cursor: 'pointer', color: 'var(--color-fg)' }}
+                        >
+                          {u.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <UserSearch onSelect={setSelectedDelegate} excludeId={currentUser.id} />
+                </div>
+              )}
+            </div>
+
+            <div className={styles.formGrid}>
+              <div>
+                <label htmlFor="delegation-scope" className={styles.formLabel}>Scope</label>
+                <select
+                  id="delegation-scope"
+                  value={scopeTopicId}
+                  onChange={(e) => setScopeTopicId(e.target.value)}
+                  className={styles.formSelect}
+                >
+                  <option value="__global__">Global (all topics)</option>
+                  {(allTopics ?? []).map((t: Topic) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              <UserSearch onSelect={setSelectedDelegate} excludeId={currentUser.id} />
-            )}
-          </div>
-
-          <div className={styles.formGrid}>
-            <div>
-              <label htmlFor="delegation-scope" className={styles.formLabel}>Scope</label>
-              <select
-                id="delegation-scope"
-                value={scopeTopicId}
-                onChange={(e) => setScopeTopicId(e.target.value)}
-                className={styles.formSelect}
-              >
-                <option value="__global__">Global (all topics)</option>
-                {(allTopics ?? []).map((t: Topic) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
+              <div>
+                <label htmlFor="delegation-expires-at" className={styles.formLabel}>
+                  Expires <span className={styles.formLabelNote}>(optional)</span>
+                </label>
+                <input
+                  id="delegation-expires-at"
+                  type="datetime-local"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  className={styles.formInput}
+                />
+              </div>
+              <div>
+                <label htmlFor="delegation-weight" className={styles.formLabel}>Weight %</label>
+                <input
+                  id="delegation-weight"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={weightPercent}
+                  onChange={(e) => setWeightPercent(e.target.value)}
+                  className={styles.formInput}
+                />
+              </div>
             </div>
-            <div>
-              <label htmlFor="delegation-expires-at" className={styles.formLabel}>
-                Expires <span className={styles.formLabelNote}>(optional)</span>
+
+            <div className={styles.formField}>
+              <label htmlFor="delegation-fallback" className={styles.formLabel}>
+                Conditional <span className={styles.formLabelNote}>(optional — void if delegate hasn't voted within N hours of deadline)</span>
               </label>
-              <input
-                id="delegation-expires-at"
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-                className={styles.formInput}
-              />
+              <div className={styles.fallbackRow}>
+                <input
+                  id="delegation-fallback"
+                  type="number"
+                  min={1}
+                  max={168}
+                  value={fallbackHours}
+                  onChange={(e) => setFallbackHours(e.target.value)}
+                  placeholder="e.g. 48"
+                  className={styles.formInput}
+                  style={{ width: 80 }}
+                />
+                <span className={styles.fallbackHint}>hours before deadline</span>
+              </div>
             </div>
-            <div>
-              <label htmlFor="delegation-weight" className={styles.formLabel}>Weight %</label>
-              <input
-                id="delegation-weight"
-                type="number"
-                min={1}
-                max={100}
-                value={weightPercent}
-                onChange={(e) => setWeightPercent(e.target.value)}
-                className={styles.formInput}
-              />
+
+            {formError && <p className={styles.formError}>{formError}</p>}
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button type="submit" disabled={submitting || !selectedDelegate} size="sm">
+                {submitting ? 'Adding…' : 'Add delegation'}
+              </Button>
+              <Button type="button" variant="secondary" size="sm" onClick={() => { resetForm(); setShowForm(false); }}>
+                Cancel
+              </Button>
             </div>
-          </div>
+          </form>
+        </section>
+      )}
 
-          <div className={styles.formField}>
-            <label htmlFor="delegation-fallback" className={styles.formLabel}>
-              Conditional <span className={styles.formLabelNote}>(optional — void if delegate hasn't voted within N hours of deadline)</span>
-            </label>
-            <div className={styles.fallbackRow}>
-              <input
-                id="delegation-fallback"
-                type="number"
-                min={1}
-                max={168}
-                value={fallbackHours}
-                onChange={(e) => setFallbackHours(e.target.value)}
-                placeholder="e.g. 48"
-                className={styles.formInput}
-                style={{ width: 80 }}
-              />
-              <span className={styles.fallbackHint}>hours before deadline</span>
-            </div>
-          </div>
-
-          {formError && <p className={styles.formError}>{formError}</p>}
-
-          <Button type="submit" disabled={submitting || !selectedDelegate} size="sm">
-            {submitting ? 'Adding…' : 'Add delegation'}
-          </Button>
-        </form>
-      </section>
-
+      {/* Incoming (trust received) */}
       <section className={styles.section}>
-        <h3 className={styles.sectionHeading}>Delegated to you</h3>
+        <h3 className={styles.sectionHeading}>
+          Delegated to you
+          {incoming.length > 0 && (
+            <span style={{ fontWeight: 400, marginLeft: '0.5rem', textTransform: 'none', letterSpacing: 0, color: 'var(--color-fg-muted)', fontSize: 12 }}>
+              — you carry {incoming.length} vote{incoming.length !== 1 ? 's' : ''}{incomingWeight !== incoming.length ? ` (${Math.round(incomingWeight * 100) / 100}× weight)` : ''}
+            </span>
+          )}
+        </h3>
         {incoming.length === 0 ? (
           <EmptyState variant="delegations" title="Nobody has delegated to you yet" />
         ) : (
@@ -289,6 +380,9 @@ export function DelegationsPage() {
                     <span className={`${styles.scopeBadge} ${d.topic_id ? styles.scopeTopic : styles.scopeGlobal}`}>
                       {scopeLabel(d.topic_id)}
                     </span>
+                    {Number(d.weight_fraction) !== 1 && (
+                      <span className={styles.weightPct}>{Math.round(Number(d.weight_fraction) * 100)}% of their vote</span>
+                    )}
                   </div>
                 </div>
               );

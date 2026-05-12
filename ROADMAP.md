@@ -23,7 +23,7 @@ Liquid democracy for any organisation. The goal is a platform that a community g
 | 9 | Admin participation analytics | ✅ Done |
 | 10 | Stripe billing + pricing page | ✅ Done |
 | 11 | Decision record UI + export | ⬜ Pending |
-| 12 | Delegation UX redesign | ⬜ Pending |
+| 12 | Delegation UX redesign | ✅ Done |
 | 13 | Slack OAuth integration | ⬜ Pending |
 | 14 | Demo environment | ⬜ Pending |
 
