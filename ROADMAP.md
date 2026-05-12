@@ -2,7 +2,43 @@
 
 Liquid democracy for any organisation. The goal is a platform that a community group, a cooperative, a DAO, a company, or a political movement can pick up and use without needing lawyers, complex governance tooling, or technical expertise.
 
-Current state: users can register with passkeys, create proposals under topics, vote yes/no/abstain, and delegate their vote globally or per-topic. The tally respects delegation chains.
+---
+
+## Commercial Viability — Current Focus
+
+> First paying customers: progressive companies (50–300 people) democratising internal decisions — product direction, promotions, salary reviews, budget allocation.
+>
+> **Pricing**: Free (1 org, 15 members) · Pro $29/mo (unlimited orgs/members + Slack + analytics + domain restriction)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Enforce blind voting (`voting_visibility`) | ✅ Done |
+| 2 | Anonymous voting per proposal | ⬜ Pending |
+| 3 | Resend email infrastructure | ⬜ Pending |
+| 4 | Email verification at registration | ⬜ Pending |
+| 5 | Email notifications (proposal events) | ⬜ Pending |
+| 6 | Proposal scheduling (`opens_at`) | ⬜ Pending |
+| 7 | Per-org email domain allowlist | ⬜ Pending |
+| 8 | Onboarding flow for new users | ⬜ Pending |
+| 9 | Admin participation analytics | ⬜ Pending |
+| 10 | Stripe billing + pricing page | ⬜ Pending |
+| 11 | Decision record UI + export | ⬜ Pending |
+| 12 | Delegation UX redesign | ⬜ Pending |
+| 13 | Slack OAuth integration | ⬜ Pending |
+| 14 | Demo environment | ⬜ Pending |
+
+### Environment variables needed
+```
+RESEND_API_KEY=          # https://resend.com
+EMAIL_FROM=hello@ripple.vote
+STRIPE_SECRET_KEY=       # https://dashboard.stripe.com
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRO_PRICE_ID=
+SLACK_CLIENT_ID=         # https://api.slack.com/apps
+SLACK_CLIENT_SECRET=
+SLACK_SIGNING_SECRET=
+```
 
 ---
 

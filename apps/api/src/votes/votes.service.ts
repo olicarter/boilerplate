@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Vote, VoteChoice } from './vote.entity';
 import { Proposal } from '../proposals/proposal.entity';
+import { Organisation } from '../organisations/organisation.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { DelegationsService } from '../delegations/delegations.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -24,7 +25,12 @@ export class VotesService {
     return this.voteRepo.find({ order: { created_at: 'ASC' } });
   }
 
-  findByProposal(proposalId: string): Promise<Vote[]> {
+  async findByProposal(proposalId: string): Promise<Vote[]> {
+    const proposal = await this.proposalRepo.findOneBy({ id: proposalId });
+    if (proposal?.status === 'open') {
+      const org = await this.dataSource.getRepository(Organisation).findOneBy({ id: proposal.organisation_id });
+      if (org?.voting_visibility === 'hidden') return [];
+    }
     return this.voteRepo.findBy({ proposal_id: proposalId });
   }
 

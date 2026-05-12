@@ -1326,7 +1326,7 @@ export function ProposalDetailPage() {
           {isTemperatureCheck ? 'Sentiment (non-binding)' : 'Results'}
         </h3>
         {org.voting_visibility === 'hidden' && isOpen && !isDeliberating ? (
-          <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Vote counts are hidden until this proposal closes.</p>
+          <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Results hidden until voting closes</p>
         ) : tallyLoading ? (
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>Loading tally…</p>
         ) : tally ? (

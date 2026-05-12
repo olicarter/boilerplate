@@ -470,6 +470,13 @@ export class ProposalsService {
   async tally(proposalId: string): Promise<TallyResult> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
 
+    if (proposal.status === 'open') {
+      const org = await this.dataSource.getRepository(Organisation).findOneBy({ id: proposal.organisation_id });
+      if (org?.voting_visibility === 'hidden') {
+        return { yes: 0, no: 0, abstain: 0, total: 0, eligible_count: null, quorum_met: null, options: [] };
+      }
+    }
+
     if (proposal.proposal_type === 'score_voting') {
       const options = await this.dataSource.getRepository(ProposalOption).find({
         where: { proposal_id: proposalId }, order: { position: 'ASC' },
