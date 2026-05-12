@@ -118,7 +118,7 @@ export function UserProfilePage() {
                       </span>
                     )}
                   </div>
-                  <span className={`${styles.voteChoice} ${choiceClass(v.choice)}`}>
+                  <span className={`${styles.voteChoice} ${choiceClass(v.choice ?? undefined)}`}>
                     {v.choice}
                   </span>
                 </div>

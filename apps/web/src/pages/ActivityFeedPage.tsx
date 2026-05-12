@@ -142,7 +142,7 @@ export function ActivityFeedPage() {
       icon = '💬';
       content = (
         <>
-          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.comment.author_id }} className={styles.eventLink}>
+          <Link to="/orgs/$slug/users/$id" params={{ slug, id: event.comment.author_id ?? '' }} className={styles.eventLink}>
             {event.user?.name ?? 'Someone'}
           </Link>
           {' commented on '}
