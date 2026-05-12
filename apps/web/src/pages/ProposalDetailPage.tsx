@@ -244,6 +244,37 @@ export function ProposalDetailPage() {
   }, [id, currentUser?.id, myVote?.id]);
 
   useEffect(() => {
+    if (!proposal) return;
+    const prevTitle = document.title;
+    document.title = `${proposal.title} — Ripple`;
+    const baseUrl = window.location.origin;
+    const imageUrl = `${baseUrl}/api/proposals/${id}/og-image`;
+    const canonicalUrl = `${baseUrl}${window.location.pathname}`;
+    const tags: Array<{ property?: string; name?: string; content: string }> = [
+      { property: 'og:type', content: 'article' },
+      { property: 'og:title', content: proposal.title },
+      { property: 'og:description', content: proposal.description?.slice(0, 200) ?? `A proposal on Ripple` },
+      { property: 'og:image', content: imageUrl },
+      { property: 'og:url', content: canonicalUrl },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: proposal.title },
+      { name: 'twitter:image', content: imageUrl },
+    ];
+    const els: HTMLMetaElement[] = tags.map((t) => {
+      const meta = document.createElement('meta');
+      if (t.property) meta.setAttribute('property', t.property);
+      if (t.name) meta.setAttribute('name', t.name);
+      meta.setAttribute('content', t.content);
+      document.head.appendChild(meta);
+      return meta;
+    });
+    return () => {
+      document.title = prevTitle;
+      els.forEach((el) => el.remove());
+    };
+  }, [proposal?.id, proposal?.title]);
+
+  useEffect(() => {
     const type = proposal?.proposal_type;
     if (type === 'approval') {
       setApprovalSelections(new Set(myApprovalVotes.map((v: Vote) => v.option_id).filter(Boolean) as string[]));

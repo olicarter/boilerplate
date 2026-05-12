@@ -121,6 +121,72 @@ export class ProposalsService {
     return { proposal, tally: tally ?? {}, org: { slug: org.slug, name: org.name } };
   }
 
+  async getOgImage(id: string): Promise<string | null> {
+    const proposal = await this.proposalRepo.findOneBy({ id });
+    if (!proposal) return null;
+    const org = await this.orgRepo.findOneBy({ id: proposal.organisation_id });
+    const tally = await this.tally(id).catch(() => null);
+
+    const width = 1200;
+    const height = 630;
+    const total = tally ? tally.yes + tally.no + tally.abstain : 0;
+    const yesP = total > 0 ? Math.round((tally!.yes / total) * 100) : 0;
+    const noP = total > 0 ? Math.round((tally!.no / total) * 100) : 0;
+    const abstainP = total > 0 ? 100 - yesP - noP : 0;
+
+    const title = proposal.title.length > 80 ? proposal.title.slice(0, 77) + '…' : proposal.title;
+    const orgName = org?.name ?? 'Ripple';
+    const statusLabel = proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1);
+    const statusColor = proposal.status === 'open' ? '#1a7a1a' : '#666';
+    const statusBg = proposal.status === 'open' ? '#e6f7e6' : '#f0f0f0';
+
+    const barWidth = 860;
+    const yesW = Math.round(barWidth * yesP / 100);
+    const noW = Math.round(barWidth * noP / 100);
+    const abstainW = barWidth - yesW - noW;
+
+    const lines: string[] = [];
+    const words = title.split(' ');
+    let line = '';
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (test.length > 42 && line) { lines.push(line); line = word; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+
+    const titleY = lines.length === 1 ? 260 : lines.length === 2 ? 245 : 230;
+    const titleSvg = lines.map((l, i) =>
+      `<text x="170" y="${titleY + i * 58}" font-family="system-ui,sans-serif" font-size="48" font-weight="600" fill="#111">${l.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>`
+    ).join('');
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <rect width="${width}" height="${height}" fill="#fff"/>
+  <rect x="0" y="0" width="8" height="${height}" fill="#111"/>
+  <text x="170" y="80" font-family="system-ui,sans-serif" font-size="22" font-weight="600" fill="#888">${orgName.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>
+  <rect x="170" y="100" width="1" height="1" fill="none"/>
+  ${titleSvg}
+  <rect x="170" y="${titleY + lines.length * 58 + 10}" rx="12" width="90" height="30" fill="${statusBg}"/>
+  <text x="215" y="${titleY + lines.length * 58 + 30}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="${statusColor}">${statusLabel}</text>
+  ${total > 0 ? `
+  <text x="170" y="490" font-family="system-ui,sans-serif" font-size="16" fill="#444">For</text>
+  <text x="${170 + barWidth - 10}" y="490" text-anchor="end" font-family="system-ui,sans-serif" font-size="16" fill="#1a7a1a">${yesP}%</text>
+  <rect x="170" y="498" width="${barWidth}" height="10" rx="5" fill="#eee"/>
+  <rect x="170" y="498" width="${yesW}" height="10" rx="5" fill="#1a7a1a"/>
+  <text x="170" y="532" font-family="system-ui,sans-serif" font-size="16" fill="#444">Against</text>
+  <text x="${170 + barWidth - 10}" y="532" text-anchor="end" font-family="system-ui,sans-serif" font-size="16" fill="#c00">${noP}%</text>
+  <rect x="170" y="540" width="${barWidth}" height="10" rx="5" fill="#eee"/>
+  <rect x="170" y="540" width="${noW}" height="10" rx="5" fill="#c00"/>
+  <text x="170" y="574" font-family="system-ui,sans-serif" font-size="16" fill="#444">Abstain</text>
+  <text x="${170 + barWidth - 10}" y="574" text-anchor="end" font-family="system-ui,sans-serif" font-size="16" fill="#888">${abstainP}%</text>
+  <rect x="170" y="582" width="${barWidth}" height="10" rx="5" fill="#eee"/>
+  <rect x="170" y="582" width="${abstainW}" height="10" rx="5" fill="#888"/>
+  <text x="170" y="618" font-family="system-ui,sans-serif" font-size="14" fill="#aaa">${total} vote${total !== 1 ? 's' : ''} cast</text>
+  ` : `<text x="170" y="520" font-family="system-ui,sans-serif" font-size="22" fill="#aaa">No votes yet</text>`}
+  <text x="${width - 30}" y="${height - 20}" text-anchor="end" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#ccc">Ripple</text>
+</svg>`;
+  }
+
   findOne(id: string): Promise<Proposal | null> {
     return this.proposalRepo.findOneBy({ id });
   }

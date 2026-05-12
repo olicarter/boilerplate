@@ -279,7 +279,7 @@ SLACK_SIGNING_SECRET=
 
 ### Embeds
 - [x] **Embeddable vote widget** — a tiny `<iframe>` embed (or Web Component) that shows a proposal's current tally and lets a logged-in user cast a vote. Designed to be dropped into Notion, Confluence, or a company intranet.
-- [ ] **OG / social preview images** — dynamically generated Open Graph images for proposals (title, tally bars, deadline) so links shared on Slack/Twitter look informative.
+- [x] **OG / social preview images** — dynamically generated Open Graph images for proposals (title, tally bars, deadline) so links shared on Slack/Twitter look informative.
 
 ### Import / export
 - [x] **Bulk import proposals** — admins can import proposals from a CSV or JSON file. Useful when migrating from another tool or seeding a new org.

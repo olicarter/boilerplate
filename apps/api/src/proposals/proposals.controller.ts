@@ -46,6 +46,15 @@ export class ProposalsController {
     return this.proposalsService.getEmbedData(id);
   }
 
+  @Get(':id/og-image')
+  async ogImage(@Param('id') id: string, @Res() res: Response) {
+    const svg = await this.proposalsService.getOgImage(id);
+    if (!svg) { res.status(404).send('Not found'); return; }
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(svg);
+  }
+
   @Get(':id/tally/csv')
   @UseGuards(AuthGuard)
   async tallyCsv(@Param('id') id: string, @Res() res: Response) {
