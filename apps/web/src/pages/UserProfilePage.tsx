@@ -4,6 +4,7 @@ import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import type { User, Vote, Delegation, Proposal, Topic, Membership } from '../api';
+import { Avatar } from '../components/Avatar';
 import styles from './UserProfilePage.module.css';
 
 export function UserProfilePage() {
@@ -48,9 +49,7 @@ export function UserProfilePage() {
   return (
     <div className={styles.page}>
       <div className={styles.profileCard}>
-        <div className={styles.avatar}>
-          {user.name.charAt(0).toUpperCase()}
-        </div>
+        <Avatar name={user.name} avatarUrl={user.avatar_url ?? null} size={48} />
         <div>
           <p className={styles.profileName}>
             {user.name}

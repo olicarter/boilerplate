@@ -28,4 +28,7 @@ export class User {
 
   @Column({ name: 'email_verification_token_expires_at', type: 'timestamptz', nullable: true, default: null })
   email_verification_token_expires_at!: Date | null;
+
+  @Column({ name: 'avatar_url', type: 'text', nullable: true })
+  avatar_url!: string | null;
 }

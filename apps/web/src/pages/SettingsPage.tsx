@@ -1,10 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
 import { authApi, usersApi, orgsApi, type Passkey } from '../api';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
+import { Avatar } from '../components/Avatar';
 import styles from './SettingsPage.module.css';
+
+function resizeToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d')!;
+      const size = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, 128, 128);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 const NOTIFICATION_LABELS: Record<string, string> = {
   'proposal.opened': 'A new proposal is opened',
@@ -21,6 +41,10 @@ const NOTIFICATION_LABELS: Record<string, string> = {
 export function SettingsPage() {
   const currentUser = useCurrentUser();
   const addToast = useToast();
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(currentUser?.avatar_url ?? null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(currentUser?.name ?? '');
   const [savingName, setSavingName] = useState(false);
@@ -67,7 +91,8 @@ export function SettingsPage() {
   useEffect(() => {
     setName(currentUser?.name ?? '');
     setBio((currentUser?.bio as string) ?? '');
-  }, [currentUser?.name, currentUser?.bio]);
+    setAvatarUrl(currentUser?.avatar_url ?? null);
+  }, [currentUser?.name, currentUser?.bio, currentUser?.avatar_url]);
 
   if (!currentUser) {
     return <p className={styles.signIn}>Sign in to access settings.</p>;
@@ -101,6 +126,40 @@ export function SettingsPage() {
       addToast('Failed to update bio', 'error');
     } finally {
       setSavingBio(false);
+    }
+  }
+
+  async function handleAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setAvatarUploading(true);
+    try {
+      const dataUrl = await resizeToDataUrl(file);
+      await usersApi.update(currentUser!.id, { avatar_url: dataUrl });
+      setAvatarUrl(dataUrl);
+      const stored = localStorage.getItem('ripple_user');
+      if (stored) localStorage.setItem('ripple_user', JSON.stringify({ ...JSON.parse(stored), avatar_url: dataUrl }));
+      addToast('Avatar updated', 'success');
+    } catch {
+      addToast('Failed to upload avatar', 'error');
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setAvatarUploading(true);
+    try {
+      await usersApi.update(currentUser!.id, { avatar_url: null });
+      setAvatarUrl(null);
+      const stored = localStorage.getItem('ripple_user');
+      if (stored) localStorage.setItem('ripple_user', JSON.stringify({ ...JSON.parse(stored), avatar_url: null }));
+      addToast('Avatar removed', 'success');
+    } catch {
+      addToast('Failed to remove avatar', 'error');
+    } finally {
+      setAvatarUploading(false);
     }
   }
 
@@ -174,6 +233,26 @@ export function SettingsPage() {
 
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Display name</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
+          <Avatar name={currentUser.name} avatarUrl={avatarUrl} size={64} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleAvatarPick}
+            />
+            <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={avatarUploading}>
+              {avatarUploading ? 'Uploading…' : 'Upload photo'}
+            </Button>
+            {avatarUrl && (
+              <Button size="sm" variant="ghost" onClick={handleRemoveAvatar} disabled={avatarUploading}>
+                Remove photo
+              </Button>
+            )}
+          </div>
+        </div>
         <form className={styles.nameForm} onSubmit={handleSaveName}>
           <div className={styles.nameField}>
             <label htmlFor="settings-name" className={styles.formLabel}>Name</label>

@@ -24,7 +24,7 @@ export class UsersController {
 
   @Patch(':id')
   @UseGuards(AuthGuard)
-  update(@Param('id') id: string, @Body() body: { name?: string; email?: string; bio?: string | null }) {
+  update(@Param('id') id: string, @Body() body: { name?: string; email?: string; bio?: string | null; avatar_url?: string | null }) {
     return this.usersService.update(id, body);
   }
 

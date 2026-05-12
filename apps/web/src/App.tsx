@@ -17,6 +17,7 @@ import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { OfflineBanner } from './components/OfflineBanner';
 import { NotificationBell } from './components/NotificationBell';
+import { Avatar } from './components/Avatar';
 import { ProposalsPage } from './pages/ProposalsPage';
 import { ProposalDetailPage } from './pages/ProposalDetailPage';
 import { DelegationsPage } from './pages/DelegationsPage';
@@ -376,13 +377,16 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
       {user ? (
         <>
           <div className={styles.userRow}>
-            {orgSlug ? (
-              <Link to="/orgs/$slug/users/$id" params={{ slug: orgSlug, id: user.id }} className={styles.userName}>
-                {user.name}
-              </Link>
-            ) : (
-              <span className={styles.userName}>{user.name}</span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 0, overflow: 'hidden' }}>
+              <Avatar name={user.name} avatarUrl={user.avatar_url ?? null} size={24} />
+              {orgSlug ? (
+                <Link to="/orgs/$slug/users/$id" params={{ slug: orgSlug, id: user.id }} className={styles.userName}>
+                  {user.name}
+                </Link>
+              ) : (
+                <span className={styles.userName}>{user.name}</span>
+              )}
+            </div>
             <NotificationBell orgSlug={notificationOrgSlug ?? orgSlug} />
           </div>
           <button onClick={onLogout} className={styles.signOut}>Sign out</button>

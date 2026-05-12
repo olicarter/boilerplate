@@ -30,11 +30,16 @@ export class UsersService {
     });
   }
 
-  async update(id: string, data: Partial<Pick<User, 'name' | 'email' | 'bio'>>): Promise<{ item: User; txid: number }> {
+  async update(id: string, data: Partial<Pick<User, 'name' | 'email' | 'bio' | 'avatar_url'>>): Promise<{ item: User; txid: number }> {
     if (data.name !== undefined) {
       const name = data.name.trim();
       if (!name) throw new BadRequestException('Name is required');
       if (name.length > NAME_MAX) throw new BadRequestException(`Name must be ${NAME_MAX} characters or fewer`);
+    }
+    if (data.avatar_url !== undefined && data.avatar_url !== null) {
+      // Limit to ~200KB (base64 encoded 128×128 JPEG is typically <20KB)
+      if (data.avatar_url.length > 200_000) throw new BadRequestException('Avatar image is too large (max 200KB)');
+      if (!data.avatar_url.startsWith('data:image/')) throw new BadRequestException('Invalid image format');
     }
 
     return this.dataSource.transaction(async (manager) => {
