@@ -24,6 +24,7 @@ import { UserProfilePage } from './pages/UserProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { MembersPage } from './pages/MembersPage';
 import { OrgListPage } from './pages/OrgListPage';
+import { LandingPage } from './pages/LandingPage';
 import { OrgHomePage } from './pages/OrgHomePage';
 import { JoinPage } from './pages/JoinPage';
 import { AdminPage } from './pages/AdminPage';
@@ -360,10 +361,12 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
 // Root layout — no org context yet (used for / and /settings and /users/:id)
 function RootComponent() {
   const [user, setUser] = useState<User | null>(getStoredUser);
+  const [showAuth, setShowAuth] = useState(false);
 
   async function handleLogin(u: User) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
     setUser(u);
+    setShowAuth(false);
   }
 
   async function handleLogout() {
@@ -375,7 +378,12 @@ function RootComponent() {
   if (!user) {
     return (
       <UserContext.Provider value={null}>
-        <AuthPanel onLogin={handleLogin} />
+        <LandingPage onSignIn={() => setShowAuth(true)} />
+        {showAuth && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'var(--color-bg)' }}>
+            <AuthPanel onLogin={handleLogin} onDismiss={() => setShowAuth(false)} />
+          </div>
+        )}
       </UserContext.Provider>
     );
   }
