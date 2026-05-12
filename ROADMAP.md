@@ -25,7 +25,7 @@ Liquid democracy for any organisation. The goal is a platform that a community g
 | 11 | Decision record UI + export | ⬜ Pending |
 | 12 | Delegation UX redesign | ✅ Done |
 | 13 | Slack OAuth integration | ✅ Done |
-| 14 | Demo environment | ⬜ Pending |
+| 14 | Demo environment | ✅ Done |
 
 ### Environment variables needed
 ```

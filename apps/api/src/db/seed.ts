@@ -55,6 +55,7 @@ interface ProposalDef {
   authorIdx: number; tags?: string[]; pinned?: boolean;
   voteDistribution?: 'pass' | 'reject' | 'contested';
   options?: string[];
+  anonymousVoting?: boolean;
 }
 
 // Seeds votes for an org's proposals. voters = approved voting members; oliVotedSet = proposal
@@ -478,7 +479,7 @@ const NL_PROPOSALS: ProposalDef[] = [
     desc: "Propose that all new backend services are written in Rust rather than Node.js/TypeScript. Rationale: performance (10–100x for CPU-bound tasks), memory safety, and growing ecosystem. Mohammed has done a proof-of-concept migration of the notifications service — build time is higher but runtime performance and memory usage are dramatically better.\n\nPassed on a narrow majority. Node.js services will not be migrated, but all greenfield work goes to Rust." },
   { title: 'Default to async-first communication', topicIdx: 2, status: 'open', type: 'standard', threshold: 50, createdDaysAgo: 3, closesInDays: 11, authorIdx: 2, tags: ['communication', 'async', 'culture'],
     desc: "No recurring meeting should exist without a written agenda shared at least 24 hours in advance. Meetings that could be Slack threads should be Slack threads. Meetings that could be Loom videos should be Loom videos. Engineers should have at least two uninterrupted focus blocks of 2+ hours per day.\n\nThis is a cultural norm, not a policy — but formalising it helps us hold each other accountable." },
-  { title: 'Increase all salaries by 8% to match CPI', topicIdx: 3, status: 'closed', type: 'standard', threshold: 50, createdDaysAgo: 55, closesInDays: -41, closedAtDaysAgo: 41, authorIdx: 0, tags: ['compensation', 'salaries'], voteDistribution: 'pass',
+  { title: 'Increase all salaries by 8% to match CPI', topicIdx: 3, status: 'closed', type: 'standard', threshold: 50, createdDaysAgo: 55, closesInDays: -41, closedAtDaysAgo: 41, authorIdx: 0, tags: ['compensation', 'salaries'], voteDistribution: 'pass', anonymousVoting: true,
     desc: "CPI over the past 12 months has been 7.4%. This proposal applied an 8% uplift to all salaries effective 1 April, keeping us above inflation and within our projected headcount budget. Niall confirmed the uplift is fully funded from operating margin without requiring new investment." },
 ];
 
@@ -513,11 +514,11 @@ async function seed() {
 
   console.log('Seeding users...');
   const [gfUsers, vdUsers, sfUsers, acUsers, nlUsers] = await Promise.all([
-    em.save(User, GF_USERS.map(u => em.create(User, { id: uid(), ...u }))),
-    em.save(User, VD_USERS.map(u => em.create(User, { id: uid(), ...u }))),
-    em.save(User, SF_USERS.map(u => em.create(User, { id: uid(), ...u }))),
-    em.save(User, AC_USERS.map(u => em.create(User, { id: uid(), ...u }))),
-    em.save(User, NL_USERS.map(u => em.create(User, { id: uid(), ...u }))),
+    em.save(User, GF_USERS.map(u => em.create(User, { id: uid(), ...u, email_verified: true }))),
+    em.save(User, VD_USERS.map(u => em.create(User, { id: uid(), ...u, email_verified: true }))),
+    em.save(User, SF_USERS.map(u => em.create(User, { id: uid(), ...u, email_verified: true }))),
+    em.save(User, AC_USERS.map(u => em.create(User, { id: uid(), ...u, email_verified: true }))),
+    em.save(User, NL_USERS.map(u => em.create(User, { id: uid(), ...u, email_verified: true }))),
   ]);
   const oli = gfUsers[0];
 
@@ -772,7 +773,8 @@ async function seed() {
     invite_token: uid(), proposal_creation_role: 'member', topic_creation_role: 'member',
     default_voting_duration_days: 7, default_threshold: 60, voting_visibility: 'public',
     is_public: false, veto_role: 'admin', min_endorsements: 0, require_member_approval: false,
-    weight_mode: 'manual',
+    weight_mode: 'manual', plan: 'pro' as any,
+    allowed_email_domains: ['northlight.io'],
   }));
 
   await em.save(Membership, NL_MEMBERSHIPS.map(([idx, role, weight, status]) =>
@@ -790,6 +792,7 @@ async function seed() {
       author_id: nlUsers[p.authorIdx].id, title: p.title, description: p.desc,
       status: p.status, proposal_type: p.type as any, threshold: p.threshold ?? 60,
       impact_level: (p.impact ?? null) as any, tags: p.tags ?? [],
+      anonymous_voting: p.anonymousVoting ?? false,
       created_at: ago(p.createdDaysAgo), closes_at: closesAt,
       closed_at: p.closedAtDaysAgo !== undefined ? ago(p.closedAtDaysAgo) : null,
     });
