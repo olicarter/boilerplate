@@ -74,6 +74,8 @@ export interface Organisation {
     threshold: number;
   }>;
   allowed_email_domains: string[];
+  plan: 'free' | 'pro';
+  stripe_customer_id: string | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -267,6 +269,15 @@ export const orgsApi = {
     request<Array<{ user_id: string; carried_weight: number }>>(`/orgs/${slug}/delegation-weights`),
   getAnalytics: (slug: string) =>
     request<OrgAnalytics>(`/orgs/${slug}/analytics`),
+};
+
+export const billingApi = {
+  getStatus: (orgId: string) =>
+    request<{ plan: 'free' | 'pro'; memberCount: number; memberLimit: number | null; canUpgrade: boolean }>(`/billing/${orgId}/status`),
+  createCheckout: (orgId: string, returnUrl: string) =>
+    request<{ url: string }>(`/billing/${orgId}/checkout`, { method: 'POST', body: JSON.stringify({ return_url: returnUrl }) }),
+  createPortal: (orgId: string, returnUrl: string) =>
+    request<{ url: string }>(`/billing/${orgId}/portal`, { method: 'POST', body: JSON.stringify({ return_url: returnUrl }) }),
 };
 
 export interface OrgAnalytics {

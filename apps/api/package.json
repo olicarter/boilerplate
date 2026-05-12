@@ -27,6 +27,7 @@
     "reflect-metadata": "^0.2",
     "resend": "^6.12.3",
     "rxjs": "^7",
+    "stripe": "^22.1.1",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3"
   },

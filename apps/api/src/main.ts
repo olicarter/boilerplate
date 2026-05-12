@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import type { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.setGlobalPrefix('api');
   app.use(helmet({ contentSecurityPolicy: false }));
   app.enableCors({ origin: 'https://localhost:5173', credentials: true });

@@ -32,6 +32,7 @@ import { PublicResultsPage } from './pages/PublicResultsPage';
 import { ActivityFeedPage } from './pages/ActivityFeedPage';
 import { DelegationNetworkPage } from './pages/DelegationNetworkPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { PricingPage } from './pages/PricingPage';
 import { OrgProvider } from './OrgContext';
 import styles from './styles/Shell.module.css';
 
@@ -273,6 +274,7 @@ function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlu
       {user && (
         <Link to="/settings" {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Settings</Link>
       )}
+      <Link to="/pricing" {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Pricing</Link>
     </nav>
   );
 }
@@ -584,11 +586,18 @@ const verifyEmailRoute = createRoute({
   component: VerifyEmailPage,
 });
 
+const pricingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/pricing',
+  component: PricingPage,
+});
+
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
   orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute]),
   publicResultsRoute,
   verifyEmailRoute,
+  pricingRoute,
 ]);
 
 const router = createRouter({ routeTree });

@@ -31,6 +31,7 @@ import { Veto } from './vetoes/veto.entity';
 import { Endorsement } from './endorsements/endorsement.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EmailModule } from './email/email.module';
+import { BillingModule } from './billing/billing.module';
 import { Notification } from './notifications/notification.entity';
 import { ProposalOption } from './proposals/proposal-option.entity';
 import { ProposalReaction } from './proposals/proposal-reaction.entity';
@@ -62,6 +63,7 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
     EndorsementsModule,
     NotificationsModule,
     EmailModule,
+    BillingModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -62,6 +62,15 @@ export class Organisation {
   @Column({ name: 'allowed_email_domains', type: 'text', array: true, default: [] })
   allowed_email_domains!: string[];
 
+  @Column({ type: 'text', default: 'free' })
+  plan!: 'free' | 'pro';
+
+  @Column({ name: 'stripe_customer_id', type: 'text', nullable: true, default: null })
+  stripe_customer_id!: string | null;
+
+  @Column({ name: 'stripe_subscription_id', type: 'text', nullable: true, default: null })
+  stripe_subscription_id!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

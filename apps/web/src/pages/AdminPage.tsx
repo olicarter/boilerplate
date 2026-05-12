@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics } from '../api';
+import { orgsApi, billingApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -88,11 +88,15 @@ export function AdminPage() {
   const [auditLogLoading, setAuditLogLoading] = useState(true);
   const [analytics, setAnalytics] = useState<OrgAnalytics | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [billingStatus, setBillingStatus] = useState<{ plan: 'free' | 'pro'; memberCount: number; memberLimit: number | null; canUpgrade: boolean } | null>(null);
+  const [upgradingToStripe, setUpgradingToStripe] = useState(false);
+  const [managingBilling, setManagingBilling] = useState(false);
 
   useEffect(() => {
     orgsApi.listAuditLog(org.slug).then(setAuditLog).catch(() => {}).finally(() => setAuditLogLoading(false));
     orgsApi.getAnalytics(org.slug).then(setAnalytics).catch(() => {}).finally(() => setAnalyticsLoading(false));
-  }, [org.slug]);
+    billingApi.getStatus(org.id).then(setBillingStatus).catch(() => {});
+  }, [org.slug, org.id]);
 
   if (!isAdmin) {
     return <p className={styles.denied}>Access denied — admins only.</p>;
@@ -342,6 +346,28 @@ export function AdminPage() {
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed to delete', 'error');
       setDeleting(false);
+    }
+  }
+
+  async function handleUpgrade() {
+    setUpgradingToStripe(true);
+    try {
+      const { url } = await billingApi.createCheckout(org.id, window.location.href);
+      window.location.href = url;
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to start checkout', 'error');
+      setUpgradingToStripe(false);
+    }
+  }
+
+  async function handleManageBilling() {
+    setManagingBilling(true);
+    try {
+      const { url } = await billingApi.createPortal(org.id, window.location.href);
+      window.location.href = url;
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to open billing portal', 'error');
+      setManagingBilling(false);
     }
   }
 
@@ -892,6 +918,48 @@ export function AdminPage() {
           </ul>
         )}
       </section>
+
+      {/* Billing */}
+      {billingStatus && (
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Plan &amp; billing</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <span style={{ fontWeight: 700, fontSize: 15, textTransform: 'capitalize' }}>{billingStatus.plan}</span>
+              {billingStatus.plan === 'free' && billingStatus.memberLimit !== null && (
+                <span style={{ fontSize: 13, color: 'var(--color-fg-muted)', marginLeft: 8 }}>
+                  {billingStatus.memberCount} / {billingStatus.memberLimit} members
+                </span>
+              )}
+              {billingStatus.plan === 'pro' && (
+                <span style={{ fontSize: 13, color: 'var(--color-fg-muted)', marginLeft: 8 }}>
+                  Unlimited members · $29/mo
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {billingStatus.plan === 'free' && billingStatus.canUpgrade && (
+                <Button size="sm" onClick={handleUpgrade} disabled={upgradingToStripe}>
+                  {upgradingToStripe ? 'Redirecting…' : 'Upgrade to Pro'}
+                </Button>
+              )}
+              {billingStatus.plan === 'pro' && (
+                <Button size="sm" variant="secondary" onClick={handleManageBilling} disabled={managingBilling}>
+                  {managingBilling ? 'Redirecting…' : 'Manage billing'}
+                </Button>
+              )}
+              <a href="/pricing" style={{ fontSize: 13, color: 'var(--color-fg-muted)', textDecoration: 'underline', display: 'flex', alignItems: 'center' }}>
+                View pricing
+              </a>
+            </div>
+          </div>
+          {billingStatus.plan === 'free' && billingStatus.memberLimit !== null && billingStatus.memberCount >= billingStatus.memberLimit && (
+            <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 6, fontSize: 13 }}>
+              You've reached the 15-member limit on the Free plan. Upgrade to Pro to add more members.
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Danger zone */}
       <section className={styles.dangerSection}>
