@@ -326,6 +326,7 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
   if (isMobile) {
     return (
       <div className={styles.mobileShell}>
+        <a href="#main-content" className={styles.skipLink}>Skip to main content</a>
         <header className={styles.mobileHeader}>
           <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className={styles.menuButton}>
             ☰
@@ -347,13 +348,14 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
           </>
         )}
 
-        <main className={styles.mobileMain}>{children}</main>
+        <main id="main-content" className={styles.mobileMain}>{children}</main>
       </div>
     );
   }
 
   return (
     <div className={styles.shell}>
+      <a href="#main-content" className={styles.skipLink}>Skip to main content</a>
       <aside className={styles.sidebar}>
         <span className={styles.wordmark}>Ripple</span>
         <NavLinks user={user} orgSlug={orgSlug} orgId={orgId} />
@@ -365,7 +367,7 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
             <span>Please verify your email address. Check your inbox for a verification link.</span>
           </div>
         )}
-        <main className={styles.main}>{children}</main>
+        <main id="main-content" className={styles.main}>{children}</main>
       </div>
     </div>
   );

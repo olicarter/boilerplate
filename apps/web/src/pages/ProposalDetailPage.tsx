@@ -842,7 +842,7 @@ export function ProposalDetailPage() {
               {editTags.map((t) => (
                 <span key={t} className={styles.tagChip}>
                   {t}
-                  <button type="button" onClick={() => setEditTags(editTags.filter((x) => x !== t))} className={styles.tagChipRemove}>×</button>
+                  <button type="button" aria-label={`Remove tag ${t}`} onClick={() => setEditTags(editTags.filter((x) => x !== t))} className={styles.tagChipRemove}>×</button>
                 </span>
               ))}
             </div>
@@ -1783,12 +1783,12 @@ export function ProposalDetailPage() {
                               {opt.text}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <button onClick={() => {
+                              <button aria-label="Move option up" onClick={() => {
                                 if (!isInRanking) { setRankOrder((prev) => [...prev, opt.id]); return; }
                                 const idx = rankOrder.indexOf(opt.id);
                                 if (idx > 0) { const next = [...rankOrder]; [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]; setRankOrder(next); }
                               }} style={{ fontSize: 10, padding: '1px 4px', cursor: 'pointer', border: '1px solid #ddd', background: 'none', borderRadius: 2 }}>▲</button>
-                              <button onClick={() => {
+                              <button aria-label="Move option down" onClick={() => {
                                 if (!isInRanking) return;
                                 const idx = rankOrder.indexOf(opt.id);
                                 if (idx < rankOrder.length - 1) { const next = [...rankOrder]; [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]]; setRankOrder(next); }
@@ -1812,6 +1812,7 @@ export function ProposalDetailPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   <textarea
                     data-testid="vote-reason-input"
+                    aria-label="Vote reason (optional)"
                     placeholder="Add a reason (optional)"
                     value={voteReason}
                     onChange={(e) => setVoteReason(e.target.value)}
@@ -1851,6 +1852,7 @@ export function ProposalDetailPage() {
                 <div>
                   <textarea
                     data-testid="vote-reason-input"
+                    aria-label="Vote reason (optional)"
                     placeholder="Add a reason (optional)"
                     value={voteReason}
                     onChange={(e) => setVoteReason(e.target.value)}
@@ -2033,6 +2035,7 @@ export function ProposalDetailPage() {
               ))}
             </div>
             <textarea
+              aria-label={argSide === 'against' ? 'Against argument' : 'For argument'}
               value={argBody}
               onChange={(e) => setArgBody(e.target.value.slice(0, 2000))}
               rows={2}
@@ -2087,6 +2090,7 @@ export function ProposalDetailPage() {
                   {l.direction === 'outgoing' && currentUser && (
                     <button
                       type="button"
+                      aria-label="Remove link"
                       onClick={() => handleRemoveLink(l.id)}
                       style={{ fontSize: 11, color: '#aaa', border: 'none', background: 'none', cursor: 'pointer', padding: '0 0.2rem' }}
                     >
@@ -2179,6 +2183,7 @@ export function ProposalDetailPage() {
             <div style={{ border: '1px solid #fde68a', borderRadius: 6, padding: '1rem 1.25rem', background: '#fffbeb', marginBottom: '1rem' }}>
               <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: '#92400e' }}>Proposed new description (members will vote on this amendment):</p>
               <textarea
+                aria-label="Proposed new description"
                 value={amendText}
                 onChange={(e) => setAmendText(e.target.value)}
                 rows={6}
@@ -2316,6 +2321,7 @@ export function ProposalDetailPage() {
                           <form onSubmit={(e) => saveEditComment(c.id, e)}>
                             <textarea
                               data-testid="comment-edit-textarea"
+                              aria-label="Edit comment"
                               value={editCommentBody}
                               onChange={(e) => setEditCommentBody(e.target.value.slice(0, COMMENT_MAX))}
                               rows={3}

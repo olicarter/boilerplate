@@ -144,6 +144,8 @@ export function NotificationBell({ orgSlug }: { orgSlug?: string }) {
         {count > 0 && (
           <span
             data-testid="notification-badge"
+            aria-live="polite"
+            aria-atomic="true"
             style={{
               position: 'absolute', top: -2, right: -4,
               background: '#d94040', color: '#fff', borderRadius: '50%',
@@ -158,7 +160,11 @@ export function NotificationBell({ orgSlug }: { orgSlug?: string }) {
       </button>
 
       {open && (
-        <div style={{
+        <div
+          role="dialog"
+          aria-label="Notifications"
+          aria-modal="false"
+          style={{
           position: 'absolute', bottom: '120%', left: '50%', transform: 'translateX(-50%)',
           width: 300, maxHeight: 400, overflowY: 'auto',
           background: '#fff', border: '1px solid #ddd', borderRadius: 8,
