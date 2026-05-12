@@ -52,6 +52,11 @@ export class AuthController {
     return this.authService.deletePasskey(credentialId, req.user!.id);
   }
 
+  @Post('verify-email')
+  verifyEmail(@Body() body: { token: string }) {
+    return this.authService.verifyEmail(body.token);
+  }
+
   @Post('logout')
   logout(@Req() req: Request) {
     return this.authService.logout(req);

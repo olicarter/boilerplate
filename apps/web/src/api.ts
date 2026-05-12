@@ -30,6 +30,8 @@ export const authApi = {
     request<{ success: boolean }>('/auth/add-passkey/finish', { method: 'POST', body: JSON.stringify(credential) }),
   deletePasskey: (id: string) =>
     request<{ success: boolean }>(`/auth/passkeys/${id}`, { method: 'DELETE' }),
+  verifyEmail: (token: string) =>
+    request<{ success: boolean }>('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
 };
 
 export interface MutationResult<T> {
@@ -42,6 +44,7 @@ export interface User {
   name: string;
   email: string;
   bio: string | null;
+  email_verified: boolean;
   created_at: string;
   [key: string]: unknown;
 }

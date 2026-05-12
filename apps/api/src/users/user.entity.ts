@@ -19,4 +19,13 @@ export class User {
 
   @Column({ type: 'text', nullable: true })
   bio!: string | null;
+
+  @Column({ name: 'email_verified', type: 'boolean', default: false })
+  email_verified!: boolean;
+
+  @Column({ name: 'email_verification_token', type: 'text', nullable: true, default: null })
+  email_verification_token!: string | null;
+
+  @Column({ name: 'email_verification_token_expires_at', type: 'timestamptz', nullable: true, default: null })
+  email_verification_token_expires_at!: Date | null;
 }

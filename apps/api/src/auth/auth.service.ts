@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 import type { Request } from 'express';
 import {
   generateRegistrationOptions,
@@ -12,6 +12,7 @@ import {
 import type { AuthenticatorTransportFuture, RegistrationResponseJSON, AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { Credential } from './credential.entity';
 import { User } from '../users/user.entity';
+import { EmailService } from '../email/email.service';
 
 const RP_ID = process.env.RP_ID ?? 'localhost';
 const RP_NAME = 'Ripple';
@@ -33,6 +34,7 @@ export class AuthService {
     @InjectRepository(Credential)
     private readonly credentialRepo: Repository<Credential>,
     private readonly dataSource: DataSource,
+    private readonly emailService: EmailService,
   ) {}
 
   async registerBegin(data: { name: string; email: string }) {
@@ -108,7 +110,37 @@ export class AuthService {
     );
 
     req.session!.userId = user.id;
+
+    if (!user.email_verified) {
+      await this.sendVerificationEmail(user);
+    }
+
     return user;
+  }
+
+  async sendVerificationEmail(user: User): Promise<void> {
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await this.userRepo.update(user.id, {
+      email_verification_token: token,
+      email_verification_token_expires_at: expires,
+    });
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:5173';
+    await this.emailService.sendVerification(user.email, token, baseUrl).catch(() => { /* non-critical */ });
+  }
+
+  async verifyEmail(token: string): Promise<{ success: boolean }> {
+    const user = await this.userRepo.findOneBy({ email_verification_token: token });
+    if (!user) throw new BadRequestException('Invalid or expired verification token');
+    if (!user.email_verification_token_expires_at || user.email_verification_token_expires_at < new Date()) {
+      throw new BadRequestException('Verification token has expired');
+    }
+    await this.userRepo.update(user.id, {
+      email_verified: true,
+      email_verification_token: null,
+      email_verification_token_expires_at: null,
+    });
+    return { success: true };
   }
 
   async loginBegin() {

@@ -14,8 +14,8 @@ Liquid democracy for any organisation. The goal is a platform that a community g
 |---|------|--------|
 | 1 | Enforce blind voting (`voting_visibility`) | ✅ Done |
 | 2 | Anonymous voting per proposal | ✅ Done |
-| 3 | Resend email infrastructure | ⬜ Pending |
-| 4 | Email verification at registration | ⬜ Pending |
+| 3 | Resend email infrastructure | ✅ Done |
+| 4 | Email verification at registration | ✅ Done |
 | 5 | Email notifications (proposal events) | ⬜ Pending |
 | 6 | Proposal scheduling (`opens_at`) | ⬜ Pending |
 | 7 | Per-org email domain allowlist | ⬜ Pending |

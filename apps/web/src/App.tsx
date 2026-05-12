@@ -31,6 +31,7 @@ import { AdminPage } from './pages/AdminPage';
 import { PublicResultsPage } from './pages/PublicResultsPage';
 import { ActivityFeedPage } from './pages/ActivityFeedPage';
 import { DelegationNetworkPage } from './pages/DelegationNetworkPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { OrgProvider } from './OrgContext';
 import styles from './styles/Shell.module.css';
 
@@ -353,7 +354,14 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
         <NavLinks user={user} orgSlug={orgSlug} orgId={orgId} />
         {userSection}
       </aside>
-      <main className={styles.main}>{children}</main>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {user && !user.email_verified && (
+          <div style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a', padding: '0.6rem 1.5rem', fontSize: 13, color: '#92400e', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>Please verify your email address. Check your inbox for a verification link.</span>
+          </div>
+        )}
+        <main className={styles.main}>{children}</main>
+      </div>
     </div>
   );
 }
@@ -570,10 +578,17 @@ const publicResultsRoute = createRoute({
   component: PublicResultsPage,
 });
 
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/verify-email',
+  component: VerifyEmailPage,
+});
+
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
   orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute]),
   publicResultsRoute,
+  verifyEmailRoute,
 ]);
 
 const router = createRouter({ routeTree });
