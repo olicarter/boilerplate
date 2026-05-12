@@ -112,7 +112,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -139,6 +139,7 @@ export class OrganisationsService {
       if (data.data_retention_months !== undefined) updates.data_retention_months = data.data_retention_months;
       if (data.discord_webhook_url !== undefined) updates.discord_webhook_url = data.discord_webhook_url;
       if (data.quadratic_credits !== undefined) updates.quadratic_credits = data.quadratic_credits;
+      if (data.credit_period_days !== undefined) updates.credit_period_days = data.credit_period_days;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -1082,8 +1083,76 @@ export class OrganisationsService {
       `UPDATE memberships SET credits_balance = $1 WHERE organisation_id = $2 AND status = 'approved'`,
       [org.quadratic_credits, org.id],
     );
+    await this.orgRepo.update(org.id, { credits_allocated_at: new Date() });
     this.auditLog.log(org.id, actorId, 'credits.allocated', 'org', org.id, { credits: org.quadratic_credits });
     return { count: result[1] ?? 0 };
+  }
+
+  async exportSnapshotFormat(slug: string, actorId: string): Promise<object[]> {
+    const org = await this.orgRepo.findOneByOrFail({ slug });
+    await this.requireRole(org.id, actorId, ['admin', 'moderator']);
+
+    const proposals = await this.dataSource.getRepository(Proposal).find({ where: { organisation_id: org.id } });
+    const votes = await this.dataSource.getRepository(Vote).find({ where: { organisation_id: org.id } });
+    const options = await this.dataSource.query(
+      `SELECT * FROM proposal_options WHERE organisation_id = $1`, [org.id],
+    );
+
+    return proposals.map((p) => {
+      const pVotes = votes.filter((v) => v.proposal_id === p.id);
+      const pOptions = options.filter((o: any) => o.proposal_id === p.id).sort((a: any, b: any) => a.position - b.position);
+
+      let choices: string[];
+      let scores: number[];
+      let type: string;
+      if (['multiple_choice', 'approval', 'score_voting', 'ranked_choice'].includes(p.proposal_type)) {
+        choices = pOptions.map((o: any) => o.text);
+        scores = pOptions.map((o: any) => pVotes.filter((v) => v.option_id === o.id).length);
+        type = p.proposal_type === 'approval' ? 'approval' : p.proposal_type === 'ranked_choice' ? 'ranked-choice' : 'single-choice';
+      } else {
+        choices = ['For', 'Against', 'Abstain'];
+        scores = [
+          pVotes.filter((v) => v.choice === 'yes').length,
+          pVotes.filter((v) => v.choice === 'no').length,
+          pVotes.filter((v) => v.choice === 'abstain').length,
+        ];
+        type = p.proposal_type === 'consent' ? 'basic' : 'basic';
+      }
+
+      return {
+        id: p.id,
+        title: p.title,
+        body: p.description,
+        choices,
+        start: Math.floor(new Date(p.created_at).getTime() / 1000),
+        end: p.closes_at ? Math.floor(new Date(p.closes_at).getTime() / 1000) : null,
+        snapshot: 0,
+        state: p.status === 'open' ? 'active' : 'closed',
+        author: p.author_id ?? '',
+        network: '1',
+        type,
+        scores,
+        scores_total: pVotes.length,
+        votes: pVotes.length,
+        space: { id: org.slug, name: org.name },
+      };
+    });
+  }
+
+  async runCreditDecay(): Promise<void> {
+    const orgs = await this.orgRepo.find();
+    for (const org of orgs) {
+      if (!org.quadratic_credits || !org.credit_period_days || !org.credits_allocated_at) continue;
+      const nextAllocation = new Date(org.credits_allocated_at);
+      nextAllocation.setDate(nextAllocation.getDate() + org.credit_period_days);
+      if (new Date() >= nextAllocation) {
+        await this.dataSource.query(
+          `UPDATE memberships SET credits_balance = $1 WHERE organisation_id = $2 AND status = 'approved'`,
+          [org.quadratic_credits, org.id],
+        );
+        await this.orgRepo.update(org.id, { credits_allocated_at: new Date() });
+      }
+    }
   }
 
   async purgeExpiredProposals(): Promise<number> {

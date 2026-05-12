@@ -284,7 +284,7 @@ SLACK_SIGNING_SECRET=
 ### Import / export
 - [x] **Bulk import proposals** — admins can import proposals from a CSV or JSON file. Useful when migrating from another tool or seeding a new org.
 - [x] **Export org data** — full export of org data as JSON (proposals, votes, delegations, members). For data portability and backups.
-- [ ] **Snapshot voting compatibility** — export proposals and results in Snapshot.org-compatible JSON format. Lets DAOs move decisions between Ripple and Snapshot.
+- [x] **Snapshot voting compatibility** — export proposals and results in Snapshot.org-compatible JSON format. Lets DAOs move decisions between Ripple and Snapshot.
 
 ---
 
@@ -308,7 +308,7 @@ SLACK_SIGNING_SECRET=
 
 ### Quadratic voting
 - [x] **Credit allocation** — each member gets a budget of credits per voting period. Casting K votes on a proposal costs K² credits. Encourages expressing preference intensity, not just direction. Schema needs a `credits_balance` per member per period.
-- [ ] **Credit decay** — unspent credits expire at the end of the period, preventing hoarding.
+- [x] **Credit decay** — unspent credits expire at the end of the period, preventing hoarding.
 
 ### Constitutional proposals
 - [ ] **Protected topics** — some topics (e.g. "Constitution", "Membership rules") are marked as constitutional. Proposals in these topics require supermajority + extended deliberation period + admin co-sponsorship.
@@ -367,5 +367,5 @@ These items apply across all phases and should be maintained continuously.
 - [ ] **Migration discipline** — every DB schema change ships with a TypeORM migration. No exceptions.
 - [ ] **Changelog** — maintain a `CHANGELOG.md` updated with every release. Use conventional commit format.
 - [ ] **Dependency updates** — monthly Dependabot PR reviews. Keep `@simplewebauthn`, ElectricSQL, and TanStack packages current — they move fast.
-- [ ] **Security headers** — add `helmet` to the NestJS app for CSP, HSTS, X-Frame-Options etc. Review and tighten the CSP allowlist regularly.
+- [x] **Security headers** — add `helmet` to the NestJS app for CSP, HSTS, X-Frame-Options etc. Review and tighten the CSP allowlist regularly.
 - [ ] **Load testing** — before any public launch, run k6 load tests against the API simulating concurrent voting on a high-traffic proposal.

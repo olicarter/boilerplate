@@ -101,6 +101,12 @@ export class Organisation {
   @Column({ name: 'quadratic_credits', type: 'int', nullable: true, default: null })
   quadratic_credits!: number | null;
 
+  @Column({ name: 'credit_period_days', type: 'int', nullable: true, default: null })
+  credit_period_days!: number | null;
+
+  @Column({ name: 'credits_allocated_at', type: 'timestamptz', nullable: true, default: null })
+  credits_allocated_at!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

@@ -126,6 +126,9 @@ export function AdminPage() {
   const [quadraticCredits, setQuadraticCredits] = useState<string>(
     org.quadratic_credits != null ? String(org.quadratic_credits) : '',
   );
+  const [creditPeriodDays, setCreditPeriodDays] = useState<string>(
+    org.credit_period_days != null ? String(org.credit_period_days) : '',
+  );
   const [savingCredits, setSavingCredits] = useState(false);
   const [allocatingCredits, setAllocatingCredits] = useState(false);
 
@@ -1536,7 +1539,8 @@ export function AdminPage() {
             setSavingCredits(true);
             try {
               const credits = quadraticCredits.trim() ? parseInt(quadraticCredits, 10) : null;
-              await orgsApi.update(org.slug, { quadratic_credits: credits });
+              const period = creditPeriodDays.trim() ? parseInt(creditPeriodDays, 10) : null;
+              await orgsApi.update(org.slug, { quadratic_credits: credits, credit_period_days: period });
               addToast('Credit allowance saved', 'success');
             } catch {
               addToast('Failed to save credit allowance', 'error');
@@ -1554,7 +1558,16 @@ export function AdminPage() {
             placeholder="e.g. 100"
             style={{ width: 80, padding: '0 var(--space-2)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
           />
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>credits per period</span>
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>credits,</span>
+          <input
+            type="number"
+            min={1}
+            value={creditPeriodDays}
+            onChange={(e) => setCreditPeriodDays(e.target.value)}
+            placeholder="e.g. 30"
+            style={{ width: 70, padding: '0 var(--space-2)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+          />
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>day period (blank = manual only)</span>
           <Button type="submit" size="sm" disabled={savingCredits}>{savingCredits ? 'Saving…' : 'Save'}</Button>
           <Button
             type="button"
@@ -1596,6 +1609,13 @@ export function AdminPage() {
             style={{ display: 'inline-block' }}
           >
             <Button size="sm" variant="secondary" type="button">Download audit log (.csv)</Button>
+          </a>
+          <a
+            href={`/api/orgs/${org.slug}/proposals/snapshot`}
+            download={`${org.slug}-snapshot.json`}
+            style={{ display: 'inline-block' }}
+          >
+            <Button size="sm" variant="secondary" type="button">Download Snapshot export (.json)</Button>
           </a>
         </div>
       </section>
