@@ -1332,6 +1332,19 @@ export function AdminPage() {
         </form>
       </section>
 
+      {/* Data */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Data export</h3>
+        <p className={styles.sectionHint}>Download a full JSON archive of proposals, votes, delegations, and members for backup or migration.</p>
+        <a
+          href={`/api/orgs/${org.slug}/export`}
+          download={`${org.slug}-export.json`}
+          style={{ display: 'inline-block' }}
+        >
+          <Button size="sm" variant="secondary" type="button">Download org data (.json)</Button>
+        </a>
+      </section>
+
       {/* Danger zone */}
       <section className={styles.dangerSection}>
         <h3 className={styles.dangerTitle}>Danger zone</h3>

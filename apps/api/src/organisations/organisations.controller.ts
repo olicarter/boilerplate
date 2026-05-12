@@ -301,4 +301,17 @@ export class OrganisationsController {
     res.setHeader('Content-Disposition', `attachment; filename="${slug}-proposals.ics"`);
     res.send(ics);
   }
+
+  @Get(':slug/export')
+  @UseGuards(AuthGuard)
+  async exportOrgData(
+    @Param('slug') slug: string,
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+  ) {
+    const data = await this.orgsService.exportOrgData(slug, req.user!.id);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}-export.json"`);
+    res.send(JSON.stringify(data, null, 2));
+  }
 }

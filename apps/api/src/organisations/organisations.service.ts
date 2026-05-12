@@ -1005,4 +1005,39 @@ export class OrganisationsService {
     });
     return [headers.join(','), ...rows].join('\n');
   }
+
+  async exportOrgData(slug: string, actorId: string): Promise<object> {
+    const org = await this.orgRepo.findOneByOrFail({ slug });
+    await this.requireRole(org.id, actorId, ['admin']);
+
+    const [memberships, topics, proposals, votes, delegations] = await Promise.all([
+      this.memberRepo.find({ where: { organisation_id: org.id } }),
+      this.dataSource.getRepository(Topic).find({ where: { organisation_id: org.id } }),
+      this.dataSource.getRepository(Proposal).find({ where: { organisation_id: org.id } }),
+      this.dataSource.getRepository(Vote).find({ where: { organisation_id: org.id } }),
+      this.dataSource.getRepository(Delegation).find({ where: { organisation_id: org.id } }),
+    ]);
+
+    const userIds = [...new Set(memberships.map((m) => m.user_id))];
+    const users = userIds.length > 0
+      ? await this.dataSource.getRepository(User).findBy(userIds.map((id) => ({ id })))
+      : [];
+
+    return {
+      exported_at: new Date().toISOString(),
+      organisation: { id: org.id, name: org.name, slug: org.slug, created_at: org.created_at },
+      members: memberships.map((m) => {
+        const user = users.find((u) => u.id === m.user_id);
+        return { user_id: m.user_id, name: user?.name, email: user?.email, role: m.role, status: m.status, joined_at: m.joined_at };
+      }),
+      topics: topics.map((t) => ({ id: t.id, name: t.name, description: t.description, created_at: t.created_at })),
+      proposals: proposals.map((p) => ({
+        id: p.id, title: p.title, status: p.status, proposal_type: p.proposal_type,
+        author_id: p.author_id, topic_id: p.topic_id, threshold: p.threshold,
+        created_at: p.created_at, closes_at: p.closes_at, closed_at: p.closed_at, outcome: p.outcome,
+      })),
+      votes: votes.map((v) => ({ id: v.id, proposal_id: v.proposal_id, user_id: v.user_id, choice: v.choice, created_at: v.created_at })),
+      delegations: delegations.map((d) => ({ id: d.id, delegator_id: d.delegator_id, delegate_id: d.delegate_id, topic_id: d.topic_id, created_at: d.created_at, expires_at: d.expires_at })),
+    };
+  }
 }
