@@ -248,9 +248,9 @@ SLACK_SIGNING_SECRET=
 
 ### Performance
 - [ ] **Virtualised proposal list** — use a virtual list (e.g. TanStack Virtual) for the proposals page when there are hundreds of proposals, avoiding DOM bloat.
-- [ ] **Optimistic updates** — votes and delegations should feel instant. TanStack DB optimistic mutations are already partially there; audit and fix any cases where the UI waits for server confirmation before updating.
+- [x] **Optimistic updates** — votes and delegations should feel instant. TanStack DB optimistic mutations are already partially there; audit and fix any cases where the UI waits for server confirmation before updating.
 - [ ] **Image optimisation** — avatar images served via a CDN with responsive sizes. Lazy-loaded.
-- [ ] **Bundle analysis** — run `vite-bundle-visualizer`, identify and eliminate large unused dependencies.
+- [x] **Bundle analysis** — run `vite-bundle-visualizer`, identify and eliminate large unused dependencies.
 
 ### Internationalisation
 - [ ] **i18n infrastructure** — integrate `react-i18next`. Extract all UI strings into locale files. This is a large cross-cutting change — do it once and do it properly.
