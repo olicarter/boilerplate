@@ -91,6 +91,8 @@ export interface Organisation {
   slack_team_name: string | null;
   slack_channel_id: string | null;
   slack_channel_name: string | null;
+  primary_color: string | null;
+  logo_url: string | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -251,7 +253,7 @@ export const orgsApi = {
   get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
   create: (data: { name: string; slug?: string; description?: string }) =>
     request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
-  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'weight_mode' | 'proposal_templates' | 'allowed_email_domains'>>) =>
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'weight_mode' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url'>>) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
   transferOwnership: (slug: string, toUserId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
@@ -388,6 +390,7 @@ export interface OrgAnalytics {
   proposalsByMonth: Array<{ month: string; count: number }>;
   topVoters: Array<{ user_id: string; name: string; voteCount: number }>;
   proposalOutcomes: { passed: number; failed: number; withdrawn: number };
+  topicStats: Array<{ topic_id: string; topic_name: string; proposalCount: number; avgParticipation: number; passRate: number }>;
 }
 
 export interface DecisionEntry {

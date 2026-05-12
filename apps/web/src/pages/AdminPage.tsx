@@ -37,6 +37,9 @@ export function AdminPage() {
   const [description, setDescription] = useState(org.description);
   const [savingInfo, setSavingInfo] = useState(false);
   const [infoError, setInfoError] = useState('');
+  const [primaryColor, setPrimaryColor] = useState<string>(org.primary_color ?? '');
+  const [logoUrl, setLogoUrl] = useState<string>(org.logo_url ?? '');
+  const [savingBranding, setSavingBranding] = useState(false);
 
   const [proposalCreationRole, setProposalCreationRole] = useState<CreationRole>(org.proposal_creation_role ?? 'member');
   const [topicCreationRole, setTopicCreationRole] = useState<CreationRole>(org.topic_creation_role ?? 'member');
@@ -146,6 +149,21 @@ export function AdminPage() {
       setInfoError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setSavingInfo(false);
+    }
+  }
+
+  async function saveBranding(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingBranding(true);
+    try {
+      const color = primaryColor.trim() || null;
+      const logo = logoUrl.trim() || null;
+      await orgsApi.update(org.slug, { primary_color: color, logo_url: logo });
+      addToast('Branding saved', 'success');
+    } catch {
+      addToast('Failed to save branding', 'error');
+    } finally {
+      setSavingBranding(false);
     }
   }
 
@@ -579,6 +597,55 @@ export function AdminPage() {
           <div>
             <Button type="submit" size="sm" disabled={savingInfo}>
               {savingInfo ? 'Saving…' : 'Save changes'}
+            </Button>
+          </div>
+        </form>
+      </section>
+
+      {/* Branding */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Branding</h3>
+        <p className={styles.sectionHint}>Custom accent color and logo applied throughout the org's pages.</p>
+        <form className={styles.form} onSubmit={saveBranding}>
+          <div className={styles.formField}>
+            <label htmlFor="admin-primary-color" className={styles.formLabel}>Primary color <span className={styles.formLabelNote}>(hex, e.g. #3358c4)</span></label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <input
+                id="admin-primary-color"
+                type="color"
+                value={primaryColor || '#111111'}
+                onChange={(e) => setPrimaryColor(e.target.value)}
+                style={{ width: 40, height: 32, padding: 2, border: 'var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+              />
+              <input
+                type="text"
+                value={primaryColor}
+                onChange={(e) => setPrimaryColor(e.target.value)}
+                placeholder="#3358c4"
+                className={styles.formInput}
+                style={{ width: 100 }}
+              />
+              {primaryColor && (
+                <button type="button" onClick={() => setPrimaryColor('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+          <div className={styles.formField}>
+            <label htmlFor="admin-logo-url" className={styles.formLabel}>Logo URL <span className={styles.formLabelNote}>(optional)</span></label>
+            <input
+              id="admin-logo-url"
+              type="url"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+              placeholder="https://example.com/logo.png"
+              className={styles.formInput}
+            />
+          </div>
+          <div>
+            <Button type="submit" size="sm" disabled={savingBranding}>
+              {savingBranding ? 'Saving…' : 'Save branding'}
             </Button>
           </div>
         </form>
@@ -1100,6 +1167,26 @@ export function AdminPage() {
                 ))}
               </div>
             </div>
+
+            {analytics.topicStats && analytics.topicStats.length > 0 && (
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-fg-muted)' }}>Topic stats</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(3, auto)', gap: '4px 12px', fontSize: 13, alignItems: 'center' }}>
+                  <span style={{ color: 'var(--color-fg-muted)', fontWeight: 600 }}>Topic</span>
+                  <span style={{ color: 'var(--color-fg-muted)', fontWeight: 600, textAlign: 'right' }}>Proposals</span>
+                  <span style={{ color: 'var(--color-fg-muted)', fontWeight: 600, textAlign: 'right' }}>Participation</span>
+                  <span style={{ color: 'var(--color-fg-muted)', fontWeight: 600, textAlign: 'right' }}>Pass rate</span>
+                  {analytics.topicStats.map((t) => (
+                    <>
+                      <span key={`${t.topic_id}-name`}>{t.topic_name}</span>
+                      <span key={`${t.topic_id}-count`} style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{t.proposalCount}</span>
+                      <span key={`${t.topic_id}-part`} style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{t.avgParticipation}%</span>
+                      <span key={`${t.topic_id}-pass`} style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{t.passRate}%</span>
+                    </>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>

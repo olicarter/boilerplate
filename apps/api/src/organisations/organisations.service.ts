@@ -112,7 +112,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -134,6 +134,8 @@ export class OrganisationsService {
       if (data.require_member_approval !== undefined) updates.require_member_approval = data.require_member_approval;
       if (data.proposal_templates !== undefined) updates.proposal_templates = data.proposal_templates;
       if (data.allowed_email_domains !== undefined) updates.allowed_email_domains = data.allowed_email_domains;
+      if (data.primary_color !== undefined) updates.primary_color = data.primary_color;
+      if (data.logo_url !== undefined) updates.logo_url = data.logo_url;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -491,14 +493,16 @@ export class OrganisationsService {
     proposalsByMonth: Array<{ month: string; count: number }>;
     topVoters: Array<{ user_id: string; name: string; voteCount: number }>;
     proposalOutcomes: { passed: number; failed: number; withdrawn: number };
+    topicStats: Array<{ topic_id: string; topic_name: string; proposalCount: number; avgParticipation: number; passRate: number }>;
   }> {
     const org = await this.findBySlug(slug);
     await this.requireRole(org.id, actorId, ['admin', 'moderator']);
 
-    const [proposals, members, votes] = await Promise.all([
+    const [proposals, members, votes, topics] = await Promise.all([
       this.dataSource.getRepository(Proposal).find({ where: { organisation_id: org.id } }),
       this.memberRepo.find({ where: { organisation_id: org.id, status: 'approved' as any } }),
       this.dataSource.getRepository(Vote).find({ where: { organisation_id: org.id } }),
+      this.dataSource.getRepository(Topic).find({ where: { organisation_id: org.id } }),
     ]);
 
     const totalProposals = proposals.length;
@@ -554,6 +558,31 @@ export class OrganisationsService {
       withdrawn: proposals.filter((p) => p.status === 'withdrawn').length,
     };
 
+    // Topic-level stats
+    const topicStats = topics.map((t) => {
+      const topicProposals = proposals.filter((p) => p.topic_id === t.id && p.proposal_type !== 'discussion');
+      const closedTopicProposals = topicProposals.filter((p) => p.status === 'closed');
+      const votersPerP = closedTopicProposals.map((p) =>
+        new Set(votes.filter((v) => v.proposal_id === p.id).map((v) => v.user_id)).size,
+      );
+      const avgParticipation = totalMembers > 0 && votersPerP.length > 0
+        ? Math.round((votersPerP.reduce((a, b) => a + b, 0) / votersPerP.length / totalMembers) * 100)
+        : 0;
+      const passed = closedTopicProposals.filter((p) => {
+        const yeses = votes.filter((v) => v.proposal_id === p.id && v.choice === 'yes').length;
+        const nos = votes.filter((v) => v.proposal_id === p.id && v.choice === 'no').length;
+        return yeses + nos > 0 && (yeses / (yeses + nos)) * 100 >= (p.threshold ?? 50);
+      }).length;
+      const passRate = closedTopicProposals.length > 0 ? Math.round((passed / closedTopicProposals.length) * 100) : 0;
+      return {
+        topic_id: t.id,
+        topic_name: t.name,
+        proposalCount: topicProposals.length,
+        avgParticipation,
+        passRate,
+      };
+    }).sort((a, b) => b.proposalCount - a.proposalCount);
+
     return {
       totalProposals,
       openProposals,
@@ -565,6 +594,7 @@ export class OrganisationsService {
       proposalsByMonth,
       topVoters,
       proposalOutcomes,
+      topicStats,
     };
   }
 

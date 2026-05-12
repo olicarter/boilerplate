@@ -86,6 +86,12 @@ export class Organisation {
   @Column({ name: 'stripe_subscription_id', type: 'text', nullable: true, default: null })
   stripe_subscription_id!: string | null;
 
+  @Column({ name: 'primary_color', type: 'text', nullable: true, default: null })
+  primary_color!: string | null;
+
+  @Column({ name: 'logo_url', type: 'text', nullable: true, default: null })
+  logo_url!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }
