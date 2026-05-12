@@ -80,4 +80,7 @@ export class Proposal {
 
   @Column({ name: 'jury_size', type: 'integer', nullable: true, default: null })
   jury_size!: number | null;
+
+  @Column({ name: 'conviction_voting', type: 'boolean', default: false })
+  conviction_voting!: boolean;
 }

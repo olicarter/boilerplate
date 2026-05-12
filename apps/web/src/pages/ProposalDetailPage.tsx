@@ -951,6 +951,7 @@ export function ProposalDetailPage() {
               {isPetition && <span className={`${styles.badge} ${styles.badgeDefault}`}>Petition</span>}
               {isAmendment && <span className={`${styles.badge} ${styles.badgeDefault}`}>Amendment</span>}
               {proposal.anonymous_voting && <span className={`${styles.badge} ${styles.badgeDefault}`}>Anonymous voting</span>}
+              {proposal.conviction_voting && <span className={`${styles.badge} ${styles.badgeDefault}`}>Conviction voting</span>}
               {proposal.impact_level && (
                 <span className={`${styles.badge} ${styles.badgeDefault}`}>
                   {proposal.impact_level.charAt(0).toUpperCase() + proposal.impact_level.slice(1)} impact

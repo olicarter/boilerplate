@@ -145,6 +145,8 @@ export interface Proposal {
   parent_proposal_id: string | null;
   amendment_text: string | null;
   anonymous_voting: boolean;
+  conviction_voting: boolean;
+  jury_size: number | null;
   [key: string]: unknown;
 }
 
@@ -479,7 +481,7 @@ export const proposalOptionsApi = {
 };
 
 export const proposalsApi = {
-  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; opens_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition' | 'amendment'; impact_level?: 'low' | 'medium' | 'high' | 'constitutional' | null; signature_threshold?: number | null; parent_proposal_id?: string | null; amendment_text?: string | null; anonymous_voting?: boolean }) =>
+  create: (data: { id: string; organisation_id: string; topic_id: string; title: string; description?: string; closes_at?: string | null; opens_at?: string | null; deliberation_ends_at?: string | null; threshold?: number; quorum?: number | null; quorum_type?: 'soft' | 'hard'; status?: 'open' | 'draft'; proposal_type?: 'standard' | 'discussion' | 'multiple_choice' | 'temperature_check' | 'consent' | 'approval' | 'score_voting' | 'ranked_choice' | 'petition' | 'amendment'; impact_level?: 'low' | 'medium' | 'high' | 'constitutional' | null; signature_threshold?: number | null; parent_proposal_id?: string | null; amendment_text?: string | null; anonymous_voting?: boolean; conviction_voting?: boolean }) =>
     request<MutationResult<Proposal>>('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'threshold' | 'tags'>>) =>
     request<MutationResult<Proposal>>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),

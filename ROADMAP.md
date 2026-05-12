@@ -293,8 +293,8 @@ SLACK_SIGNING_SECRET=
 > Experimental features for power users and cutting-edge governance researchers.
 
 ### Conviction voting
-- [ ] **Conviction accumulation** — instead of a binary open/close window, votes accumulate "conviction" over time. The longer a vote is held without changing, the more weight it carries. A proposal passes when total conviction crosses a threshold. Ideal for resource allocation in DAOs.
-- [ ] **Conviction decay** — if a member changes their vote repeatedly, conviction resets. Rewards commitment.
+- [x] **Conviction accumulation** — instead of a binary open/close window, votes accumulate "conviction" over time. The longer a vote is held without changing, the more weight it carries. A proposal passes when total conviction crosses a threshold. Ideal for resource allocation in DAOs.
+- [x] **Conviction decay** — if a member changes their vote repeatedly, conviction resets. Rewards commitment.
 
 ### Futarchy
 - [ ] **Prediction market integration** — attach a yes/no prediction market to a proposal. Members bet on whether the proposal will have a positive outcome. The market result is shown alongside the vote tally as a signal. (Integrates with a market provider API rather than implementing from scratch.)

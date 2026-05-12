@@ -126,6 +126,7 @@ export function ProposalsPage() {
   const [signatureThreshold, setSignatureThreshold] = useState<string>('');
   const [mcOptions, setMcOptions] = useState<string[]>(['', '']);
   const [anonymousVoting, setAnonymousVoting] = useState(false);
+  const [convictionVoting, setConvictionVoting] = useState(false);
   const [opensAt, setOpensAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -183,6 +184,7 @@ export function ProposalsPage() {
     setProposalType('standard');
     setMcOptions(['', '']);
     setAnonymousVoting(false);
+    setConvictionVoting(false);
     setOpensAt('');
     setShowForm(false);
     setFormError('');
@@ -265,6 +267,7 @@ export function ProposalsPage() {
         deliberation_ends_at: noDeadline ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
         closed_at: null,
         anonymous_voting: anonymousVoting,
+        conviction_voting: convictionVoting,
       } as Proposal);
       await proposalTx.isPersisted.promise;
       if (needsOptions) {
@@ -611,6 +614,20 @@ export function ProposalsPage() {
                 <span className={styles.formLabel} style={{ margin: 0 }}>Anonymous voting</span>
               </label>
               <p className={styles.formHint}>Voter identities will not be shown to anyone, including admins.</p>
+            </div>
+          )}
+
+          {proposalType === 'standard' && (
+            <div className={styles.formGroup}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={convictionVoting}
+                  onChange={(e) => setConvictionVoting(e.target.checked)}
+                />
+                <span className={styles.formLabel} style={{ margin: 0 }}>Conviction voting</span>
+              </label>
+              <p className={styles.formHint}>Vote weight grows with time — the longer a vote is held without changing, the more conviction it carries.</p>
             </div>
           )}
 
