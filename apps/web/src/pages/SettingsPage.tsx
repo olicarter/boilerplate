@@ -5,6 +5,7 @@ import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
 import { Avatar } from '../components/Avatar';
+import { useTheme } from '../hooks/useTheme';
 import styles from './SettingsPage.module.css';
 
 function resizeToDataUrl(file: File): Promise<string> {
@@ -41,6 +42,7 @@ const NOTIFICATION_LABELS: Record<string, string> = {
 export function SettingsPage() {
   const currentUser = useCurrentUser();
   const addToast = useToast();
+  const { theme, setTheme } = useTheme();
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(currentUser?.avatar_url ?? null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -368,6 +370,34 @@ export function SettingsPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Appearance</h3>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          {(['system', 'light', 'dark'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTheme(t)}
+              style={{
+                padding: '0 var(--space-3)',
+                height: 32,
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-base)',
+                fontWeight: theme === t ? 'var(--weight-medium)' : 'var(--weight-normal)',
+                border: theme === t ? '1px solid var(--color-fg)' : 'var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                background: theme === t ? 'var(--color-fg)' : 'var(--color-bg)',
+                color: theme === t ? 'var(--color-bg)' : 'var(--color-fg)',
+                cursor: 'pointer',
+                transition: 'background var(--transition-fast), color var(--transition-fast)',
+                textTransform: 'capitalize',
+              }}
+            >
+              {t === 'system' ? 'System' : t === 'light' ? 'Light' : 'Dark'}
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className={styles.section}>
