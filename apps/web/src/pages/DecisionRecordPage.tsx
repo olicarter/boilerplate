@@ -24,9 +24,14 @@ const OUTCOME_LABELS: Record<string, string> = {
 
 type ResultFilter = 'all' | 'passed' | 'failed' | 'withdrawn' | 'no-votes';
 
+const PAGE_SIZE = 25;
+
 export function DecisionRecordPage() {
   const { slug } = useParams({ strict: false }) as { slug: string };
   const [entries, setEntries] = useState<DecisionEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -34,11 +39,16 @@ export function DecisionRecordPage() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    orgsApi.getDecisionRecord(slug)
-      .then(setEntries)
+    setLoading(true);
+    orgsApi.getDecisionRecord(slug, page, PAGE_SIZE)
+      .then(({ items, total, totalPages }) => {
+        setEntries(items);
+        setTotal(total);
+        setTotalPages(totalPages);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, page]);
 
   async function handleExport() {
     setExporting(true);
@@ -51,19 +61,12 @@ export function DecisionRecordPage() {
     }
   }
 
+  // Client-side filtering applies within the current page
   const filtered = entries.filter((e) => {
     if (filter !== 'all' && e.result !== filter) return false;
     if (search && !e.proposal.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
-
-  const counts = {
-    all: entries.length,
-    passed: entries.filter((e) => e.result === 'passed').length,
-    failed: entries.filter((e) => e.result === 'failed').length,
-    withdrawn: entries.filter((e) => e.result === 'withdrawn').length,
-    'no-votes': entries.filter((e) => e.result === 'no-votes').length,
-  };
 
   return (
     <div className={styles.page}>
@@ -100,11 +103,10 @@ export function DecisionRecordPage() {
           <button
             key={f}
             data-testid={`filter-${f}`}
-            onClick={() => setFilter(f)}
+            onClick={() => { setFilter(f); setPage(1); }}
             className={`${styles.filterPill} ${filter === f ? styles.filterPillActive : ''}`}
           >
-            {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
-            <span className={styles.filterCount}>{counts[f]}</span>
+            {f === 'all' ? `All (${total})` : f.charAt(0).toUpperCase() + f.slice(1)}
           </button>
         ))}
       </div>
@@ -185,6 +187,28 @@ export function DecisionRecordPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button
+            className={styles.pageBtn}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1 || loading}
+            aria-label="Previous page"
+          >
+            ← Prev
+          </button>
+          <span className={styles.pageInfo}>Page {page} of {totalPages}</span>
+          <button
+            className={styles.pageBtn}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages || loading}
+            aria-label="Next page"
+          >
+            Next →
+          </button>
         </div>
       )}
     </div>

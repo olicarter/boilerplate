@@ -24,11 +24,13 @@ export class AuditLogService {
     ).catch(() => { /* never block callers on audit failures */ });
   }
 
-  async list(orgId: string, limit = 100): Promise<AuditLogEntry[]> {
-    return this.repo.find({
+  async list(orgId: string, page = 1, pageSize = 50): Promise<{ items: AuditLogEntry[]; total: number; page: number; pageSize: number; totalPages: number }> {
+    const [items, total] = await this.repo.findAndCount({
       where: { org_id: orgId },
       order: { created_at: 'DESC' },
-      take: limit,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
+    return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
   }
 }

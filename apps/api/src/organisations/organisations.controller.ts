@@ -40,8 +40,18 @@ export class OrganisationsController {
 
   @Get(':slug/decisions')
   @UseGuards(AuthGuard)
-  getDecisionRecord(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
-    return this.orgsService.getDecisionRecord(slug, req.user!.id);
+  getDecisionRecord(
+    @Param('slug') slug: string,
+    @Req() req: AuthenticatedRequest,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.orgsService.getDecisionRecord(
+      slug,
+      req.user!.id,
+      page ? parseInt(page, 10) : 1,
+      pageSize ? Math.min(parseInt(pageSize, 10), 100) : 25,
+    );
   }
 
   @Get(':slug/decisions/export')
@@ -185,10 +195,19 @@ export class OrganisationsController {
 
   @Get(':slug/audit-log')
   @UseGuards(AuthGuard)
-  async getAuditLog(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+  async getAuditLog(
+    @Param('slug') slug: string,
+    @Req() req: AuthenticatedRequest,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     const org = await this.orgsService.findBySlug(slug);
     await this.orgsService.requireRole(org.id, req.user!.id, ['admin']);
-    return this.auditLog.list(org.id, 50);
+    return this.auditLog.list(
+      org.id,
+      page ? parseInt(page, 10) : 1,
+      pageSize ? Math.min(parseInt(pageSize, 10), 100) : 50,
+    );
   }
 
   @Get(':slug/results')

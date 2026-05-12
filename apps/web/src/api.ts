@@ -9,7 +9,13 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
       localStorage.removeItem('ripple_user');
       window.location.reload();
     }
-    throw new Error(`API error: ${res.status}`);
+    let message = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (typeof body.message === 'string') message = body.message;
+      else if (Array.isArray(body.message) && body.message.length > 0) message = body.message[0];
+    } catch { /* ignore parse error — fall back to default */ }
+    throw new Error(message);
   }
   const text = await res.text();
   return (text ? JSON.parse(text) : null) as T;
@@ -265,7 +271,8 @@ export const orgsApi = {
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'POST' }),
   revokeInviteToken: (slug: string) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'DELETE' }),
-  listAuditLog: (slug: string) => request<AuditLogEntry[]>(`/orgs/${slug}/audit-log`),
+  listAuditLog: (slug: string, page = 1, pageSize = 50) =>
+    request<{ items: AuditLogEntry[]; total: number; page: number; pageSize: number; totalPages: number }>(`/orgs/${slug}/audit-log?page=${page}&pageSize=${pageSize}`),
   getPublicResults: (slug: string) => request<{ org: Organisation; proposals: Proposal[] }>(`/orgs/${slug}/results`),
   searchMembers: (slug: string, q: string) =>
     request<{ id: string; name: string }[]>(`/orgs/${slug}/members/search?q=${encodeURIComponent(q)}`),
@@ -273,8 +280,8 @@ export const orgsApi = {
     request<Array<{ user_id: string; carried_weight: number }>>(`/orgs/${slug}/delegation-weights`),
   getAnalytics: (slug: string) =>
     request<OrgAnalytics>(`/orgs/${slug}/analytics`),
-  getDecisionRecord: (slug: string) =>
-    request<DecisionEntry[]>(`/orgs/${slug}/decisions`),
+  getDecisionRecord: (slug: string, page = 1, pageSize = 25) =>
+    request<{ items: DecisionEntry[]; total: number; page: number; pageSize: number; totalPages: number }>(`/orgs/${slug}/decisions?page=${page}&pageSize=${pageSize}`),
   listInvites: (slug: string) =>
     request<OrgInvite[]>(`/orgs/${slug}/invites`),
   sendInvite: (slug: string, email: string) =>

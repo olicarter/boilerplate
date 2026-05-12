@@ -103,7 +103,7 @@ export function AdminPage() {
   const [disconnectingSlack, setDisconnectingSlack] = useState(false);
 
   useEffect(() => {
-    orgsApi.listAuditLog(org.slug).then(setAuditLog).catch(() => {}).finally(() => setAuditLogLoading(false));
+    orgsApi.listAuditLog(org.slug).then(({ items }) => setAuditLog(items)).catch(() => {}).finally(() => setAuditLogLoading(false));
     orgsApi.getAnalytics(org.slug).then(setAnalytics).catch(() => {}).finally(() => setAnalyticsLoading(false));
     billingApi.getStatus(org.id).then(setBillingStatus).catch(() => {});
     orgsApi.listInvites(org.slug).then(setPendingInvites).catch(() => {});
