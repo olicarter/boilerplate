@@ -201,7 +201,7 @@ SLACK_SIGNING_SECRET=
 
 ### External integrations
 - [x] **Slack integration** — connect an org to a Slack workspace. Post new proposals and results to a configured channel. Optional: create a Slack command `/ripple vote [proposal]` to cast votes from Slack.
-- [ ] **Discord integration** — similar to Slack: post to a channel, optionally react with emoji to vote on simple proposals.
+- [x] **Discord integration** — similar to Slack: post to a channel, optionally react with emoji to vote on simple proposals.
 - [x] **Webhooks** — org admins can register HTTP webhook URLs for events (proposal.opened, proposal.closed, vote.cast, member.joined). Payload is JSON. Used to connect Ripple to Zapier, Make, or custom tooling.
 - [x] **Calendar export** — proposal voting deadlines exported as an `.ics` feed (or Google Calendar link) so members see deadlines in their calendar.
 

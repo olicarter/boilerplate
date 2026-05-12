@@ -104,6 +104,9 @@ export function AdminPage() {
   const [savingSlackChannel, setSavingSlackChannel] = useState(false);
   const [connectingSlack, setConnectingSlack] = useState(false);
   const [disconnectingSlack, setDisconnectingSlack] = useState(false);
+
+  const [discordWebhookUrl, setDiscordWebhookUrl] = useState<string>(org.discord_webhook_url ?? '');
+  const [savingDiscord, setSavingDiscord] = useState(false);
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
@@ -1266,6 +1269,58 @@ export function AdminPage() {
             {connectingSlack ? 'Redirecting…' : 'Connect to Slack'}
           </Button>
         )}
+      </section>
+
+      {/* Discord integration */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Discord integration</h3>
+        <p className={styles.sectionHint}>Post new proposals and results to a Discord channel. Paste a Discord webhook URL below.</p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSavingDiscord(true);
+            try {
+              await orgsApi.update(org.slug, { discord_webhook_url: discordWebhookUrl.trim() || null });
+              addToast('Discord webhook saved', 'success');
+            } catch {
+              addToast('Failed to save Discord webhook', 'error');
+            } finally {
+              setSavingDiscord(false);
+            }
+          }}
+          style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}
+        >
+          <input
+            type="url"
+            value={discordWebhookUrl}
+            onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+            placeholder="https://discord.com/api/webhooks/…"
+            style={{ flex: 1, minWidth: 280, padding: '0 var(--space-3)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+          />
+          <Button type="submit" size="sm" disabled={savingDiscord}>{savingDiscord ? 'Saving…' : 'Save'}</Button>
+          {discordWebhookUrl && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={savingDiscord}
+              onClick={async () => {
+                setSavingDiscord(true);
+                try {
+                  await orgsApi.update(org.slug, { discord_webhook_url: null });
+                  setDiscordWebhookUrl('');
+                  addToast('Discord webhook removed', 'success');
+                } catch {
+                  addToast('Failed to remove Discord webhook', 'error');
+                } finally {
+                  setSavingDiscord(false);
+                }
+              }}
+            >
+              Remove
+            </Button>
+          )}
+        </form>
       </section>
 
       {/* Billing */}

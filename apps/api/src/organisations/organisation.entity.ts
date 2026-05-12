@@ -95,6 +95,9 @@ export class Organisation {
   @Column({ name: 'data_retention_months', type: 'int', nullable: true, default: null })
   data_retention_months!: number | null;
 
+  @Column({ name: 'discord_webhook_url', type: 'text', nullable: true, default: null })
+  discord_webhook_url!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

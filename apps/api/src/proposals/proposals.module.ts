@@ -20,9 +20,10 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SlackModule } from '../slack/slack.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { DiscordModule } from '../discord/discord.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalOption, ProposalReaction, ProposalVersion, ProposalSignature, ProposalLink, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule, SlackModule, WebhooksModule],
+  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalOption, ProposalReaction, ProposalVersion, ProposalSignature, ProposalLink, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule, SlackModule, WebhooksModule, DiscordModule],
   controllers: [ProposalsController],
   providers: [ProposalsService, ProposalsScheduler],
 })
