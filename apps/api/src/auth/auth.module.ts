@@ -5,10 +5,12 @@ import { Credential } from './credential.entity';
 import { MagicLink } from './magic-link.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { AuthGuard } from './auth.guard';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User, Credential, MagicLink])],
-  providers: [AuthService],
+  providers: [AuthService, AuthGuard],
   controllers: [AuthController],
+  exports: [AuthGuard],
 })
 export class AuthModule {}

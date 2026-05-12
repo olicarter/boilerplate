@@ -349,6 +349,25 @@ export const webhooksApi = {
     request<void>(`/orgs/${slug}/webhooks/${id}`, { method: 'DELETE' }),
 };
 
+export interface ApiKeyRecord {
+  id: string;
+  organisation_id: string;
+  name: string;
+  key_preview: string;
+  created_by_user_id: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export const apiKeysApi = {
+  list: (slug: string) =>
+    request<ApiKeyRecord[]>(`/orgs/${slug}/api-keys`),
+  create: (slug: string, name: string) =>
+    request<{ key: string; record: ApiKeyRecord }>(`/orgs/${slug}/api-keys`, { method: 'POST', body: JSON.stringify({ name }) }),
+  revoke: (slug: string, keyId: string) =>
+    request<void>(`/orgs/${slug}/api-keys/${keyId}`, { method: 'DELETE' }),
+};
+
 export const billingApi = {
   getStatus: (orgId: string) =>
     request<{ plan: 'free' | 'pro'; memberCount: number; memberLimit: number | null; canUpgrade: boolean }>(`/billing/${orgId}/status`),

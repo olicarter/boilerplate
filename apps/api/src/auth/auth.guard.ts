@@ -1,4 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { createHash } from 'crypto';
 import type { Request } from 'express';
 
 declare module 'express-session' {
@@ -13,15 +16,35 @@ export interface AuthenticatedRequest extends Request {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const userId = request.session?.userId;
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
-    if (!userId) {
-      throw new UnauthorizedException('Authentication required');
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+
+    // Session-based auth
+    const userId = request.session?.userId;
+    if (userId) {
+      request.user = { id: userId };
+      return true;
     }
 
-    request.user = { id: userId };
-    return true;
+    // Bearer API key auth
+    const authHeader = request.headers['authorization'];
+    if (authHeader?.startsWith('Bearer rk_')) {
+      const rawKey = authHeader.slice('Bearer '.length);
+      const keyHash = createHash('sha256').update(rawKey).digest('hex');
+      const row = await this.dataSource.query<Array<{ created_by_user_id: string; revoked_at: string | null }>>(
+        `SELECT created_by_user_id, revoked_at FROM api_keys WHERE key_hash = $1 LIMIT 1`,
+        [keyHash],
+      );
+      if (row.length > 0 && !row[0].revoked_at) {
+        request.user = { id: row[0].created_by_user_id };
+        // Update last_used_at without blocking
+        this.dataSource.query(`UPDATE api_keys SET last_used_at = now() WHERE key_hash = $1`, [keyHash]).catch(() => {});
+        return true;
+      }
+    }
+
+    throw new UnauthorizedException('Authentication required');
   }
 }

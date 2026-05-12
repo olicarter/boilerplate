@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, billingApi, slackApi, webhooksApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint } from '../api';
+import { orgsApi, billingApi, slackApi, webhooksApi, apiKeysApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint, type ApiKeyRecord } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -107,6 +107,11 @@ export function AdminPage() {
   const [addingWebhook, setAddingWebhook] = useState(false);
   const [deletingWebhookId, setDeletingWebhookId] = useState<string | null>(null);
   const [newWebhookSecret, setNewWebhookSecret] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
+  const [newApiKeyName, setNewApiKeyName] = useState('');
+  const [creatingApiKey, setCreatingApiKey] = useState(false);
+  const [newApiKeyValue, setNewApiKeyValue] = useState<string | null>(null);
+  const [revokingApiKeyId, setRevokingApiKeyId] = useState<string | null>(null);
 
   useEffect(() => {
     orgsApi.listAuditLog(org.slug).then(({ items }) => setAuditLog(items)).catch(() => {}).finally(() => setAuditLogLoading(false));
@@ -114,6 +119,7 @@ export function AdminPage() {
     billingApi.getStatus(org.id).then(setBillingStatus).catch(() => {});
     orgsApi.listInvites(org.slug).then(setPendingInvites).catch(() => {});
     webhooksApi.list(org.slug).then(setWebhooks).catch(() => {});
+    apiKeysApi.list(org.slug).then(setApiKeys).catch(() => {});
     if (org.slack_team_id) {
       slackApi.listChannels(org.id).then(setSlackChannels).catch(() => {});
     }
@@ -500,6 +506,37 @@ export function AdminPage() {
       addToast('Failed to remove webhook', 'error');
     } finally {
       setDeletingWebhookId(null);
+    }
+  }
+
+  async function handleCreateApiKey(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newApiKeyName.trim()) return;
+    setCreatingApiKey(true);
+    setNewApiKeyValue(null);
+    try {
+      const result = await apiKeysApi.create(org.slug, newApiKeyName.trim());
+      setApiKeys((prev) => [result.record, ...prev]);
+      setNewApiKeyValue(result.key);
+      setNewApiKeyName('');
+      addToast('API key created', 'success');
+    } catch {
+      addToast('Failed to create API key', 'error');
+    } finally {
+      setCreatingApiKey(false);
+    }
+  }
+
+  async function handleRevokeApiKey(keyId: string) {
+    setRevokingApiKeyId(keyId);
+    try {
+      await apiKeysApi.revoke(org.slug, keyId);
+      setApiKeys((prev) => prev.filter((k) => k.id !== keyId));
+      addToast('API key revoked', 'success');
+    } catch {
+      addToast('Failed to revoke API key', 'error');
+    } finally {
+      setRevokingApiKeyId(null);
     }
   }
 
@@ -1239,6 +1276,59 @@ export function AdminPage() {
               {addingWebhook ? 'Adding…' : 'Add endpoint'}
             </Button>
           </div>
+        </form>
+      </section>
+
+      {/* API Keys */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>API keys</h3>
+        <p className={styles.sectionHint}>
+          Long-lived keys for server-to-server access. Include as <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>Authorization: Bearer &lt;key&gt;</code> on requests.
+        </p>
+
+        {apiKeys.length > 0 && (
+          <div style={{ marginBottom: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            {apiKeys.map((k) => (
+              <div key={k.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)', padding: 'var(--space-2) var(--space-3)', border: 'var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 'var(--weight-medium)', color: 'var(--color-fg)' }}>{k.name}</div>
+                  <div style={{ color: 'var(--color-fg-muted)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>{k.key_preview}</div>
+                  {k.last_used_at && (
+                    <div style={{ color: 'var(--color-fg-subtle)', fontSize: 'var(--text-xs)' }}>
+                      Last used {new Date(k.last_used_at).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+                <Button size="sm" variant="danger" onClick={() => handleRevokeApiKey(k.id)} disabled={revokingApiKeyId === k.id}>
+                  {revokingApiKeyId === k.id ? 'Revoking…' : 'Revoke'}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {newApiKeyValue && (
+          <div style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-3) var(--space-4)', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)' }}>
+            <strong>API key (copy now — shown once):</strong>{' '}
+            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', wordBreak: 'break-all' }}>{newApiKeyValue}</code>
+          </div>
+        )}
+
+        <form onSubmit={handleCreateApiKey} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-end' }}>
+          <div className={styles.formField} style={{ flex: 1, marginBottom: 0 }}>
+            <label htmlFor="api-key-name" className={styles.formLabel}>Key name</label>
+            <input
+              id="api-key-name"
+              type="text"
+              value={newApiKeyName}
+              onChange={(e) => setNewApiKeyName(e.target.value)}
+              placeholder="e.g. CI/CD integration"
+              className={styles.formInput}
+            />
+          </div>
+          <Button type="submit" size="sm" disabled={creatingApiKey || !newApiKeyName.trim()}>
+            {creatingApiKey ? 'Creating…' : 'Create key'}
+          </Button>
         </form>
       </section>
 
