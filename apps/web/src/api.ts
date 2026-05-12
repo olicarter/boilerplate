@@ -38,6 +38,10 @@ export const authApi = {
     request<{ success: boolean }>(`/auth/passkeys/${id}`, { method: 'DELETE' }),
   verifyEmail: (token: string) =>
     request<{ success: boolean }>('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
+  magicLinkBegin: (email: string) =>
+    request<{ success: boolean }>('/auth/magic/begin', { method: 'POST', body: JSON.stringify({ email }) }),
+  magicLinkVerify: (token: string) =>
+    request<User>(`/auth/magic/verify?token=${encodeURIComponent(token)}`, { method: 'POST' }),
 };
 
 export interface MutationResult<T> {

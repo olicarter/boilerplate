@@ -80,6 +80,21 @@ export class EmailService {
     });
   }
 
+  async sendMagicLink(to: string, magicUrl: string): Promise<void> {
+    await this.send({
+      to,
+      subject: 'Sign in to Ripple',
+      html: layout(`
+        <p>Hi,</p>
+        <p>Click the button below to sign in to Ripple. This link expires in 15 minutes and can only be used once.</p>
+        <a href="${magicUrl}" class="btn">Sign in to Ripple</a>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <p>— The Ripple team</p>
+      `),
+      text: `Sign in to Ripple: ${magicUrl}\n\nThis link expires in 15 minutes.`,
+    });
+  }
+
   async sendInvite(to: string, inviterName: string, orgName: string, acceptUrl: string): Promise<void> {
     await this.send({
       to,

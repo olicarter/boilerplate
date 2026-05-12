@@ -11,6 +11,7 @@ import {
 } from '@simplewebauthn/server';
 import type { AuthenticatorTransportFuture, RegistrationResponseJSON, AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { Credential } from './credential.entity';
+import { MagicLink } from './magic-link.entity';
 import { User } from '../users/user.entity';
 import { EmailService } from '../email/email.service';
 
@@ -33,6 +34,8 @@ export class AuthService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Credential)
     private readonly credentialRepo: Repository<Credential>,
+    @InjectRepository(MagicLink)
+    private readonly magicLinkRepo: Repository<MagicLink>,
     private readonly dataSource: DataSource,
     private readonly emailService: EmailService,
   ) {}
@@ -270,6 +273,34 @@ export class AuthService {
 
     await this.credentialRepo.delete(credentialId);
     return { success: true };
+  }
+
+  async magicLinkBegin(email: string): Promise<{ success: boolean }> {
+    const normalised = email?.trim().toLowerCase();
+    if (!normalised || !EMAIL_RE.test(normalised)) throw new BadRequestException('Invalid email address');
+    // Always return success to avoid email enumeration
+    const user = await this.userRepo.findOneBy({ email: normalised });
+    if (!user) return { success: true };
+
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+    await this.magicLinkRepo.save(this.magicLinkRepo.create({ userId: user.id, token, expires_at: expires }));
+
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:5173';
+    const magicUrl = `${baseUrl}/magic?token=${token}`;
+    await this.emailService.sendMagicLink(user.email, magicUrl).catch(() => { /* non-critical */ });
+
+    return { success: true };
+  }
+
+  async magicLinkVerify(token: string, req: Request): Promise<User> {
+    const link = await this.magicLinkRepo.findOne({ where: { token }, relations: ['user'] });
+    if (!link || link.used_at) throw new UnauthorizedException('Invalid or expired magic link');
+    if (link.expires_at < new Date()) throw new UnauthorizedException('Magic link has expired');
+
+    await this.magicLinkRepo.update(link.id, { used_at: new Date() });
+    req.session!.userId = link.user.id;
+    return link.user;
   }
 
   logout(req: Request) {

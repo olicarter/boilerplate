@@ -20,6 +20,7 @@ import { CommentReaction } from '../comments/comment-reaction.entity';
 import { Notification } from '../notifications/notification.entity';
 import { AuditLogEntry } from '../audit-log/audit-log.entity';
 import { Credential } from '../auth/credential.entity';
+import { MagicLink } from '../auth/magic-link.entity';
 import { OrgInvite } from '../organisations/org-invite.entity';
 
 const dataSource = new DataSource({
@@ -28,7 +29,7 @@ const dataSource = new DataSource({
   entities: [
     User, Organisation, Membership, OrgInvite, Topic, Proposal, ProposalOption,
     ProposalReaction, ProposalLink, Delegation, Vote, Endorsement,
-    Veto, Argument, Comment, CommentReaction, Notification, AuditLogEntry, Credential,
+    Veto, Argument, Comment, CommentReaction, Notification, AuditLogEntry, Credential, MagicLink,
   ],
 });
 

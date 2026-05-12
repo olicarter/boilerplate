@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
 import { AuthService } from './auth.service';
@@ -50,6 +50,16 @@ export class AuthController {
   @Delete('passkeys/:id')
   deletePasskey(@Param('id') credentialId: string, @Req() req: AuthenticatedRequest) {
     return this.authService.deletePasskey(credentialId, req.user!.id);
+  }
+
+  @Post('magic/begin')
+  magicLinkBegin(@Body() body: { email: string }) {
+    return this.authService.magicLinkBegin(body.email);
+  }
+
+  @Post('magic/verify')
+  magicLinkVerify(@Query('token') token: string, @Req() req: Request) {
+    return this.authService.magicLinkVerify(token, req);
   }
 
   @Post('verify-email')

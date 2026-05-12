@@ -35,6 +35,7 @@ import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { PricingPage } from './pages/PricingPage';
 import { DecisionRecordPage } from './pages/DecisionRecordPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
+import { MagicLinkPage } from './pages/MagicLinkPage';
 import { OrgProvider } from './OrgContext';
 import styles from './styles/Shell.module.css';
 
@@ -60,9 +61,10 @@ function useIsMobile() {
 }
 
 function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDismiss?: () => void }) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'magic'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [magicSent, setMagicSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -79,6 +81,20 @@ function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDi
       onLogin(user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.magicLinkBegin(email.trim());
+      setMagicSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send sign-in link');
     } finally {
       setLoading(false);
     }
@@ -133,10 +149,10 @@ function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDi
             Ripple
           </div>
           <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-1)' }}>
-            {mode === 'login' ? 'Sign in' : 'Create account'}
+            {mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Email sign-in'}
           </h1>
           <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)' }}>
-            {mode === 'login' ? 'Use your passkey to continue.' : 'Register with a passkey.'}
+            {mode === 'login' ? 'Use your passkey to continue.' : mode === 'register' ? 'Register with a passkey.' : 'We\'ll send a sign-in link to your email.'}
           </p>
         </div>
 
@@ -163,7 +179,7 @@ function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDi
             >
               {loading ? 'Waiting for passkey…' : 'Sign in with passkey'}
             </button>
-            <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: 0 }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: '0 0 var(--space-2)' }}>
               No account?{' '}
               <button
                 onClick={() => { setMode('register'); setError(''); }}
@@ -172,7 +188,61 @@ function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDi
                 Register
               </button>
             </p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: 0 }}>
+              No passkey?{' '}
+              <button
+                onClick={() => { setMode('magic'); setError(''); }}
+                style={{ background: 'none', border: 'none', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', cursor: 'pointer', padding: 0, fontWeight: 'var(--weight-medium)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+              >
+                Sign in with email
+              </button>
+            </p>
           </>
+        ) : mode === 'magic' ? (
+          magicSent ? (
+            <div>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', marginBottom: 'var(--space-4)' }}>
+                Check your inbox — we've sent a sign-in link to <strong>{email}</strong>. It expires in 15 minutes.
+              </p>
+              <button
+                onClick={() => { setMode('login'); setMagicSent(false); setEmail(''); setError(''); }}
+                style={{ background: 'none', border: 'none', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', cursor: 'pointer', padding: 0, fontWeight: 'var(--weight-medium)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+              >
+                ← Back to sign in
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleMagicLink} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              <div>
+                <label htmlFor="magic-email" style={{ display: 'block', marginBottom: 'var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--color-fg-muted)' }}>Email</label>
+                <input
+                  id="magic-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoFocus
+                  style={{ width: '100%', height: 32, padding: '0 var(--space-3)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', border: 'var(--border)', borderRadius: 'var(--radius-sm)', outline: 'none', color: 'var(--color-fg)' }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{ width: '100%', height: 36, background: 'var(--color-accent)', color: 'var(--color-accent-fg)', border: 'none', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-medium)', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1 }}
+              >
+                {loading ? 'Sending…' : 'Send sign-in link'}
+              </button>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); setError(''); }}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', cursor: 'pointer', padding: 0, fontWeight: 'var(--weight-medium)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                >
+                  ← Back to sign in
+                </button>
+              </p>
+            </form>
+          )
         ) : (
           <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             <div>
@@ -609,6 +679,12 @@ const acceptInviteRoute = createRoute({
   component: AcceptInvitePage,
 });
 
+const magicLinkRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/magic',
+  component: MagicLinkPage,
+});
+
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
   orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute, decisionRecordRoute]),
@@ -616,6 +692,7 @@ const routeTree = rootRoute.addChildren([
   verifyEmailRoute,
   pricingRoute,
   acceptInviteRoute,
+  magicLinkRoute,
 ]);
 
 const router = createRouter({ routeTree });
