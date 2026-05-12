@@ -300,8 +300,8 @@ SLACK_SIGNING_SECRET=
 - [ ] **Prediction market integration** — attach a yes/no prediction market to a proposal. Members bet on whether the proposal will have a positive outcome. The market result is shown alongside the vote tally as a signal. (Integrates with a market provider API rather than implementing from scratch.)
 
 ### Sortition (democratic lottery)
-- [ ] **Random jury selection** — for a given proposal, randomly select N members (optionally weighted by delegation weight) as a "jury" who must participate. Non-jury members can still vote but jury participation is expected. Good for reducing voter fatigue on low-salience decisions.
-- [ ] **Jury quorum** — quorum is met when all N jury members have voted, regardless of total turnout.
+- [x] **Random jury selection** — for a given proposal, randomly select N members (optionally weighted by delegation weight) as a "jury" who must participate. Non-jury members can still vote but jury participation is expected. Good for reducing voter fatigue on low-salience decisions.
+- [x] **Jury quorum** — quorum is met when all N jury members have voted, regardless of total turnout.
 
 ### Holographic consensus
 - [ ] **Proposal queue with boosting** — a limited number of proposals can be in "active" voting at once. Members stake tokens (or reputation points) to "boost" a proposal into the active queue. Boosted proposals that pass reward boosters; those that fail penalise them. Based on DAOstack's model.

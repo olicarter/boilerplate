@@ -77,4 +77,7 @@ export class Proposal {
 
   @Column({ name: 'anonymous_voting', type: 'boolean', default: false })
   anonymous_voting!: boolean;
+
+  @Column({ name: 'jury_size', type: 'integer', nullable: true, default: null })
+  jury_size!: number | null;
 }

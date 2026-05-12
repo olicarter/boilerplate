@@ -136,6 +136,9 @@ export function ProposalDetailPage() {
   const [watching, setWatching] = useState(false);
   const [watchLoading, setWatchLoading] = useState(false);
   const [voteCarrying, setVoteCarrying] = useState<Array<{ voter: { user_id: string; name: string }; carrying: Array<{ user_id: string; name: string }> }>>([]);
+  const [jury, setJury] = useState<Array<{ user_id: string; name: string; has_voted: boolean }> | null>(null);
+  const [selectingJury, setSelectingJury] = useState(false);
+  const [jurySize, setJurySize] = useState('5');
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -218,6 +221,7 @@ export function ProposalDetailPage() {
     proposalSignaturesApi.list(id).then((r) => { setSignatures(r.signatures); setSignatureCount(r.count); }).catch(() => {});
     proposalLinksApi.list(id).then(setLinks).catch(() => {});
     proposalsApi.getCarrying(id).then(setVoteCarrying).catch(() => {});
+    proposalsApi.getJury(id).then(setJury).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -1534,6 +1538,65 @@ export function ProposalDetailPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Jury */}
+      {(jury && jury.length > 0 || (isModerator && proposal.status === 'open' && !isDiscussion)) && (
+        <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '1rem 1.25rem', marginBottom: '1.5rem', background: 'var(--color-bg-muted)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-3)', marginBottom: '0.75rem' }}>
+            <h3 style={{ margin: 0, fontSize: 14, color: 'var(--color-fg-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Jury</h3>
+            {isModerator && proposal.status === 'open' && (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const size = parseInt(jurySize, 10);
+                  if (!size || size < 1) return;
+                  setSelectingJury(true);
+                  try {
+                    const selected = await proposalsApi.selectJury(id, size);
+                    setJury(selected.map((m) => ({ ...m, has_voted: false })));
+                    addToast(`Jury of ${selected.length} selected`, 'success');
+                  } catch (err) {
+                    addToast(err instanceof Error ? err.message : 'Failed to select jury', 'error');
+                  } finally {
+                    setSelectingJury(false);
+                  }
+                }}
+                style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={jurySize}
+                  onChange={(e) => setJurySize(e.target.value)}
+                  style={{ width: 52, padding: '0 var(--space-2)', height: 28, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+                />
+                <button
+                  type="submit"
+                  disabled={selectingJury}
+                  style={{ padding: '0 var(--space-3)', height: 28, fontSize: 'var(--text-sm)', border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                >
+                  {selectingJury ? 'Selecting…' : jury && jury.length > 0 ? 'Reselect' : 'Select jury'}
+                </button>
+              </form>
+            )}
+          </div>
+          {jury && jury.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              {jury.map((j) => (
+                <div key={j.user_id} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: j.has_voted ? '#16a34a' : '#d1d5db', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--color-fg)' }}>{j.name}</span>
+                  {j.has_voted && <span style={{ fontSize: 11, color: '#16a34a' }}>voted</span>}
+                </div>
+              ))}
+              <p style={{ fontSize: 12, color: 'var(--color-fg-muted)', margin: '0.5rem 0 0' }}>
+                {jury.filter((j) => j.has_voted).length} / {jury.length} jury members have voted
+              </p>
+            </div>
+          )}
         </div>
       )}
 

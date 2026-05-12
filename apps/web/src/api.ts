@@ -527,6 +527,10 @@ export const proposalsApi = {
     request<Array<{ voter: { user_id: string; name: string }; carrying: Array<{ user_id: string; name: string }> }>>(`/proposals/${id}/carrying`),
   bulkImport: (orgSlug: string, proposals: Array<{ title: string; description?: string; topic_id: string; closes_at?: string; status?: 'open' | 'draft'; tags?: string[] }>) =>
     request<{ created: number; errors: Array<{ index: number; message: string }> }>('/proposals/import', { method: 'POST', body: JSON.stringify({ org_slug: orgSlug, proposals }) }),
+  getJury: (id: string) =>
+    request<Array<{ user_id: string; name: string; has_voted: boolean }>>(`/proposals/${id}/jury`),
+  selectJury: (id: string, size: number) =>
+    request<Array<{ user_id: string; name: string }>>(`/proposals/${id}/jury`, { method: 'POST', body: JSON.stringify({ size }) }),
 };
 
 export interface ProposalReaction {

@@ -615,6 +615,51 @@ export class ProposalsService {
     await this.reactionRepo.delete({ proposal_id: proposalId, user_id: userId });
   }
 
+  async selectJury(proposalId: string, actorId: string, size: number): Promise<Array<{ user_id: string; name: string }>> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    if (!(await this.canModerate(proposal.organisation_id, actorId))) {
+      throw new ForbiddenException('Only moderators and above can select a jury');
+    }
+    if (proposal.status !== 'open') throw new BadRequestException('Jury can only be selected for open proposals');
+    if (size < 1 || size > 100) throw new BadRequestException('Jury size must be between 1 and 100');
+
+    const members = await this.memberRepo.find({ where: { organisation_id: proposal.organisation_id, status: 'approved' as any } });
+    if (members.length < size) throw new BadRequestException(`Not enough members (${members.length}) to select a jury of ${size}`);
+
+    const shuffled = [...members].sort(() => Math.random() - 0.5);
+    const jurors = shuffled.slice(0, size);
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.query(`DELETE FROM proposal_juries WHERE proposal_id = $1`, [proposalId]);
+      for (const m of jurors) {
+        await manager.query(`INSERT INTO proposal_juries (proposal_id, user_id) VALUES ($1, $2)`, [proposalId, m.user_id]);
+      }
+      await manager.update(Proposal, proposalId, { jury_size: size });
+    });
+
+    const users = await this.dataSource.query<Array<{ id: string; name: string }>>(
+      `SELECT id, name FROM users WHERE id = ANY($1)`,
+      [jurors.map((m) => m.user_id)],
+    );
+    const nameMap = new Map(users.map((u) => [u.id, u.name]));
+    return jurors.map((m) => ({ user_id: m.user_id, name: nameMap.get(m.user_id) ?? 'Unknown' }));
+  }
+
+  async getJury(proposalId: string): Promise<Array<{ user_id: string; name: string; has_voted: boolean }>> {
+    const jurors = await this.dataSource.query<Array<{ user_id: string; name: string }>>(
+      `SELECT pj.user_id, u.name FROM proposal_juries pj JOIN users u ON u.id = pj.user_id WHERE pj.proposal_id = $1`,
+      [proposalId],
+    );
+    if (jurors.length === 0) return [];
+
+    const votes = await this.dataSource.query<Array<{ user_id: string }>>(
+      `SELECT user_id FROM votes WHERE proposal_id = $1 AND user_id = ANY($2)`,
+      [proposalId, jurors.map((j) => j.user_id)],
+    );
+    const voted = new Set(votes.map((v) => v.user_id));
+    return jurors.map((j) => ({ ...j, has_voted: voted.has(j.user_id) }));
+  }
+
   async tally(proposalId: string): Promise<TallyResult> {
     const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
 
@@ -794,6 +839,21 @@ export class ProposalsService {
       tally.quorum_met = totalWeight > 0
         ? (tally.total / totalWeight) * 100 >= effectiveQuorum
         : false;
+    }
+
+    if (proposal.jury_size) {
+      const jurors = await this.dataSource.query<Array<{ user_id: string }>>(
+        `SELECT user_id FROM proposal_juries WHERE proposal_id = $1`,
+        [proposalId],
+      );
+      if (jurors.length > 0) {
+        const votedJurors = await this.dataSource.query<Array<{ user_id: string }>>(
+          `SELECT user_id FROM votes WHERE proposal_id = $1 AND user_id = ANY($2)`,
+          [proposalId, jurors.map((j) => j.user_id)],
+        );
+        tally.quorum_met = votedJurors.length >= jurors.length;
+        tally.eligible_count = jurors.length;
+      }
     }
 
     return tally;

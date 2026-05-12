@@ -153,6 +153,21 @@ export class ProposalsController {
     return this.proposalsService.delete(id);
   }
 
+  @Get(':id/jury')
+  getJury(@Param('id') id: string) {
+    return this.proposalsService.getJury(id);
+  }
+
+  @Post(':id/jury')
+  @UseGuards(AuthGuard)
+  selectJury(
+    @Param('id') id: string,
+    @Body() body: { size: number },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.selectJury(id, req.user!.id, body.size);
+  }
+
   @Get(':id/carrying')
   getVoteCarrying(@Param('id') id: string) {
     return this.proposalsService.getVoteCarrying(id);
