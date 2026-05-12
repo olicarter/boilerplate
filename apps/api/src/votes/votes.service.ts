@@ -7,6 +7,7 @@ import { Organisation } from '../organisations/organisation.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { DelegationsService } from '../delegations/delegations.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 
 @Injectable()
 export class VotesService {
@@ -19,6 +20,7 @@ export class VotesService {
     private readonly delegationRepo: Repository<Delegation>,
     private readonly dataSource: DataSource,
     private readonly notifications: NotificationsService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   findAll(): Promise<Vote[]> {
@@ -85,6 +87,14 @@ export class VotesService {
         [data.proposal_id, data.user_id],
       );
     } catch { /* non-critical */ }
+
+    if (!proposal.anonymous_voting) {
+      this.webhooks.dispatch(proposal.organisation_id, 'vote.cast', {
+        proposal_id: data.proposal_id,
+        user_id: data.user_id,
+        choice: data.choice ?? null,
+      }).catch(() => {});
+    }
 
     return result;
   }

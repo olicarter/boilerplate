@@ -20,6 +20,7 @@ import { DelegationsService } from '../delegations/delegations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 
 function toSlug(value: string): string {
   return value
@@ -44,6 +45,7 @@ export class OrganisationsService {
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
     private readonly email: EmailService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   async findAll(): Promise<Organisation[]> {
@@ -192,6 +194,7 @@ export class OrganisationsService {
     });
     this.auditLog.log(orgId, actorId, 'member.added', 'user', targetUserId, { role });
     await this.notifyAdminsAndModerators(orgId, targetUserId, 'member.joined', targetUserId, orgId);
+    this.webhooks.dispatch(orgId, 'member.joined', { user_id: targetUserId, role }).catch(() => {});
     return result;
   }
 
@@ -361,6 +364,7 @@ export class OrganisationsService {
     });
     this.auditLog.log(org.id, actorId, 'member.approved', 'user', targetUserId, {});
     await this.notifyAdminsAndModerators(org.id, targetUserId, 'member.joined', targetUserId, org.id);
+    this.webhooks.dispatch(org.id, 'member.joined', { user_id: targetUserId, role: membership.role }).catch(() => {});
     return result;
   }
 

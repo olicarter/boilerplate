@@ -331,6 +331,24 @@ export const slackApi = {
     request<{ ok: boolean }>(`/slack/${orgId}/disconnect`, { method: 'DELETE' }),
 };
 
+export interface WebhookEndpoint {
+  id: string;
+  org_id: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  created_at: string;
+}
+
+export const webhooksApi = {
+  list: (slug: string) =>
+    request<WebhookEndpoint[]>(`/orgs/${slug}/webhooks`),
+  create: (slug: string, url: string, events: string[]) =>
+    request<WebhookEndpoint & { secret: string }>(`/orgs/${slug}/webhooks`, { method: 'POST', body: JSON.stringify({ url, events }) }),
+  delete: (slug: string, id: string) =>
+    request<void>(`/orgs/${slug}/webhooks/${id}`, { method: 'DELETE' }),
+};
+
 export const billingApi = {
   getStatus: (orgId: string) =>
     request<{ plan: 'free' | 'pro'; memberCount: number; memberLimit: number | null; canUpgrade: boolean }>(`/billing/${orgId}/status`),

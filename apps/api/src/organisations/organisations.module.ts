@@ -9,9 +9,10 @@ import { OrganisationsService } from './organisations.service';
 import { OrganisationsController } from './organisations.controller';
 import { AuditLogModule } from '../audit-log/audit-log.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organisation, Membership, OrgInvite, Proposal, User]), AuditLogModule, NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Organisation, Membership, OrgInvite, Proposal, User]), AuditLogModule, NotificationsModule, WebhooksModule],
   providers: [OrganisationsService],
   controllers: [OrganisationsController],
   exports: [OrganisationsService],

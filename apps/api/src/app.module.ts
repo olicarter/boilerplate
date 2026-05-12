@@ -35,6 +35,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { EmailModule } from './email/email.module';
 import { BillingModule } from './billing/billing.module';
 import { SlackModule } from './slack/slack.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { WebhookEndpoint } from './webhooks/webhook-endpoint.entity';
 import { Notification } from './notifications/notification.entity';
 import { ProposalOption } from './proposals/proposal-option.entity';
 import { ProposalReaction } from './proposals/proposal-reaction.entity';
@@ -47,7 +49,7 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
-      entities: [User, Topic, Proposal, ProposalOption, ProposalReaction, Delegation, Vote, Credential, MagicLink, Comment, CommentReaction, ProposalVersion, Organisation, Membership, OrgInvite, Argument, AuditLogEntry, Veto, Endorsement, Notification],
+      entities: [User, Topic, Proposal, ProposalOption, ProposalReaction, Delegation, Vote, Credential, MagicLink, Comment, CommentReaction, ProposalVersion, Organisation, Membership, OrgInvite, Argument, AuditLogEntry, Veto, Endorsement, Notification, WebhookEndpoint],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,
@@ -68,6 +70,7 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
     EmailModule,
     BillingModule,
     SlackModule,
+    WebhooksModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -17,6 +17,7 @@ import { DelegationsService } from '../delegations/delegations.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SlackService } from '../slack/slack.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import { User } from '../users/user.entity';
 
 const TITLE_MAX = 200;
@@ -63,6 +64,7 @@ export class ProposalsService {
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
     private readonly slack: SlackService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   findAll(): Promise<Proposal[]> {
@@ -262,6 +264,7 @@ export class ProposalsService {
     });
     const appUrl = process.env.APP_URL ?? 'http://localhost:5173';
     this.slack.postProposalOpened(org.id, result.item.title, `${appUrl}/orgs/${org.slug}/proposals/${id}`).catch(() => {});
+    this.webhooks.dispatch(result.item.organisation_id, 'proposal.opened', { id, title: result.item.title, author_id: result.item.author_id }).catch(() => {});
     return result;
   }
 
@@ -278,6 +281,7 @@ export class ProposalsService {
       const passed = tally ? tally.yes > tally.no : false;
       const appUrl = process.env.APP_URL ?? 'http://localhost:5173';
       this.slack.postProposalClosed(closedOrg.id, result.item.title, passed ? 'passed' : 'failed', `${appUrl}/orgs/${closedOrg.slug}/proposals/${id}`).catch(() => {});
+      this.webhooks.dispatch(result.item.organisation_id, 'proposal.closed', { id, title: result.item.title, passed }).catch(() => {});
     }
     return result;
   }
@@ -357,6 +361,7 @@ export class ProposalsService {
           targetId: p.id,
           metadata: { title: p.title },
         });
+        this.webhooks.dispatch(p.organisation_id, 'proposal.opened', { id: p.id, title: p.title, author_id: p.author_id }).catch(() => {});
       }),
     );
     return scheduled.length;
@@ -376,6 +381,7 @@ export class ProposalsService {
         if (p.proposal_type === 'amendment') {
           await this.applyAmendmentIfPassed(p.id).catch(() => {});
         }
+        this.webhooks.dispatch(p.organisation_id, 'proposal.closed', { id: p.id, title: p.title }).catch(() => {});
       }),
     );
     return expired.length;

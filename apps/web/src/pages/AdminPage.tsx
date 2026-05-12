@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, billingApi, slackApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics } from '../api';
+import { orgsApi, billingApi, slackApi, webhooksApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -101,12 +101,19 @@ export function AdminPage() {
   const [savingSlackChannel, setSavingSlackChannel] = useState(false);
   const [connectingSlack, setConnectingSlack] = useState(false);
   const [disconnectingSlack, setDisconnectingSlack] = useState(false);
+  const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
+  const [addingWebhook, setAddingWebhook] = useState(false);
+  const [deletingWebhookId, setDeletingWebhookId] = useState<string | null>(null);
+  const [newWebhookSecret, setNewWebhookSecret] = useState<string | null>(null);
 
   useEffect(() => {
     orgsApi.listAuditLog(org.slug).then(({ items }) => setAuditLog(items)).catch(() => {}).finally(() => setAuditLogLoading(false));
     orgsApi.getAnalytics(org.slug).then(setAnalytics).catch(() => {}).finally(() => setAnalyticsLoading(false));
     billingApi.getStatus(org.id).then(setBillingStatus).catch(() => {});
     orgsApi.listInvites(org.slug).then(setPendingInvites).catch(() => {});
+    webhooksApi.list(org.slug).then(setWebhooks).catch(() => {});
     if (org.slack_team_id) {
       slackApi.listChannels(org.id).then(setSlackChannels).catch(() => {});
     }
@@ -460,6 +467,39 @@ export function AdminPage() {
       addToast(err instanceof Error ? err.message : 'Failed to save channel', 'error');
     } finally {
       setSavingSlackChannel(false);
+    }
+  }
+
+  async function handleAddWebhook(e: React.FormEvent) {
+    e.preventDefault();
+    const url = webhookUrl.trim();
+    if (!url) return;
+    setAddingWebhook(true);
+    setNewWebhookSecret(null);
+    try {
+      const created = await webhooksApi.create(org.slug, url, webhookEvents);
+      setWebhooks((prev) => [...prev, created]);
+      setNewWebhookSecret(created.secret);
+      setWebhookUrl('');
+      setWebhookEvents([]);
+      addToast('Webhook endpoint added', 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to add webhook', 'error');
+    } finally {
+      setAddingWebhook(false);
+    }
+  }
+
+  async function handleDeleteWebhook(id: string) {
+    setDeletingWebhookId(id);
+    try {
+      await webhooksApi.delete(org.slug, id);
+      setWebhooks((prev) => prev.filter((w) => w.id !== id));
+      addToast('Webhook removed', 'success');
+    } catch {
+      addToast('Failed to remove webhook', 'error');
+    } finally {
+      setDeletingWebhookId(null);
     }
   }
 
@@ -1136,6 +1176,71 @@ export function AdminPage() {
           )}
         </section>
       )}
+
+      {/* Webhooks */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Webhooks</h3>
+        <p className={styles.sectionHint}>Receive HTTP POST notifications when events occur in this organisation. Sign with the secret shown once on creation.</p>
+
+        {webhooks.length > 0 && (
+          <div style={{ marginBottom: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            {webhooks.map((w) => (
+              <div key={w.id} style={{ border: 'var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-3) var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.url}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-fg-muted)' }}>
+                    {w.events.length === 0 ? 'All events' : w.events.join(', ')}
+                  </p>
+                </div>
+                <Button size="sm" variant="danger" onClick={() => handleDeleteWebhook(w.id)} disabled={deletingWebhookId === w.id}>
+                  {deletingWebhookId === w.id ? 'Removing…' : 'Remove'}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {newWebhookSecret && (
+          <div style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-3) var(--space-4)', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)' }}>
+            <strong>Secret (copy now — shown once):</strong>{' '}
+            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', wordBreak: 'break-all' }}>{newWebhookSecret}</code>
+          </div>
+        )}
+
+        <form onSubmit={handleAddWebhook} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          <div className={styles.formField}>
+            <label htmlFor="webhook-url" className={styles.formLabel}>Endpoint URL</label>
+            <input
+              id="webhook-url"
+              type="url"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              placeholder="https://example.com/webhook"
+              className={styles.formInput}
+            />
+          </div>
+          <div className={styles.formField}>
+            <label className={styles.formLabel}>Events (leave empty for all)</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              {['proposal.opened', 'proposal.closed', 'vote.cast', 'member.joined'].map((ev) => (
+                <label key={ev} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-sm)', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={webhookEvents.includes(ev)}
+                    onChange={(e) => setWebhookEvents((prev) => e.target.checked ? [...prev, ev] : prev.filter((x) => x !== ev))}
+                  />
+                  <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{ev}</code>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <Button type="submit" size="sm" disabled={addingWebhook || !webhookUrl.trim()}>
+              {addingWebhook ? 'Adding…' : 'Add endpoint'}
+            </Button>
+          </div>
+        </form>
+      </section>
 
       {/* Danger zone */}
       <section className={styles.dangerSection}>
