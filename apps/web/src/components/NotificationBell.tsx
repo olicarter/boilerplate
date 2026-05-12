@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { notificationsApi, type Notification } from '../api';
 import { useCurrentUser } from '../context';
@@ -39,7 +39,10 @@ function NotificationItem({
 
   return (
     <div
+      role={n.target_id ? 'button' : undefined}
+      tabIndex={n.target_id ? 0 : undefined}
       onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } }}
       data-testid="notification-item"
       style={{
         padding: '0.6rem 0.75rem',
@@ -131,13 +134,29 @@ export function NotificationBell({ orgSlug }: { orgSlug?: string }) {
     setCount(0);
   }
 
+  const panelId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      panelRef.current?.focus();
+    } else {
+      triggerRef.current?.focus();
+    }
+  }, [open]);
+
   if (!user) return null;
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
+        ref={triggerRef}
         onClick={toggleOpen}
         aria-label={`Notifications${count > 0 ? ` (${count} unread)` : ''}`}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-controls={panelId}
         data-testid="notification-bell"
         style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '2px', lineHeight: 1, color: 'var(--color-sidebar-fg-muted)', transition: 'color var(--transition-fast)' }}
       >
@@ -162,15 +181,20 @@ export function NotificationBell({ orgSlug }: { orgSlug?: string }) {
 
       {open && (
         <div
+          id={panelId}
+          ref={panelRef}
           role="dialog"
           aria-label="Notifications"
-          aria-modal="false"
+          aria-modal="true"
+          tabIndex={-1}
+          onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
           style={{
           position: 'absolute', bottom: '120%', left: '50%', transform: 'translateX(-50%)',
           width: 300, maxHeight: 400, overflowY: 'auto',
           background: '#fff', border: '1px solid #ddd', borderRadius: 8,
           boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
           zIndex: 100,
+          outline: 'none',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.75rem', borderBottom: '1px solid #eee' }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>Notifications</span>

@@ -410,7 +410,7 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
       <div className={styles.mobileShell}>
         <a href="#main-content" className={styles.skipLink}>Skip to main content</a>
         <header className={styles.mobileHeader}>
-          <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className={styles.menuButton}>
+          <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" aria-expanded={sidebarOpen} aria-controls="mobile-drawer" className={styles.menuButton}>
             ☰
           </button>
           <span className={styles.mobileWordmark}>Ripple</span>
@@ -419,7 +419,14 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
         {sidebarOpen && (
           <>
             <div onClick={() => setSidebarOpen(false)} className={styles.overlay} />
-            <div className={styles.drawer}>
+            <div
+              id="mobile-drawer"
+              className={styles.drawer}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
+              onKeyDown={(e) => { if (e.key === 'Escape') setSidebarOpen(false); }}
+            >
               <div className={styles.drawerHeader}>
                 <span className={styles.drawerWordmark}>Ripple</span>
                 <button onClick={() => setSidebarOpen(false)} aria-label="Close menu" className={styles.closeButton}>✕</button>

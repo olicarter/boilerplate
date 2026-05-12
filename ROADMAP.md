@@ -242,9 +242,9 @@ SLACK_SIGNING_SECRET=
 
 ### Accessibility
 - [x] **WCAG 2.1 AA audit** — run axe-core against all pages, fix all critical issues: colour contrast, focus ring visibility, skip-to-content link, landmark roles.
-- [ ] **Keyboard navigation** — all interactive elements reachable and operable by keyboard. Dropdown menus, modals, and the UserSearch component need special attention.
+- [x] **Keyboard navigation** — all interactive elements reachable and operable by keyboard. Dropdown menus, modals, and the UserSearch component need special attention.
 - [x] **Screen reader labels** — all icon-only buttons have `aria-label`. Dynamic content changes (vote counts, notification badge) use `aria-live`.
-- [ ] **Focus management** — when a modal opens, focus moves into it; when it closes, focus returns to the trigger.
+- [x] **Focus management** — when a modal opens, focus moves into it; when it closes, focus returns to the trigger.
 
 ### Performance
 - [ ] **Virtualised proposal list** — use a virtual list (e.g. TanStack Virtual) for the proposals page when there are hundreds of proposals, avoiding DOM bloat.

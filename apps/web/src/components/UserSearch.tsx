@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useId } from 'react';
 import { useLiveQuery } from '@tanstack/react-db';
 import { usersCollection } from '../collections';
 import type { User } from '../api';
@@ -18,6 +18,9 @@ export function UserSearch({
 }: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const listboxId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: fetchedUsers } = useLiveQuery(usersCollection);
   const allUsers = usersProp ?? fetchedUsers;
@@ -35,17 +38,50 @@ export function UserSearch({
           )
           .slice(0, 8);
 
+  function select(user: User) {
+    onSelect(user);
+    setQuery('');
+    setOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.focus();
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open || matches.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, matches.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      select(matches[activeIndex] as User);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setActiveIndex(-1);
+    }
+  }
+
   return (
     <div style={{ position: 'relative' }}>
       <input
+        ref={inputRef}
         type="text"
+        role="combobox"
+        aria-expanded={open && matches.length > 0}
+        aria-controls={listboxId}
+        aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
+        aria-autocomplete="list"
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
+          setActiveIndex(-1);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={() => { setTimeout(() => { setOpen(false); setActiveIndex(-1); }, 150); }}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         style={{
           width: '100%',
@@ -57,7 +93,9 @@ export function UserSearch({
         }}
       />
       {open && matches.length > 0 && (
-        <div
+        <ul
+          id={listboxId}
+          role="listbox"
           style={{
             position: 'absolute',
             top: '100%',
@@ -70,31 +108,33 @@ export function UserSearch({
             zIndex: 10,
             maxHeight: 240,
             overflowY: 'auto',
+            listStyle: 'none',
+            margin: 0,
+            padding: 0,
           }}
         >
-          {matches.map((u: User) => (
-            <div
+          {matches.map((u: User, i) => (
+            <li
               key={u.id}
-              onMouseDown={() => {
-                onSelect(u as User);
-                setQuery('');
-                setOpen(false);
-              }}
-              style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: 14 }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.background = '#f8f8f8';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.background = '';
+              id={`${listboxId}-option-${i}`}
+              role="option"
+              aria-selected={i === activeIndex}
+              onMouseDown={() => select(u as User)}
+              onMouseEnter={() => setActiveIndex(i)}
+              style={{
+                padding: '0.5rem 0.75rem',
+                cursor: 'pointer',
+                fontSize: 14,
+                background: i === activeIndex ? '#f0f0f0' : '#fff',
               }}
             >
               <span style={{ fontWeight: 500 }}>{u.name}</span>
               <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: 13 }}>
                 {u.email}
               </span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
