@@ -126,6 +126,7 @@ export function ProposalsPage() {
   const [signatureThreshold, setSignatureThreshold] = useState<string>('');
   const [mcOptions, setMcOptions] = useState<string[]>(['', '']);
   const [anonymousVoting, setAnonymousVoting] = useState(false);
+  const [opensAt, setOpensAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -182,6 +183,7 @@ export function ProposalsPage() {
     setProposalType('standard');
     setMcOptions(['', '']);
     setAnonymousVoting(false);
+    setOpensAt('');
     setShowForm(false);
     setFormError('');
   }
@@ -249,6 +251,7 @@ export function ProposalsPage() {
         signature_threshold: proposalType === 'petition' ? parseInt(signatureThreshold, 10) : null,
         created_at: new Date().toISOString(),
         closes_at: noDeadline ? null : (closesAt ? new Date(closesAt).toISOString() : null),
+        opens_at: opensAt ? new Date(opensAt).toISOString() : null,
         deliberation_ends_at: noDeadline ? null : (deliberationEndsAt ? new Date(deliberationEndsAt).toISOString() : null),
         closed_at: null,
         anonymous_voting: anonymousVoting,
@@ -487,6 +490,20 @@ export function ProposalsPage() {
                     min={deliberationEndsAt || toLocalDatetimeString(new Date())}
                     className={styles.formInput}
                   />
+                </div>
+                <div className={styles.formField}>
+                  <label htmlFor="new-proposal-opens-at" className={styles.formLabel}>
+                    Scheduled open <span className={styles.formLabelNote}>(optional — publish later)</span>
+                  </label>
+                  <input
+                    id="new-proposal-opens-at"
+                    type="datetime-local"
+                    value={opensAt}
+                    onChange={(e) => setOpensAt(e.target.value)}
+                    min={toLocalDatetimeString(new Date())}
+                    className={styles.formInput}
+                  />
+                  {opensAt && <p className={styles.formHint}>Proposal will be saved as draft and open automatically at this time.</p>}
                 </div>
                 <div className={styles.formField}>
                   <label htmlFor="new-proposal-threshold" className={styles.formLabel}>Passing threshold</label>

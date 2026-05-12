@@ -786,6 +786,11 @@ export function ProposalDetailPage() {
         <span className={`${styles.badge} ${isDraft ? styles.badgeDraft : isOpen ? styles.badgeOpen : styles.badgeDefault}`}>
           {proposal.status}
         </span>
+        {isDraft && proposal.opens_at && (
+          <span className={`${styles.badge} ${styles.badgeDefault}`} title={`Opens ${new Date(proposal.opens_at as string).toLocaleString()}`}>
+            Scheduled
+          </span>
+        )}
         {result === 'passed' && <span className={`${styles.badge} ${styles.badgeSuccess}`}>Passed</span>}
         {result === 'failed' && <span className={`${styles.badge} ${styles.badgeError}`}>Failed</span>}
         {result === 'blocked' && <span className={`${styles.badge} ${styles.badgeError}`}>Blocked</span>}

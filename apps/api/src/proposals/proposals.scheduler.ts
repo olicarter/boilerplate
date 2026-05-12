@@ -13,4 +13,10 @@ export class ProposalsScheduler {
     const closed = await this.proposalsService.autoCloseExpired();
     if (closed > 0) this.logger.log(`Auto-closed ${closed} expired proposal(s)`);
   }
+
+  @Cron('* * * * *')
+  async openScheduledProposals() {
+    const opened = await this.proposalsService.autoOpenScheduled();
+    if (opened > 0) this.logger.log(`Auto-opened ${opened} scheduled proposal(s)`);
+  }
 }

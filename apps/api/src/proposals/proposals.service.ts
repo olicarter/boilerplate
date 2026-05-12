@@ -83,6 +83,7 @@ export class ProposalsService {
     title: string;
     description?: string;
     closes_at?: string | null;
+    opens_at?: string | null;
     deliberation_ends_at?: string | null;
     threshold?: number;
     quorum?: number | null;
@@ -126,8 +127,9 @@ export class ProposalsService {
         closed_at: null,
         threshold: 50,
         ...data,
-        status: data.status ?? 'open',
+        status: data.opens_at ? 'draft' : (data.status ?? 'open'),
         closes_at: data.closes_at ? new Date(data.closes_at) : null,
+        opens_at: data.opens_at ? new Date(data.opens_at) : null,
         deliberation_ends_at: data.deliberation_ends_at ? new Date(data.deliberation_ends_at) : null,
       });
       const saved = await manager.save(proposal);
@@ -326,6 +328,27 @@ export class ProposalsService {
       throw new ForbiddenException('Only moderators and admins can set proposal outcomes');
     }
     return this.update(id, { outcome });
+  }
+
+  async autoOpenScheduled(): Promise<number> {
+    const scheduled = await this.proposalRepo.find({
+      where: { status: 'draft', opens_at: LessThanOrEqual(new Date()) },
+    });
+    if (scheduled.length === 0) return 0;
+
+    await Promise.all(
+      scheduled.map(async (p) => {
+        await this.proposalRepo.update(p.id, { status: 'open', opens_at: null });
+        await this.notifyOrgMembers(p.organisation_id, p.author_id, {
+          type: 'proposal.opened',
+          actorId: p.author_id,
+          targetType: 'proposal',
+          targetId: p.id,
+          metadata: { title: p.title },
+        });
+      }),
+    );
+    return scheduled.length;
   }
 
   async autoCloseExpired(): Promise<number> {

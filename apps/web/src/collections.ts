@@ -105,6 +105,7 @@ export function createOrgCollections(orgId: string) {
           title: p.title,
           description: p.description,
           closes_at: p.closes_at,
+          opens_at: p.opens_at,
           deliberation_ends_at: p.deliberation_ends_at,
           threshold: p.threshold,
           status: p.status as 'open' | 'draft',
