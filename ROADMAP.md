@@ -19,7 +19,7 @@ Liquid democracy for any organisation. The goal is a platform that a community g
 | 5 | Email notifications (proposal events) | ✅ Done |
 | 6 | Proposal scheduling (`opens_at`) | ✅ Done |
 | 7 | Per-org email domain allowlist | ✅ Done |
-| 8 | Onboarding flow for new users | ⬜ Pending |
+| 8 | Onboarding flow for new users | ✅ Done |
 | 9 | Admin participation analytics | ⬜ Pending |
 | 10 | Stripe billing + pricing page | ⬜ Pending |
 | 11 | Decision record UI + export | ⬜ Pending |

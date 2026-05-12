@@ -54,6 +54,38 @@ export function OrgListPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
+  const [inviteInput, setInviteInput] = useState('');
+  const [joiningViaLink, setJoiningViaLink] = useState(false);
+
+  async function handleJoinViaLink(e: React.FormEvent) {
+    e.preventDefault();
+    const input = inviteInput.trim();
+    let slug = '';
+    let token = '';
+    try {
+      const url = new URL(input.startsWith('http') ? input : `https://dummy.com/${input}`);
+      const parts = url.pathname.split('/').filter(Boolean);
+      const orgIdx = parts.indexOf('orgs');
+      if (orgIdx !== -1 && parts[orgIdx + 1]) slug = parts[orgIdx + 1];
+      token = url.searchParams.get('invite') ?? '';
+    } catch {
+      slug = input;
+    }
+    if (!slug || !token) {
+      addToast('Invalid invite link. Paste the full URL you received.', 'error');
+      return;
+    }
+    setJoiningViaLink(true);
+    try {
+      await orgsApi.joinViaToken(slug, token);
+      addToast('Joined organisation!', 'success');
+      navigate({ to: '/orgs/$slug', params: { slug } });
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to join', 'error');
+    } finally {
+      setJoiningViaLink(false);
+    }
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -124,14 +156,34 @@ export function OrgListPage() {
       {myOrgs.length === 0 ? (
         showCreate ? null : (
           <div className={styles.empty}>
-            <p className={styles.emptyIcon}>🗳️</p>
             <p className={styles.emptyTitle}>Welcome to Ripple</p>
             <p className={styles.emptyDescription}>
-              Run transparent votes for any group — cooperatives, DAOs, community organisations, and more.
+              Make decisions together — create an organisation and run your first vote in minutes, or join one with an invite link.
             </p>
-            <Button onClick={() => setShowCreate(true)}>
-              Create your first organisation
-            </Button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', maxWidth: 400 }}>
+              <Button onClick={() => setShowCreate(true)}>
+                Create an organisation
+              </Button>
+              <div style={{ position: 'relative', textAlign: 'center' }}>
+                <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: 0 }} />
+                <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'var(--color-bg)', padding: '0 0.75rem', fontSize: 12, color: 'var(--color-fg-muted)' }}>or</span>
+              </div>
+              <form onSubmit={handleJoinViaLink} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: 13, color: 'var(--color-fg-muted)', fontWeight: 500 }}>Have an invite link?</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    value={inviteInput}
+                    onChange={(e) => setInviteInput(e.target.value)}
+                    placeholder="Paste invite link…"
+                    style={{ flex: 1, padding: '0.5rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14 }}
+                  />
+                  <Button type="submit" disabled={joiningViaLink || !inviteInput.trim()} size="sm">
+                    {joiningViaLink ? 'Joining…' : 'Join'}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
         )
       ) : (
