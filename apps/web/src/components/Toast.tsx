@@ -24,6 +24,9 @@ const ACCENT: Record<Toast['type'], string> = {
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
   return (
     <div
+      role="status"
+      aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+      aria-atomic="true"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -45,6 +48,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       <span style={{ flex: 1 }}>{toast.message}</span>
       <button
         onClick={onDismiss}
+        aria-label="Dismiss notification"
         style={{ background: 'none', border: 'none', color: 'var(--color-sidebar-fg-muted)', cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1 }}
       >
         ✕
