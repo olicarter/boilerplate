@@ -256,7 +256,7 @@ SLACK_SIGNING_SECRET=
 - [ ] **i18n infrastructure** — integrate `react-i18next`. Extract all UI strings into locale files. This is a large cross-cutting change — do it once and do it properly.
 - [ ] **English (default) + Spanish** — ship two locales to prove the system works before adding more.
 - [ ] **RTL layout support** — use logical CSS properties (`margin-inline-start` etc.) so RTL languages (Arabic, Hebrew) don't break the layout.
-- [ ] **Date/number localisation** — use `Intl.DateTimeFormat` and `Intl.NumberFormat` everywhere instead of hardcoded format strings.
+- [x] **Date/number localisation** — use `Intl.DateTimeFormat` and `Intl.NumberFormat` everywhere instead of hardcoded format strings.
 
 ### Error handling
 - [x] **Global error boundary** — React error boundary at the root that catches JS errors and shows a friendly "something went wrong" page with a reload button, rather than a blank screen.
@@ -364,8 +364,8 @@ Features shipped that extend beyond the original spec:
 These items apply across all phases and should be maintained continuously.
 
 - [ ] **Test coverage** — maintain Playwright e2e tests for every new user-facing feature. Target: no feature ships without at least a happy-path e2e test.
-- [ ] **Migration discipline** — every DB schema change ships with a TypeORM migration. No exceptions.
-- [ ] **Changelog** — maintain a `CHANGELOG.md` updated with every release. Use conventional commit format.
+- [x] **Migration discipline** — every DB schema change ships with a TypeORM migration. No exceptions.
+- [x] **Changelog** — maintain a `CHANGELOG.md` updated with every release. Use conventional commit format.
 - [ ] **Dependency updates** — monthly Dependabot PR reviews. Keep `@simplewebauthn`, ElectricSQL, and TanStack packages current — they move fast.
 - [x] **Security headers** — add `helmet` to the NestJS app for CSP, HSTS, X-Frame-Options etc. Review and tighten the CSP allowlist regularly.
 - [ ] **Load testing** — before any public launch, run k6 load tests against the API simulating concurrent voting on a high-traffic proposal.

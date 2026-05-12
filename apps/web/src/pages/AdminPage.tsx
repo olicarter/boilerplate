@@ -5,6 +5,7 @@ import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
 import { orgsApi, billingApi, slackApi, webhooksApi, apiKeysApi, proposalsApi, topicsApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint, type ApiKeyRecord, type Topic } from '../api';
+import { formatDate, formatDatetime } from '../utils/format';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -985,7 +986,7 @@ export function AdminPage() {
                 <div>
                   <span className={styles.pendingName}>{invite.email}</span>
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-fg-muted)', marginLeft: 'var(--space-3)' }}>
-                    sent by {invite.invited_by_name ?? 'admin'} · expires {new Date(invite.expires_at).toLocaleDateString()}
+                    sent by {invite.invited_by_name ?? 'admin'} · expires {formatDate(invite.expires_at)}
                   </span>
                 </div>
                 <Button
@@ -1227,7 +1228,7 @@ export function AdminPage() {
             {auditLog.map((entry) => {
               const actor = entry.actor_id ? usersById.get(entry.actor_id) : null;
               const actorName = actor?.name ?? entry.actor_id ?? 'System';
-              const date = new Date(entry.created_at).toLocaleString();
+              const date = formatDatetime(entry.created_at);
               return (
                 <li key={entry.id} className={styles.auditEntry}>
                   <span className={styles.auditActor}>{actorName}</span>
@@ -1458,7 +1459,7 @@ export function AdminPage() {
                   <div style={{ color: 'var(--color-fg-muted)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>{k.key_preview}</div>
                   {k.last_used_at && (
                     <div style={{ color: 'var(--color-fg-subtle)', fontSize: 'var(--text-xs)' }}>
-                      Last used {new Date(k.last_used_at).toLocaleDateString()}
+                      Last used {formatDate(k.last_used_at)}
                     </div>
                   )}
                 </div>

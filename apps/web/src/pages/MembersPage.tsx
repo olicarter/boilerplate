@@ -3,6 +3,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { usersCollection, membershipsCollection } from '../collections';
 import { orgsApi, type User, type Membership, type Proposal, type Vote } from '../api';
+import { formatDate } from '../utils/format';
 import { useCurrentUser } from '../context';
 import { useOrg } from '../OrgContext';
 import { useToast } from '../components/Toast';
@@ -215,7 +216,7 @@ export function MembersPage() {
                   </Link>
                   {isMe && <span className={styles.youLabel}>(you)</span>}
                   <div className={styles.memberMeta}>
-                    {user?.email} · joined {new Date(m.joined_at).toLocaleDateString()}
+                    {user?.email} · joined {formatDate(m.joined_at)}
                     {eligibleProposalCount > 0 && (() => {
                       const voted = votesByUser.get(m.user_id)?.size ?? 0;
                       const pct = Math.round((voted / eligibleProposalCount) * 100);

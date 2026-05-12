@@ -8,6 +8,7 @@ import { UserSearch } from '../components/UserSearch';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { EmptyState } from '../components/EmptyState';
 import { useCurrentUser } from '../context';
+import { formatDate } from '../utils/format';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
 import { delegationsApi, type User, type Delegation, type Topic, type Membership, type DelegationHistoryEntry } from '../api';
@@ -211,7 +212,7 @@ export function DelegationsPage() {
               const delegate = userMap[d.delegate_id];
               const expired = d.expires_at ? new Date(d.expires_at) <= new Date() : false;
               const expiresDate = d.expires_at
-                ? new Date(d.expires_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                ? formatDate(d.expires_at)
                 : null;
               const fraction = Number(d.weight_fraction) || 1;
               const pct = Math.round(fraction * 100);

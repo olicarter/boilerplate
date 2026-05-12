@@ -4,6 +4,7 @@ import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import type { User, Vote, Delegation, Proposal, Topic, Membership } from '../api';
+import { formatDate } from '../utils/format';
 import { Avatar } from '../components/Avatar';
 import styles from './UserProfilePage.module.css';
 
@@ -56,7 +57,7 @@ export function UserProfilePage() {
             {isOwnProfile && <span className={styles.youBadge}>(you)</span>}
           </p>
           <p className={styles.profileEmail}>{user.email}</p>
-          <p className={styles.profileMeta}>Member since {new Date(user.created_at).toLocaleDateString()}</p>
+          <p className={styles.profileMeta}>Member since {formatDate(user.created_at)}</p>
           {membership && (
             <p className={styles.profileRole}>
               {membership.role.charAt(0).toUpperCase() + membership.role.slice(1)}

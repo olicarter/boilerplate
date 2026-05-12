@@ -13,6 +13,7 @@ import { MentionTextarea, type MentionTextareaHandle } from '../components/Menti
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
+import { formatDate, formatDatetime, formatRelative } from '../utils/format';
 import styles from './ProposalDetailPage.module.css';
 
 const TITLE_MAX = 200;
@@ -33,7 +34,7 @@ function formatDeadline(closesAt: string): { label: string; subtext: string; urg
   const minutes = Math.floor(ms / 60000);
   const hours = Math.floor(ms / 3600000);
   const days = Math.floor(ms / 86400000);
-  const date = new Date(closesAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const date = formatDatetime(closesAt);
   if (minutes < 60) return { label: `${minutes} minutes left`, subtext: `Closes ${date}`, urgent: true };
   if (hours < 24) return { label: `${hours} hour${hours !== 1 ? 's' : ''} left`, subtext: `Closes ${date}`, urgent: hours < 6 };
   return { label: `${days} day${days !== 1 ? 's' : ''} left`, subtext: `Closes ${date}`, urgent: false };
@@ -826,7 +827,7 @@ export function ProposalDetailPage() {
           {proposal.status}
         </span>
         {isDraft && proposal.opens_at && (
-          <span className={`${styles.badge} ${styles.badgeDefault}`} title={`Opens ${new Date(proposal.opens_at as string).toLocaleString()}`}>
+          <span className={`${styles.badge} ${styles.badgeDefault}`} title={`Opens ${formatDatetime(proposal.opens_at)}`}>
             Scheduled
           </span>
         )}
@@ -1006,7 +1007,7 @@ export function ProposalDetailPage() {
                 <div key={v.id} style={{ fontSize: 12, color: '#888', marginBottom: i < versions.length - 1 ? '0.5rem' : 0 }}>
                   <span style={{ color: '#555' }}>{v.title}</span>
                   <span style={{ marginLeft: '0.5rem' }}>
-                    · {new Date(v.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    · {formatDate(v.created_at)}
                   </span>
                   {userMap[v.changed_by ?? ''] && (
                     <span style={{ marginLeft: '0.5rem' }}>by {userMap[v.changed_by!].name}</span>
@@ -1028,8 +1029,8 @@ export function ProposalDetailPage() {
             {' · '}
           </>
         ) : null}
-        {new Date(proposal.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-        {proposal.closed_at && ` · Closed ${new Date(proposal.closed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`}
+        {formatDate(proposal.created_at)}
+        {proposal.closed_at && ` · Closed ${formatDate(proposal.closed_at)}`}
       </p>
 
       {/* Reactions */}
@@ -1184,7 +1185,7 @@ export function ProposalDetailPage() {
           </div>
           {isDeliberating && (
             <p style={{ margin: '0.5rem 0 0', fontSize: 12, color: '#6d28d9' }}>
-              Deliberation ends {new Date(proposal.deliberation_ends_at as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} — voting opens after.
+              Deliberation ends {formatDatetime(proposal.deliberation_ends_at)} — voting opens after.
             </p>
           )}
         </div>
@@ -1612,7 +1613,7 @@ export function ProposalDetailPage() {
         <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '1rem 1.25rem', marginBottom: '1.5rem', background: '#fafafa' }}>
           <p style={{ margin: '0 0 0.5rem', fontSize: 13, fontWeight: 600 }}>Constitutional outcome seal</p>
           <p style={{ margin: '0 0 0.25rem', fontSize: 12, color: '#555' }}>
-            Outcome: <strong>{constitutionalOutcome.outcome}</strong> · signed {new Date(constitutionalOutcome.signed_at).toLocaleString()}
+            Outcome: <strong>{constitutionalOutcome.outcome}</strong> · signed {formatDatetime(constitutionalOutcome.signed_at)}
           </p>
           <p style={{ margin: 0, fontSize: 11, color: '#888', fontFamily: 'monospace', wordBreak: 'break-all' }}>SHA-256: {constitutionalOutcome.hash}</p>
         </div>
@@ -1649,7 +1650,7 @@ export function ProposalDetailPage() {
         <div style={{ border: '1px solid #ddd6fe', borderRadius: 6, padding: '0.75rem 1.25rem', background: '#faf5ff', marginBottom: '1.5rem' }}>
           <p style={{ margin: 0, fontSize: 14, color: '#6d28d9', fontWeight: 500 }}>Deliberation phase — voting is not yet open.</p>
           <p style={{ margin: '0.25rem 0 0', fontSize: 13, color: '#888' }}>
-            Use this time to read the arguments and discussion below. Voting opens {new Date(proposal.deliberation_ends_at as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+            Use this time to read the arguments and discussion below. Voting opens {formatDatetime(proposal.deliberation_ends_at)}.
           </p>
         </div>
       )}
@@ -2351,7 +2352,7 @@ export function ProposalDetailPage() {
                   </span>
                   {a.closes_at && (
                     <span style={{ marginLeft: '0.5rem', color: '#aaa', fontSize: 12 }}>
-                      · vote closes {new Date(a.closes_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      · vote closes {formatDate(a.closes_at)}
                     </span>
                   )}
                 </div>
@@ -2449,7 +2450,7 @@ export function ProposalDetailPage() {
                             {commentAuthor?.name ?? 'Unknown'}
                           </span>
                           <span style={{ fontSize: 12, color: '#aaa' }}>
-                            {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {formatDate(c.created_at)}
                           </span>
                           {c.pinned_at && (
                             <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>📌 Pinned</span>

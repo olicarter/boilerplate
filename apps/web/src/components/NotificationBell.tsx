@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { notificationsApi, type Notification } from '../api';
 import { useCurrentUser } from '../context';
+import { formatDatetime } from '../utils/format';
 
 const TYPE_LABELS: Record<Notification['type'], string> = {
   'proposal.opened': 'New proposal',
@@ -67,7 +68,7 @@ function NotificationItem({
           </div>
         )}
         <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
-          {new Date(n.created_at).toLocaleString()}
+          {formatDatetime(n.created_at)}
         </div>
       </div>
     </div>
