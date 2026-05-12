@@ -288,4 +288,17 @@ export class OrganisationsController {
   sendDigest(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
     return this.orgsService.sendDigest(slug, req.user!.id);
   }
+
+  @Get(':slug/calendar.ics')
+  @UseGuards(AuthGuard)
+  async getCalendar(
+    @Param('slug') slug: string,
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+  ) {
+    const ics = await this.orgsService.getCalendarIcs(slug, req.user!.id);
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}-proposals.ics"`);
+    res.send(ics);
+  }
 }

@@ -912,6 +912,71 @@ export class OrganisationsService {
     return { sent };
   }
 
+  async getCalendarIcs(slug: string, userId: string): Promise<string> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, userId, ['member', 'moderator', 'admin']);
+    const appUrl = process.env.APP_URL ?? 'http://localhost:5173';
+
+    const proposals = await this.dataSource.query<Array<{
+      id: string; title: string; closes_at: string | null; opens_at: string | null;
+      created_at: string; status: string;
+    }>>(
+      `SELECT id, title, closes_at, opens_at, created_at, status
+       FROM proposals
+       WHERE organisation_id = $1
+         AND status IN ('open', 'draft')
+         AND (closes_at IS NOT NULL OR opens_at IS NOT NULL)
+       ORDER BY COALESCE(closes_at, opens_at) ASC`,
+      [org.id],
+    );
+
+    function icsDate(d: string): string {
+      return new Date(d).toISOString().replace(/[-:]/g, '').replace('.000', '');
+    }
+
+    function icsText(s: string): string {
+      return s.replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\n/g, '\\n');
+    }
+
+    const events = proposals.flatMap((p) => {
+      const lines: string[] = [];
+      if (p.closes_at) {
+        lines.push(
+          'BEGIN:VEVENT',
+          `UID:ripple-close-${p.id}@${slug}`,
+          `DTSTAMP:${icsDate(p.created_at)}`,
+          `DTSTART:${icsDate(p.closes_at)}`,
+          `DTEND:${icsDate(p.closes_at)}`,
+          `SUMMARY:${icsText(`Vote closes: ${p.title}`)}`,
+          `URL:${appUrl}/orgs/${org.slug}/proposals/${p.id}`,
+          'END:VEVENT',
+        );
+      }
+      if (p.opens_at) {
+        lines.push(
+          'BEGIN:VEVENT',
+          `UID:ripple-open-${p.id}@${slug}`,
+          `DTSTAMP:${icsDate(p.created_at)}`,
+          `DTSTART:${icsDate(p.opens_at)}`,
+          `DTEND:${icsDate(p.opens_at)}`,
+          `SUMMARY:${icsText(`Vote opens: ${p.title}`)}`,
+          `URL:${appUrl}/orgs/${org.slug}/proposals/${p.id}`,
+          'END:VEVENT',
+        );
+      }
+      return lines;
+    });
+
+    return [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      `PRODID:-//Ripple//${org.name}//EN`,
+      `X-WR-CALNAME:${icsText(org.name)} proposals`,
+      ...events,
+      'END:VCALENDAR',
+    ].join('\r\n');
+  }
+
   async exportDecisionRecordCsv(slug: string, actorId: string): Promise<string> {
     const records = await this.getDecisionRecordAll(slug, actorId);
     const headers = ['Title', 'Topic', 'Type', 'Status', 'Result', 'Closed Date', 'Yes', 'No', 'Abstain', 'Yes %', 'Threshold %', 'Implementation Status'];

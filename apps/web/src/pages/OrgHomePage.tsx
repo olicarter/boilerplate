@@ -110,6 +110,15 @@ export function OrgHomePage() {
         </div>
       </div>
 
+      {currentUser && myMembership && (
+        <p style={{ margin: '0 0 var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>
+          <a href={`/api/orgs/${org.slug}/calendar.ics`} style={{ color: 'var(--color-fg-muted)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+            Download calendar (.ics)
+          </a>
+          {' — import voting deadlines into your calendar app'}
+        </p>
+      )}
+
       <div className={styles.quickNav}>
         {NAV_LINKS.map(({ to, label, icon }) => (
           <Link key={label} to={to} params={{ slug: org.slug }} className={styles.navCard}>
