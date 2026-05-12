@@ -67,6 +67,15 @@ export class ProposalsController {
     return this.proposalsService.listVersions(id);
   }
 
+  @Post('import')
+  @UseGuards(AuthGuard)
+  bulkImport(
+    @Body() body: { org_slug: string; proposals: Array<{ title: string; description?: string; topic_id: string; closes_at?: string; status?: 'open' | 'draft'; tags?: string[] }> },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.bulkImport(body.org_slug, req.user!.id, body.proposals);
+  }
+
   @Post()
   @UseGuards(AuthGuard)
   create(

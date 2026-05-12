@@ -178,6 +178,58 @@ export class ProposalsService {
     return result;
   }
 
+  async bulkImport(
+    orgSlug: string,
+    actorId: string,
+    rows: Array<{ title: string; description?: string; topic_id: string; closes_at?: string; status?: 'open' | 'draft'; tags?: string[] }>,
+  ): Promise<{ created: number; errors: Array<{ index: number; message: string }> }> {
+    const org = await this.orgRepo.findOneBy({ slug: orgSlug });
+    if (!org) throw new NotFoundException('Organisation not found');
+
+    const membership = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: actorId });
+    if (!membership) throw new ForbiddenException('Not a member of this organisation');
+    const required = ROLE_RANK[org.proposal_creation_role] ?? 1;
+    if ((ROLE_RANK[membership.role] ?? 0) < required) {
+      throw new ForbiddenException(`Only ${org.proposal_creation_role}s and above can create proposals`);
+    }
+
+    let created = 0;
+    const errors: Array<{ index: number; message: string }> = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        const title = row.title?.trim();
+        if (!title) { errors.push({ index: i, message: 'Title is required' }); continue; }
+        if (title.length > TITLE_MAX) { errors.push({ index: i, message: `Title too long (max ${TITLE_MAX})` }); continue; }
+        if (!row.topic_id) { errors.push({ index: i, message: 'topic_id is required' }); continue; }
+
+        await this.dataSource.transaction(async (manager) => {
+          const proposal = manager.create(Proposal, {
+            id: randomUUID(),
+            organisation_id: org.id,
+            author_id: actorId,
+            title,
+            description: row.description ?? '',
+            topic_id: row.topic_id,
+            status: row.status ?? 'open',
+            closes_at: row.closes_at ? new Date(row.closes_at) : null,
+            tags: row.tags ?? [],
+            threshold: 50,
+            closed_at: null,
+          });
+          await manager.save(proposal);
+          this.auditLog.log(org.id, actorId, 'proposal.created', 'proposal', proposal.id, { title: proposal.title, status: proposal.status, bulk_import: true });
+        });
+        created++;
+      } catch (err) {
+        errors.push({ index: i, message: err instanceof Error ? err.message : 'Unknown error' });
+      }
+    }
+
+    return { created, errors };
+  }
+
   async update(
     id: string,
     data: Partial<Pick<Proposal, 'title' | 'description' | 'status' | 'closed_at' | 'closes_at' | 'deliberation_ends_at' | 'threshold' | 'outcome' | 'pinned' | 'tags' | 'anonymous_voting'>>,

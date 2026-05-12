@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, billingApi, slackApi, webhooksApi, apiKeysApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint, type ApiKeyRecord } from '../api';
+import { orgsApi, billingApi, slackApi, webhooksApi, apiKeysApi, proposalsApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint, type ApiKeyRecord } from '../api';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -115,6 +115,10 @@ export function AdminPage() {
   const [creatingApiKey, setCreatingApiKey] = useState(false);
   const [newApiKeyValue, setNewApiKeyValue] = useState<string | null>(null);
   const [revokingApiKeyId, setRevokingApiKeyId] = useState<string | null>(null);
+
+  const [importJson, setImportJson] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ created: number; errors: Array<{ index: number; message: string }> } | null>(null);
 
   useEffect(() => {
     orgsApi.listAuditLog(org.slug).then(({ items }) => setAuditLog(items)).catch(() => {}).finally(() => setAuditLogLoading(false));
@@ -1430,6 +1434,62 @@ export function AdminPage() {
         >
           <Button size="sm" variant="secondary" type="button">Download org data (.json)</Button>
         </a>
+      </section>
+
+      {/* Bulk import */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Bulk import proposals</h3>
+        <p className={styles.sectionHint}>
+          Paste a JSON array of proposals to create them all at once. Each object must have <code>title</code> and <code>topic_id</code>. Optional fields: <code>description</code>, <code>closes_at</code>, <code>status</code> ("open" or "draft"), <code>tags</code>.
+        </p>
+        <textarea
+          rows={8}
+          value={importJson}
+          onChange={(e) => { setImportJson(e.target.value); setImportResult(null); }}
+          placeholder={'[\n  { "title": "Proposal 1", "topic_id": "uuid-here", "description": "..." },\n  { "title": "Proposal 2", "topic_id": "uuid-here" }\n]'}
+          style={{ width: '100%', fontFamily: 'monospace', fontSize: 'var(--text-sm)', padding: 'var(--space-3)', border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', resize: 'vertical', boxSizing: 'border-box' }}
+        />
+        <div style={{ marginTop: 'var(--space-3)', display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+          <Button
+            size="sm"
+            disabled={importing || !importJson.trim()}
+            onClick={async () => {
+              let parsed: unknown;
+              try { parsed = JSON.parse(importJson); } catch { addToast('Invalid JSON', 'error'); return; }
+              if (!Array.isArray(parsed)) { addToast('JSON must be an array', 'error'); return; }
+              setImporting(true);
+              setImportResult(null);
+              try {
+                const result = await proposalsApi.bulkImport(org.slug, parsed as Parameters<typeof proposalsApi.bulkImport>[1]);
+                setImportResult(result);
+                if (result.errors.length === 0) {
+                  addToast(`Imported ${result.created} proposal${result.created !== 1 ? 's' : ''}`, 'success');
+                  setImportJson('');
+                } else {
+                  addToast(`Imported ${result.created} proposals, ${result.errors.length} failed`, 'error');
+                }
+              } catch (err) {
+                addToast(err instanceof Error ? err.message : 'Import failed', 'error');
+              } finally {
+                setImporting(false);
+              }
+            }}
+          >
+            {importing ? 'Importing…' : 'Import proposals'}
+          </Button>
+          {importResult && (
+            <span style={{ fontSize: 'var(--text-sm)', color: importResult.errors.length ? 'var(--color-error)' : 'var(--color-fg-muted)' }}>
+              {importResult.created} created{importResult.errors.length > 0 ? `, ${importResult.errors.length} failed` : ''}
+            </span>
+          )}
+        </div>
+        {importResult && importResult.errors.length > 0 && (
+          <ul style={{ marginTop: 'var(--space-3)', fontSize: 'var(--text-sm)', color: 'var(--color-error)', paddingLeft: 'var(--space-4)' }}>
+            {importResult.errors.map((e) => (
+              <li key={e.index}>Row {e.index + 1}: {e.message}</li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* Danger zone */}

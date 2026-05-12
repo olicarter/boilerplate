@@ -523,6 +523,8 @@ export const proposalsApi = {
     request<Record<string, unknown>>(`/proposals/${id}/receipt`),
   getCarrying: (id: string) =>
     request<Array<{ voter: { user_id: string; name: string }; carrying: Array<{ user_id: string; name: string }> }>>(`/proposals/${id}/carrying`),
+  bulkImport: (orgSlug: string, proposals: Array<{ title: string; description?: string; topic_id: string; closes_at?: string; status?: 'open' | 'draft'; tags?: string[] }>) =>
+    request<{ created: number; errors: Array<{ index: number; message: string }> }>('/proposals/import', { method: 'POST', body: JSON.stringify({ org_slug: orgSlug, proposals }) }),
 };
 
 export interface ProposalReaction {
