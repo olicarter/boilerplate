@@ -32,6 +32,41 @@ const USE_CASES = [
 
 interface Stats { orgs: number; members: number; votes: number }
 
+function VoteBar({ label, pct, strong }: { label: string; pct: number; strong?: boolean }) {
+  return (
+    <div className={styles.vmRow}>
+      <span className={styles.vmLabel}>{label}</span>
+      <div className={styles.vmTrack}>
+        <div className={`${styles.vmFill} ${strong ? styles.vmFillStrong : ''}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className={styles.vmPct}>{pct}%</span>
+    </div>
+  );
+}
+
+function VoteMock() {
+  return (
+    <div className={styles.voteMock}>
+      <div className={styles.vmOrg}>Eastside Residents' Association</div>
+      <h3 className={styles.vmTitle}>Should we adopt the new neighbourhood charter?</h3>
+      <div className={styles.vmMeta}>
+        <span className={styles.vmLive}><span className={styles.vmDot} />Live</span>
+        <span>18 votes</span>
+        <span>Closes in 2 days</span>
+      </div>
+      <div className={styles.vmBars}>
+        <VoteBar label="Yes" pct={67} strong />
+        <VoteBar label="No" pct={21} />
+        <VoteBar label="Abstain" pct={12} />
+      </div>
+      <div className={styles.vmFooter}>
+        <span>4 votes via delegation</span>
+        <span className={styles.vmPassing}>Passing ✓</span>
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   onSignIn: () => void;
 }
@@ -58,24 +93,31 @@ export function LandingPage({ onSignIn }: Props) {
       {/* Hero */}
       <section className={styles.hero}>
         <div className={styles.inner}>
-          <h1 className={styles.heroTitle}>
-            Democratic decisions,<br />
-            for any group.
-          </h1>
-          <p className={styles.heroSub}>
-            Ripple brings liquid democracy to cooperatives, councils, governments, and any
-            organisation that needs to make decisions together — with proposals, delegation,
-            and full transparency.
-          </p>
-          <div className={styles.heroCtas}>
-            <button onClick={onSignIn} className={styles.primaryCta}>
-              Get started
-            </button>
-            {publicOrgs.length > 0 && (
-              <a href="#organisations" className={styles.secondaryCta}>
-                Explore organisations
-              </a>
-            )}
+          <div className={styles.heroLayout}>
+            <div className={styles.heroContent}>
+              <h1 className={styles.heroTitle}>
+                Democratic decisions,<br />
+                for any group.
+              </h1>
+              <p className={styles.heroSub}>
+                Ripple brings liquid democracy to cooperatives, councils, governments, and any
+                organisation that needs to make decisions together — with proposals, delegation,
+                and full transparency.
+              </p>
+              <div className={styles.heroCtas}>
+                <button onClick={onSignIn} className={styles.primaryCta}>
+                  Get started free
+                </button>
+                {publicOrgs.length > 0 && (
+                  <a href="#organisations" className={styles.secondaryCta}>
+                    Explore organisations
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className={styles.heroVisual}>
+              <VoteMock />
+            </div>
           </div>
         </div>
       </section>
@@ -125,10 +167,10 @@ export function LandingPage({ onSignIn }: Props) {
       </section>
 
       {/* Features */}
-      <section className={styles.section}>
+      <section className={`${styles.section} ${styles.sectionDark}`}>
         <div className={styles.inner}>
-          <h2 className={styles.sectionTitle}>Everything your group needs</h2>
-          <p className={styles.sectionSub}>Built for real decisions, not just polls.</p>
+          <h2 className={`${styles.sectionTitle} ${styles.sectionTitleLight}`}>Everything your group needs</h2>
+          <p className={`${styles.sectionSub} ${styles.sectionSubLight}`}>Built for real decisions, not just polls.</p>
           <div className={styles.features}>
             {FEATURES.map((f) => (
               <div key={f.title} className={styles.feature}>
