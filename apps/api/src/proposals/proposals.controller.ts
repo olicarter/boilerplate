@@ -208,6 +208,12 @@ export class ProposalsController {
     return this.proposalsService.removeLink(linkId, req.user!.id);
   }
 
+  @Get(':id/receipt')
+  @UseGuards(AuthGuard)
+  getReceipt(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.getVoteReceipt(id, req.user!.id);
+  }
+
   @Get(':id/watch')
   @UseGuards(AuthGuard)
   async getWatchStatus(@Param('id') id: string, @Req() req: AuthenticatedRequest) {

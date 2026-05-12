@@ -1712,7 +1712,7 @@ export function ProposalDetailPage() {
                   "{myVote.reason}"
                 </p>
               )}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => { setChangingVote(true); setVoteReason((myVote.reason as string) ?? ''); }}
                   disabled={voting}
@@ -1728,6 +1728,27 @@ export function ProposalDetailPage() {
                   style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', color: '#d94040', border: '1px solid #d94040', background: 'none' }}
                   confirmStyle={{ color: '#d94040', border: '1px solid #d94040', background: 'none', borderRadius: 4 }}
                 />
+                {!proposal.anonymous_voting && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const receipt = await proposalsApi.getReceipt(id);
+                        const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `vote-receipt-${id.slice(0, 8)}.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        addToast('Failed to download receipt', 'error');
+                      }
+                    }}
+                    style={{ fontSize: 13, padding: '0.35rem 0.9rem', cursor: 'pointer', color: 'var(--color-fg-muted)', background: 'none', border: '1px solid var(--color-border)', borderRadius: 4 }}
+                  >
+                    Download receipt
+                  </button>
+                )}
               </div>
             </div>
           ) : (

@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHmac } from 'crypto';
 import { ImpactLevel, Proposal, ProposalStatus } from './proposal.entity';
 import { ProposalOption } from './proposal-option.entity';
 import { ProposalReaction } from './proposal-reaction.entity';
@@ -979,5 +979,30 @@ export class ProposalsService {
       [proposalId],
     );
     return rows.map((r) => r.user_id);
+  }
+
+  async getVoteReceipt(proposalId: string, userId: string): Promise<object> {
+    const proposal = await this.proposalRepo.findOneByOrFail({ id: proposalId });
+    if (proposal.anonymous_voting) {
+      throw new ForbiddenException('Vote receipts are not available for anonymous voting proposals');
+    }
+    const voteRepo = this.dataSource.getRepository(Vote);
+    const votes = await voteRepo.findBy({ proposal_id: proposalId, user_id: userId });
+    if (votes.length === 0) throw new NotFoundException('No vote found for this proposal');
+
+    const receipt: Record<string, unknown> = {
+      version: 1,
+      proposal_id: proposalId,
+      proposal_title: proposal.title,
+      user_id: userId,
+      org_id: proposal.organisation_id,
+      votes: votes.map((v) => ({ choice: v.choice, option_id: v.option_id, reason: v.reason, voted_at: v.created_at })),
+      issued_at: new Date().toISOString(),
+    };
+
+    const secret = process.env.RECEIPT_SECRET ?? 'ripple-receipt-insecure';
+    const body = JSON.stringify(receipt);
+    const sig = createHmac('sha256', secret).update(body).digest('hex');
+    return { ...receipt, signature: `sha256=${sig}` };
   }
 }

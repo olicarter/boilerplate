@@ -490,6 +490,8 @@ export const proposalsApi = {
     request<void>(`/proposals/${id}/watch`, { method: 'PUT' }),
   unwatch: (id: string) =>
     request<void>(`/proposals/${id}/watch`, { method: 'DELETE' }),
+  getReceipt: (id: string) =>
+    request<Record<string, unknown>>(`/proposals/${id}/receipt`),
 };
 
 export interface ProposalReaction {
