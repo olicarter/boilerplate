@@ -210,6 +210,17 @@ export class OrganisationsController {
     );
   }
 
+  @Get(':slug/audit-log/export')
+  @UseGuards(AuthGuard)
+  async exportAuditLog(@Param('slug') slug: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const org = await this.orgsService.findBySlug(slug);
+    await this.orgsService.requireRole(org.id, req.user!.id, ['admin']);
+    const csv = await this.auditLog.exportCsv(org.id);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}-audit-log.csv"`);
+    res.send(csv);
+  }
+
   @Get(':slug/results')
   async getPublicResults(@Param('slug') slug: string) {
     return this.orgsService.getPublicResults(slug);

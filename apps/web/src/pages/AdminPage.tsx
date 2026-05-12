@@ -1468,13 +1468,22 @@ export function AdminPage() {
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Data export</h3>
         <p className={styles.sectionHint}>Download a full JSON archive of proposals, votes, delegations, and members for backup or migration.</p>
-        <a
-          href={`/api/orgs/${org.slug}/export`}
-          download={`${org.slug}-export.json`}
-          style={{ display: 'inline-block' }}
-        >
-          <Button size="sm" variant="secondary" type="button">Download org data (.json)</Button>
-        </a>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+          <a
+            href={`/api/orgs/${org.slug}/export`}
+            download={`${org.slug}-export.json`}
+            style={{ display: 'inline-block' }}
+          >
+            <Button size="sm" variant="secondary" type="button">Download org data (.json)</Button>
+          </a>
+          <a
+            href={`/api/orgs/${org.slug}/audit-log/export`}
+            download={`${org.slug}-audit-log.csv`}
+            style={{ display: 'inline-block' }}
+          >
+            <Button size="sm" variant="secondary" type="button">Download audit log (.csv)</Button>
+          </a>
+        </div>
       </section>
 
       {/* Bulk import */}
