@@ -28,4 +28,13 @@ export class Membership {
 
   @Column({ type: 'int', default: 1 })
   weight!: number;
+
+  @Column({ name: 'email_notifications_enabled', type: 'boolean', default: true })
+  email_notifications_enabled!: boolean;
+
+  @Column({ name: 'email_digest_enabled', type: 'boolean', default: false })
+  email_digest_enabled!: boolean;
+
+  @Column({ name: 'unsubscribe_token', type: 'text' })
+  unsubscribe_token!: string;
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
-import { authApi, usersApi, type Passkey } from '../api';
+import { authApi, usersApi, orgsApi, type Passkey } from '../api';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
@@ -34,6 +34,10 @@ export function SettingsPage() {
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean> | null>(null);
   const [savingNotif, setSavingNotif] = useState(false);
 
+  type OrgEmailPref = { org_id: string; org_name: string; org_slug: string; email_notifications_enabled: boolean; email_digest_enabled: boolean };
+  const [orgEmailPrefs, setOrgEmailPrefs] = useState<OrgEmailPref[] | null>(null);
+  const [savingOrgEmailPref, setSavingOrgEmailPref] = useState<string | null>(null);
+
   const loadPasskeys = useCallback(async () => {
     try {
       const list = await authApi.listPasskeys();
@@ -56,6 +60,7 @@ export function SettingsPage() {
     if (currentUser) {
       loadPasskeys();
       loadNotifPrefs();
+      usersApi.getOrgEmailPreferences().then(setOrgEmailPrefs).catch(() => setOrgEmailPrefs([]));
     }
   }, [currentUser, loadPasskeys, loadNotifPrefs]);
 
@@ -146,6 +151,21 @@ export function SettingsPage() {
     }
   }
 
+  async function toggleOrgEmailPref(slug: string, field: 'email_notifications_enabled' | 'email_digest_enabled', value: boolean) {
+    const key = `${slug}:${field}`;
+    setSavingOrgEmailPref(key);
+    try {
+      await orgsApi.updateEmailPreferences(slug, { [field]: value });
+      setOrgEmailPrefs((prev) =>
+        prev?.map((p) => p.org_slug === slug ? { ...p, [field]: value } : p) ?? null
+      );
+    } catch {
+      addToast('Failed to save preference', 'error');
+    } finally {
+      setSavingOrgEmailPref(null);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <h2 className={styles.heading}>Settings</h2>
@@ -225,6 +245,45 @@ export function SettingsPage() {
                 />
                 <span className={isEnabled(type) ? styles.notifTextOn : styles.notifTextOff}>{label}</span>
               </label>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Email preferences per organisation</h3>
+        {orgEmailPrefs === null ? (
+          <p className={styles.loading}>Loading…</p>
+        ) : orgEmailPrefs.length === 0 ? (
+          <p className={styles.loading}>You are not a member of any organisations.</p>
+        ) : (
+          <div className={styles.notifList}>
+            {orgEmailPrefs.map((pref) => (
+              <div key={pref.org_id} style={{ marginBottom: 'var(--space-4)' }}>
+                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', marginBottom: 'var(--space-2)', color: 'var(--color-fg)' }}>
+                  {pref.org_name}
+                </p>
+                <label className={styles.notifLabel}>
+                  <input
+                    type="checkbox"
+                    checked={pref.email_notifications_enabled}
+                    disabled={savingOrgEmailPref === `${pref.org_slug}:email_notifications_enabled`}
+                    onChange={(e) => toggleOrgEmailPref(pref.org_slug, 'email_notifications_enabled', e.target.checked)}
+                    className={styles.notifCheckbox}
+                  />
+                  <span className={pref.email_notifications_enabled ? styles.notifTextOn : styles.notifTextOff}>Email notifications</span>
+                </label>
+                <label className={styles.notifLabel} style={{ marginTop: 'var(--space-1)' }}>
+                  <input
+                    type="checkbox"
+                    checked={pref.email_digest_enabled}
+                    disabled={savingOrgEmailPref === `${pref.org_slug}:email_digest_enabled`}
+                    onChange={(e) => toggleOrgEmailPref(pref.org_slug, 'email_digest_enabled', e.target.checked)}
+                    className={styles.notifCheckbox}
+                  />
+                  <span className={pref.email_digest_enabled ? styles.notifTextOn : styles.notifTextOff}>Weekly digest</span>
+                </label>
+              </div>
             ))}
           </div>
         )}

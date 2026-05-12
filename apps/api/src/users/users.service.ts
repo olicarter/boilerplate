@@ -66,4 +66,15 @@ export class UsersService {
     const user = await this.userRepo.findOneByOrFail({ id });
     return user.notification_preferences;
   }
+
+  async getOrgEmailPreferences(userId: string): Promise<Array<{ org_id: string; org_name: string; org_slug: string; email_notifications_enabled: boolean; email_digest_enabled: boolean }>> {
+    return this.dataSource.query(`
+      SELECT m.organisation_id AS org_id, o.name AS org_name, o.slug AS org_slug,
+             m.email_notifications_enabled, m.email_digest_enabled
+      FROM memberships m
+      JOIN organisations o ON o.id = m.organisation_id
+      WHERE m.user_id = $1 AND m.status = 'approved'
+      ORDER BY o.name
+    `, [userId]);
+  }
 }

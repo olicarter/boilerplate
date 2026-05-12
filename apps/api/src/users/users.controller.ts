@@ -48,4 +48,10 @@ export class UsersController {
   ) {
     return this.usersService.updateNotificationPreferences(req.user!.id, body);
   }
+
+  @Get('me/org-email-preferences')
+  @UseGuards(AuthGuard)
+  getOrgEmailPreferences(@Req() req: AuthenticatedRequest) {
+    return this.usersService.getOrgEmailPreferences(req.user!.id);
+  }
 }

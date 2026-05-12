@@ -261,4 +261,31 @@ export class OrganisationsController {
   getDelegationWeights(@Param('slug') slug: string) {
     return this.orgsService.getDelegationWeights(slug);
   }
+
+  @Get('unsubscribe')
+  unsubscribe(@Query('token') token: string) {
+    return this.orgsService.unsubscribeByToken(token);
+  }
+
+  @Get(':slug/email-preferences')
+  @UseGuards(AuthGuard)
+  getEmailPreferences(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.getEmailPreferences(slug, req.user!.id);
+  }
+
+  @Patch(':slug/email-preferences')
+  @UseGuards(AuthGuard)
+  updateEmailPreferences(
+    @Param('slug') slug: string,
+    @Body() body: { email_notifications_enabled?: boolean; email_digest_enabled?: boolean },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.orgsService.updateEmailPreferences(slug, req.user!.id, body);
+  }
+
+  @Post(':slug/send-digest')
+  @UseGuards(AuthGuard)
+  sendDigest(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.sendDigest(slug, req.user!.id);
+  }
 }

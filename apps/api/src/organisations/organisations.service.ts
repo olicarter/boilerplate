@@ -99,6 +99,7 @@ export class OrganisationsService {
         organisation_id: saved.id,
         user_id: creatorId,
         role: 'admin',
+        unsubscribe_token: randomBytes(24).toString('hex'),
       });
       await manager.save(membership);
 
@@ -183,6 +184,7 @@ export class OrganisationsService {
         user_id: targetUserId,
         role,
         invited_by: actorId,
+        unsubscribe_token: randomBytes(24).toString('hex'),
       });
       const item = await manager.save(membership);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -314,6 +316,7 @@ export class OrganisationsService {
         organisation_id: org.id,
         user_id: userId,
         role: 'member',
+        unsubscribe_token: randomBytes(24).toString('hex'),
       });
       const item = await manager.save(membership);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -336,6 +339,7 @@ export class OrganisationsService {
         role: 'member',
         invited_by: null,
         status,
+        unsubscribe_token: randomBytes(24).toString('hex'),
       });
       const item = await manager.save(membership);
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
@@ -814,12 +818,94 @@ export class OrganisationsService {
         organisation_id: invite.org_id,
         user_id: userId,
         role: 'member',
+        unsubscribe_token: randomBytes(24).toString('hex'),
       });
       const saved = await manager.save(membership);
       await manager.update(OrgInvite, invite.id, { accepted_at: new Date() });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
       return { item: saved, txid: parseInt(row.txid, 10) };
     });
+  }
+
+  async updateEmailPreferences(slug: string, userId: string, prefs: { email_notifications_enabled?: boolean; email_digest_enabled?: boolean }): Promise<Membership> {
+    const org = await this.findBySlug(slug);
+    const membership = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: userId });
+    if (!membership) throw new NotFoundException('You are not a member of this organisation');
+    const update: Partial<Membership> = {};
+    if (prefs.email_notifications_enabled !== undefined) update.email_notifications_enabled = prefs.email_notifications_enabled;
+    if (prefs.email_digest_enabled !== undefined) update.email_digest_enabled = prefs.email_digest_enabled;
+    await this.memberRepo.update(membership.id, update);
+    return this.memberRepo.findOneByOrFail({ id: membership.id });
+  }
+
+  async getEmailPreferences(slug: string, userId: string): Promise<{ email_notifications_enabled: boolean; email_digest_enabled: boolean }> {
+    const org = await this.findBySlug(slug);
+    const membership = await this.memberRepo.findOneBy({ organisation_id: org.id, user_id: userId });
+    if (!membership) throw new NotFoundException('You are not a member of this organisation');
+    return { email_notifications_enabled: membership.email_notifications_enabled, email_digest_enabled: membership.email_digest_enabled };
+  }
+
+  async unsubscribeByToken(token: string): Promise<{ success: boolean; org_name: string }> {
+    const membership = await this.memberRepo.findOne({ where: { unsubscribe_token: token } });
+    if (!membership) throw new NotFoundException('Invalid unsubscribe link');
+    await this.memberRepo.update(membership.id, { email_notifications_enabled: false, email_digest_enabled: false });
+    const org = await this.orgRepo.findOneBy({ id: membership.organisation_id });
+    return { success: true, org_name: org?.name ?? 'the organisation' };
+  }
+
+  async sendDigest(slug: string, actorId: string): Promise<{ sent: number }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin']);
+
+    const appUrl = process.env.APP_URL ?? 'http://localhost:5173';
+
+    // Open proposals
+    const openProposals = await this.dataSource.query<{ id: string; title: string; closes_at: string | null }[]>(`
+      SELECT p.id, p.title, p.closes_at
+      FROM proposals p
+      JOIN topics t ON t.id = p.topic_id
+      WHERE t.organisation_id = $1 AND p.status = 'open'
+      ORDER BY p.closes_at ASC NULLS LAST
+      LIMIT 10
+    `, [org.id]);
+
+    // Recent results (closed in last 7 days)
+    const recentResults = await this.dataSource.query<{ id: string; title: string; result: string }[]>(`
+      SELECT p.id, p.title,
+        CASE
+          WHEN p.status = 'withdrawn' THEN 'withdrawn'
+          WHEN NOT EXISTS (SELECT 1 FROM votes WHERE proposal_id = p.id) THEN 'no-votes'
+          WHEN (SELECT COUNT(*) FROM votes WHERE proposal_id = p.id AND choice = 'yes')::float /
+               NULLIF((SELECT COUNT(*) FROM votes WHERE proposal_id = p.id AND choice IN ('yes','no')), 0) * 100 >= p.threshold
+               THEN 'passed'
+          ELSE 'failed'
+        END AS result
+      FROM proposals p
+      JOIN topics t ON t.id = p.topic_id
+      WHERE t.organisation_id = $1 AND p.status IN ('closed', 'withdrawn')
+        AND p.closed_at > NOW() - INTERVAL '7 days'
+      ORDER BY p.closed_at DESC
+      LIMIT 10
+    `, [org.id]);
+
+    if (openProposals.length === 0 && recentResults.length === 0) return { sent: 0 };
+
+    // Members who opted in
+    const members = await this.dataSource.query<{ user_id: string; email: string; name: string; unsubscribe_token: string }[]>(`
+      SELECT m.user_id, u.email, u.name, m.unsubscribe_token
+      FROM memberships m
+      JOIN users u ON u.id = m.user_id
+      WHERE m.organisation_id = $1 AND m.status = 'approved'
+        AND m.email_digest_enabled = TRUE AND m.email_notifications_enabled = TRUE
+    `, [org.id]);
+
+    let sent = 0;
+    for (const member of members) {
+      const unsubUrl = `${appUrl}/unsubscribe?token=${member.unsubscribe_token}`;
+      await this.email.sendDigest(member.email, member.name, org.name, openProposals, recentResults, appUrl, slug, unsubUrl).catch(() => { /* non-critical */ });
+      sent++;
+    }
+    return { sent };
   }
 
   async exportDecisionRecordCsv(slug: string, actorId: string): Promise<string> {

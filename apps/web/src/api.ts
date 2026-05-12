@@ -241,6 +241,8 @@ export const usersApi = {
       method: 'PATCH',
       body: JSON.stringify(prefs),
     }),
+  getOrgEmailPreferences: () =>
+    request<Array<{ org_id: string; org_name: string; org_slug: string; email_notifications_enabled: boolean; email_digest_enabled: boolean }>>('/users/me/org-email-preferences'),
 };
 
 export const orgsApi = {
@@ -296,6 +298,14 @@ export const orgsApi = {
     request<{ org: { id: string; name: string; description: string; slug: string }; email: string }>(`/orgs/invites/accept?token=${encodeURIComponent(token)}`),
   acceptInvite: (token: string) =>
     request<{ item: unknown; txid: number }>(`/orgs/invites/accept?token=${encodeURIComponent(token)}`, { method: 'POST' }),
+  getEmailPreferences: (slug: string) =>
+    request<{ email_notifications_enabled: boolean; email_digest_enabled: boolean }>(`/orgs/${slug}/email-preferences`),
+  updateEmailPreferences: (slug: string, prefs: { email_notifications_enabled?: boolean; email_digest_enabled?: boolean }) =>
+    request<{ email_notifications_enabled: boolean; email_digest_enabled: boolean }>(`/orgs/${slug}/email-preferences`, { method: 'PATCH', body: JSON.stringify(prefs) }),
+  sendDigest: (slug: string) =>
+    request<{ sent: number }>(`/orgs/${slug}/send-digest`, { method: 'POST' }),
+  unsubscribeByToken: (token: string) =>
+    request<{ success: boolean; org_name: string }>(`/orgs/unsubscribe?token=${encodeURIComponent(token)}`),
   exportDecisionRecord: async (slug: string): Promise<void> => {
     const res = await fetch(`/api/orgs/${slug}/decisions/export`, { credentials: 'include' });
     if (!res.ok) throw new Error(`API error: ${res.status}`);

@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 
-function layout(body: string): string {
+function layout(body: string, unsubscribeUrl?: string): string {
+  const ftrExtra = unsubscribeUrl
+    ? ` · <a href="${unsubscribeUrl}" style="color:#999">Unsubscribe</a>`
+    : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,7 +26,7 @@ function layout(body: string): string {
 <div class="wrap">
   <div class="hdr"><span class="logo">Ripple</span></div>
   <div class="body">${body}</div>
-  <div class="ftr">You're receiving this because you have a Ripple account. © Ripple</div>
+  <div class="ftr">You're receiving this because you have a Ripple account. © Ripple${ftrExtra}</div>
 </div>
 </body>
 </html>`;
@@ -171,7 +174,7 @@ export class EmailService {
     });
   }
 
-  async sendProposalClosed(to: string, proposalTitle: string, outcome: string, proposalUrl: string): Promise<void> {
+  async sendProposalClosed(to: string, proposalTitle: string, outcome: string, proposalUrl: string, unsubscribeUrl?: string): Promise<void> {
     await this.send({
       to,
       subject: `Result: ${proposalTitle}`,
@@ -180,8 +183,54 @@ export class EmailService {
         <p><strong>${proposalTitle}</strong></p>
         <p>Result: <strong>${outcome}</strong></p>
         <a href="${proposalUrl}" class="btn">View results</a>
-      `),
+      `, unsubscribeUrl),
       text: `"${proposalTitle}" has closed.\n\nResult: ${outcome}\n\nView results: ${proposalUrl}`,
+    });
+  }
+
+  async sendDigest(
+    to: string,
+    name: string,
+    orgName: string,
+    openProposals: Array<{ id: string; title: string; closes_at: string | null }>,
+    recentResults: Array<{ id: string; title: string; result: string }>,
+    appUrl: string,
+    orgSlug: string,
+    unsubscribeUrl: string,
+  ): Promise<void> {
+    const openSection = openProposals.length > 0
+      ? `<p><strong>Open proposals (${openProposals.length})</strong></p>
+         <ul style="margin:0 0 16px;padding:0 0 0 20px">${openProposals.map((p) => {
+           const url = `${appUrl}/orgs/${orgSlug}/proposals/${p.id}`;
+           const deadline = p.closes_at
+             ? ` — closes ${new Date(p.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+             : '';
+           return `<li style="margin-bottom:6px;font-size:14px"><a href="${url}">${p.title}</a>${deadline}</li>`;
+         }).join('')}</ul>`
+      : '<p style="color:#aaa;font-size:14px">No open proposals this week.</p>';
+
+    const resultsSection = recentResults.length > 0
+      ? `<p><strong>Recent results</strong></p>
+         <ul style="margin:0 0 16px;padding:0 0 0 20px">${recentResults.map((p) => {
+           const url = `${appUrl}/orgs/${orgSlug}/proposals/${p.id}`;
+           const badge = p.result === 'passed' ? '✓ Passed' : p.result === 'failed' ? '✗ Failed' : p.result === 'withdrawn' ? '— Withdrawn' : '— No votes';
+           return `<li style="margin-bottom:6px;font-size:14px"><a href="${url}">${p.title}</a> — ${badge}</li>`;
+         }).join('')}</ul>`
+      : '';
+
+    const orgUrl = `${appUrl}/orgs/${orgSlug}/proposals`;
+
+    await this.send({
+      to,
+      subject: `Weekly digest: ${orgName}`,
+      html: layout(`
+        <p>Hi ${name},</p>
+        <p>Here's your weekly summary for <strong>${orgName}</strong>.</p>
+        ${openSection}
+        ${resultsSection}
+        <a href="${orgUrl}" class="btn">Go to ${orgName}</a>
+      `, unsubscribeUrl),
+      text: `Weekly digest for ${orgName}\n\n${openProposals.map((p) => `• ${p.title}`).join('\n')}\n\n${orgUrl}`,
     });
   }
 }
