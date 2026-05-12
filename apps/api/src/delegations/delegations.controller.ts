@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { DelegationsService } from './delegations.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 
 @Controller('delegations')
 export class DelegationsController {
@@ -21,5 +21,11 @@ export class DelegationsController {
   @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {
     return this.delegationsService.delete(id);
+  }
+
+  @Get('history')
+  @UseGuards(AuthGuard)
+  history(@Req() req: AuthenticatedRequest) {
+    return this.delegationsService.getHistory(req.user!.id);
   }
 }

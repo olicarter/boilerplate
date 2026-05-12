@@ -96,6 +96,13 @@ export class DelegationsService {
     });
 
     try {
+      await this.dataSource.query(
+        `INSERT INTO delegation_history (organisation_id, delegator_id, delegate_id, topic_id, event) VALUES ($1,$2,$3,$4,'added')`,
+        [data.organisation_id, data.delegator_id, data.delegate_id, data.topic_id ?? null],
+      );
+    } catch { /* non-critical */ }
+
+    try {
       await this.notifications.create({
         userId: data.delegate_id,
         orgId: data.organisation_id,
@@ -119,6 +126,13 @@ export class DelegationsService {
     });
     if (delegation) {
       try {
+        await this.dataSource.query(
+          `INSERT INTO delegation_history (organisation_id, delegator_id, delegate_id, topic_id, event) VALUES ($1,$2,$3,$4,'removed')`,
+          [delegation.organisation_id, delegation.delegator_id, delegation.delegate_id, delegation.topic_id ?? null],
+        );
+      } catch { /* non-critical */ }
+
+      try {
         await this.notifications.create({
           userId: delegation.delegate_id,
           orgId: delegation.organisation_id,
@@ -131,5 +145,27 @@ export class DelegationsService {
       } catch { /* non-critical */ }
     }
     return result;
+  }
+
+  async getHistory(userId: string): Promise<Array<{
+    id: string; event: string; organisation_id: string; delegator_id: string; delegate_id: string;
+    topic_id: string | null; created_at: string;
+    delegator_name: string; delegate_name: string;
+  }>> {
+    const rows = await this.dataSource.query<Array<{
+      id: string; event: string; organisation_id: string; delegator_id: string; delegate_id: string;
+      topic_id: string | null; created_at: string; delegator_name: string; delegate_name: string;
+    }>>(
+      `SELECT dh.id, dh.event, dh.organisation_id, dh.delegator_id, dh.delegate_id, dh.topic_id, dh.created_at,
+              u1.name AS delegator_name, u2.name AS delegate_name
+       FROM delegation_history dh
+       JOIN users u1 ON u1.id = dh.delegator_id
+       JOIN users u2 ON u2.id = dh.delegate_id
+       WHERE dh.delegator_id = $1 OR dh.delegate_id = $1
+       ORDER BY dh.created_at DESC
+       LIMIT 200`,
+      [userId],
+    );
+    return rows;
   }
 }

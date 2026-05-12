@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from '@tanstack/react-db';
 import { Link } from '@tanstack/react-router';
 import { v4 as uuid } from 'uuid';
@@ -10,7 +10,7 @@ import { EmptyState } from '../components/EmptyState';
 import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
-import type { User, Delegation, Topic, Membership } from '../api';
+import { delegationsApi, type User, type Delegation, type Topic, type Membership, type DelegationHistoryEntry } from '../api';
 import styles from './DelegationsPage.module.css';
 
 export function DelegationsPage() {
@@ -32,6 +32,14 @@ export function DelegationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [history, setHistory] = useState<DelegationHistoryEntry[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      delegationsApi.getHistory().then(setHistory).catch(() => {});
+    }
+  }, [currentUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!currentUser) {
     return (
@@ -353,6 +361,51 @@ export function DelegationsPage() {
               </Button>
             </div>
           </form>
+        </section>
+      )}
+
+      {/* Delegation history */}
+      {history.length > 0 && (
+        <section className={styles.section}>
+          <h3 className={styles.sectionHeading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Delegation history</span>
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              style={{ fontSize: 'var(--text-xs)', fontWeight: 400, color: 'var(--color-fg-muted)', background: 'none', border: 'none', cursor: 'pointer', textTransform: 'none', letterSpacing: 0, fontFamily: 'var(--font-sans)' }}
+            >
+              {showHistory ? 'Hide' : `Show (${history.length})`}
+            </button>
+          </h3>
+          {showHistory && (
+            <div className={styles.list} style={{ gap: 'var(--space-1)' }}>
+              {history.map((entry) => {
+                const isOutgoing = entry.delegator_id === currentUser?.id;
+                return (
+                  <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)', padding: 'var(--space-2) 0', borderBottom: 'var(--border)' }}>
+                    <span style={{
+                      fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 'var(--radius-sm)',
+                      background: entry.event === 'added' ? 'var(--color-success-bg)' : 'var(--color-bg-muted)',
+                      color: entry.event === 'added' ? 'var(--color-success)' : 'var(--color-fg-subtle)',
+                      border: entry.event === 'added' ? '1px solid var(--color-success-border)' : 'var(--border)',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {entry.event}
+                    </span>
+                    <span>
+                      {isOutgoing
+                        ? <>You delegated to <strong style={{ color: 'var(--color-fg)' }}>{entry.delegate_name}</strong></>
+                        : <><strong style={{ color: 'var(--color-fg)' }}>{entry.delegator_name}</strong> delegated to you</>
+                      }
+                    </span>
+                    <span style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
+                      {new Date(entry.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 

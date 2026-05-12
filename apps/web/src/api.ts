@@ -525,11 +525,25 @@ export interface ProposalReaction {
   [key: string]: unknown;
 }
 
+export interface DelegationHistoryEntry {
+  id: string;
+  event: 'added' | 'removed';
+  organisation_id: string;
+  delegator_id: string;
+  delegate_id: string;
+  topic_id: string | null;
+  created_at: string;
+  delegator_name: string;
+  delegate_name: string;
+}
+
 export const delegationsApi = {
   create: (data: { id: string; organisation_id: string; delegator_id: string; delegate_id: string; topic_id?: string | null; expires_at?: string | null; fallback_abstain_hours?: number | null; weight_fraction?: number | null }) =>
     request<MutationResult<Delegation>>('/delegations', { method: 'POST', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ txid: number }>(`/delegations/${id}`, { method: 'DELETE' }),
+  getHistory: () =>
+    request<DelegationHistoryEntry[]>('/delegations/history'),
 };
 
 export interface Comment {
