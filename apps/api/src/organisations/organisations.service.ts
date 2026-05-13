@@ -112,7 +112,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days' | 'email_from_name' | 'email_from_address'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days' | 'email_from_name' | 'email_from_address' | 'boost_threshold'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -142,6 +142,7 @@ export class OrganisationsService {
       if (data.credit_period_days !== undefined) updates.credit_period_days = data.credit_period_days;
       if (data.email_from_name !== undefined) updates.email_from_name = data.email_from_name;
       if (data.email_from_address !== undefined) updates.email_from_address = data.email_from_address;
+      if (data.boost_threshold !== undefined) updates.boost_threshold = data.boost_threshold;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);

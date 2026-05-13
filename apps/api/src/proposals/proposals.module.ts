@@ -7,6 +7,7 @@ import { ProposalReaction } from './proposal-reaction.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { ProposalSignature } from './proposal-signature.entity';
 import { ProposalLink } from './proposal-link.entity';
+import { ProposalBoost } from './proposal-boost.entity';
 import { Vote } from '../votes/vote.entity';
 import { Delegation } from '../delegations/delegation.entity';
 import { Organisation } from '../organisations/organisation.entity';
@@ -23,7 +24,7 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
 import { DiscordModule } from '../discord/discord.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalOption, ProposalReaction, ProposalVersion, ProposalSignature, ProposalLink, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule, SlackModule, WebhooksModule, DiscordModule],
+  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([Proposal, ProposalOption, ProposalReaction, ProposalVersion, ProposalSignature, ProposalLink, ProposalBoost, Vote, Delegation, Organisation, Membership, Endorsement, User]), AuditLogModule, NotificationsModule, SlackModule, WebhooksModule, DiscordModule],
   controllers: [ProposalsController],
   providers: [ProposalsService, ProposalsScheduler],
 })

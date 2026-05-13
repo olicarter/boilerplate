@@ -113,6 +113,9 @@ export class Organisation {
   @Column({ name: 'email_from_address', type: 'text', nullable: true, default: null })
   email_from_address!: string | null;
 
+  @Column({ name: 'boost_threshold', type: 'int', nullable: true, default: null })
+  boost_threshold!: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

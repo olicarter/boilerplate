@@ -299,4 +299,22 @@ export class ProposalsController {
   unwatchProposal(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.proposalsService.unwatchProposal(id, req.user!.id);
   }
+
+  @Get(':id/boosts')
+  @UseGuards(AuthGuard)
+  getBoosts(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.getBoostsForUser(id, req.user!.id);
+  }
+
+  @Post(':id/boost')
+  @UseGuards(AuthGuard)
+  boost(@Param('id') id: string, @Body() body: { amount?: number }, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.boost(id, req.user!.id, body.amount ?? 1);
+  }
+
+  @Delete(':id/boost')
+  @UseGuards(AuthGuard)
+  unboost(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.unboost(id, req.user!.id);
+  }
 }

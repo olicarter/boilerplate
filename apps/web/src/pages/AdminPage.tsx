@@ -62,6 +62,12 @@ export function AdminPage() {
   const [savingVetoRole, setSavingVetoRole] = useState(false);
   const [minEndorsements, setMinEndorsements] = useState<string>(String((org as { min_endorsements?: number }).min_endorsements ?? 0));
   const [savingEndorsements, setSavingEndorsements] = useState(false);
+  const [boostThreshold, setBoostThreshold] = useState<string>(
+    (org as { boost_threshold?: number | null }).boost_threshold != null
+      ? String((org as { boost_threshold?: number | null }).boost_threshold)
+      : '',
+  );
+  const [savingBoostThreshold, setSavingBoostThreshold] = useState(false);
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsError, setDefaultsError] = useState('');
 
@@ -822,6 +828,63 @@ export function AdminPage() {
               <Button type="submit" size="sm" disabled={savingEndorsements}>
                 {savingEndorsements ? 'Saving…' : 'Save'}
               </Button>
+            </form>
+          </div>
+          <div>
+            <p className={styles.permQuestion}>Boost threshold</p>
+            <p className={styles.formHint}>
+              Members can boost draft proposals to push them into the active queue. When total boosts reach this threshold the proposal automatically goes live. Leave blank to disable boosting.
+            </p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const value = boostThreshold.trim() ? parseInt(boostThreshold, 10) : null;
+                setSavingBoostThreshold(true);
+                try {
+                  await orgsApi.update(org.slug, { boost_threshold: value });
+                  addToast('Boost threshold saved', 'success');
+                } catch {
+                  addToast('Failed to save boost threshold', 'error');
+                } finally {
+                  setSavingBoostThreshold(false);
+                }
+              }}
+              className={styles.endorseRow}
+            >
+              <input
+                type="number"
+                min={1}
+                value={boostThreshold}
+                onChange={(e) => setBoostThreshold(e.target.value)}
+                placeholder="e.g. 5"
+                className={styles.formInput}
+                style={{ width: 80 }}
+              />
+              <Button type="submit" size="sm" disabled={savingBoostThreshold}>
+                {savingBoostThreshold ? 'Saving…' : 'Save'}
+              </Button>
+              {boostThreshold && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={savingBoostThreshold}
+                  onClick={async () => {
+                    setSavingBoostThreshold(true);
+                    try {
+                      await orgsApi.update(org.slug, { boost_threshold: null });
+                      setBoostThreshold('');
+                      addToast('Boost threshold removed', 'info');
+                    } catch {
+                      addToast('Failed to remove boost threshold', 'error');
+                    } finally {
+                      setSavingBoostThreshold(false);
+                    }
+                  }}
+                >
+                  Disable
+                </Button>
+              )}
             </form>
           </div>
           <div>

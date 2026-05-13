@@ -8,6 +8,7 @@ import { ProposalReaction } from './proposal-reaction.entity';
 import { ProposalSignature } from './proposal-signature.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { ProposalLink, ProposalLinkType } from './proposal-link.entity';
+import { ProposalBoost } from './proposal-boost.entity';
 import { Endorsement } from '../endorsements/endorsement.entity';
 import { Topic } from '../topics/topic.entity';
 import { Vote } from '../votes/vote.entity';
@@ -62,6 +63,8 @@ export class ProposalsService {
     private readonly memberRepo: Repository<Membership>,
     @InjectRepository(ProposalReaction)
     private readonly reactionRepo: Repository<ProposalReaction>,
+    @InjectRepository(ProposalBoost)
+    private readonly boostRepo: Repository<ProposalBoost>,
     private readonly dataSource: DataSource,
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
@@ -1348,5 +1351,55 @@ export class ProposalsService {
     const body = JSON.stringify(receipt);
     const sig = createHmac('sha256', secret).update(body).digest('hex');
     return { ...receipt, signature: `sha256=${sig}` };
+  }
+
+  async getBoosts(proposalId: string): Promise<{ total: number; user_amount: number | null; boosts: ProposalBoost[] }> {
+    const boosts = await this.boostRepo.find({ where: { proposal_id: proposalId }, order: { created_at: 'DESC' } });
+    const total = boosts.reduce((sum, b) => sum + b.amount, 0);
+    return { total, user_amount: null, boosts };
+  }
+
+  async getBoostsForUser(proposalId: string, userId: string): Promise<{ total: number; user_amount: number | null; boosts: ProposalBoost[] }> {
+    const boosts = await this.boostRepo.find({ where: { proposal_id: proposalId }, order: { created_at: 'DESC' } });
+    const total = boosts.reduce((sum, b) => sum + b.amount, 0);
+    const user_amount = boosts.find((b) => b.user_id === userId)?.amount ?? null;
+    return { total, user_amount, boosts };
+  }
+
+  async boost(proposalId: string, userId: string, amount: number): Promise<{ total: number }> {
+    if (amount < 1 || amount > 100) throw new BadRequestException('Boost amount must be between 1 and 100');
+    const proposal = await this.proposalRepo.findOneBy({ id: proposalId });
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    if (proposal.status !== 'draft' && proposal.status !== 'open') {
+      throw new BadRequestException('Can only boost draft or open proposals');
+    }
+
+    const existing = await this.boostRepo.findOneBy({ proposal_id: proposalId, user_id: userId });
+    if (existing) {
+      await this.boostRepo.update({ id: existing.id }, { amount });
+    } else {
+      await this.boostRepo.save(this.boostRepo.create({ id: randomUUID(), proposal_id: proposalId, user_id: userId, amount }));
+    }
+
+    const boosts = await this.boostRepo.find({ where: { proposal_id: proposalId } });
+    const total = boosts.reduce((sum, b) => sum + b.amount, 0);
+
+    // Auto-promote draft to open if org has a boost_threshold and it's now met
+    if (proposal.status === 'draft') {
+      const org = await this.orgRepo.findOneBy({ id: proposal.organisation_id });
+      if (org?.boost_threshold && total >= org.boost_threshold) {
+        await this.proposalRepo.update({ id: proposalId }, { status: 'open' as ProposalStatus });
+        this.auditLog.log(proposal.organisation_id, userId, 'proposal.boost_promoted', 'proposal', proposalId, { total_boosts: total, threshold: org.boost_threshold });
+      }
+    }
+
+    return { total };
+  }
+
+  async unboost(proposalId: string, userId: string): Promise<{ total: number }> {
+    await this.boostRepo.delete({ proposal_id: proposalId, user_id: userId });
+    const boosts = await this.boostRepo.find({ where: { proposal_id: proposalId } });
+    const total = boosts.reduce((sum, b) => sum + b.amount, 0);
+    return { total };
   }
 }

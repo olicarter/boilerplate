@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, boostsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -142,6 +142,9 @@ export function ProposalDetailPage() {
   const [constitutionalOutcome, setConstitutionalOutcome] = useState<{ outcome: string; hash: string; votes_summary: object; signed_at: string } | null>(null);
   const [selectingJury, setSelectingJury] = useState(false);
   const [jurySize, setJurySize] = useState('5');
+  const [boostTotal, setBoostTotal] = useState<number>(0);
+  const [userBoostAmount, setUserBoostAmount] = useState<number | null>(null);
+  const [boosting, setBoosting] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -218,6 +221,7 @@ export function ProposalDetailPage() {
     fetchTally();
     fetchVetoes();
     fetchEndorsements();
+    boostsApi.get(id).then((r) => { setBoostTotal(r.total); setUserBoostAmount(r.user_amount); }).catch(() => {});
     proposalsApi.versions(id).then(setVersions).catch(() => setVersions([]));
     orgsApi.get(org.slug).then((o) => setMinEndorsementsLive(o.min_endorsements ?? 0)).catch(() => {});
     proposalsApi.listReactions(id).then(setReactions).catch(() => {});
@@ -1242,6 +1246,73 @@ export function ProposalDetailPage() {
           {deadline.subtext && (
             <span style={{ fontSize: 13, color: '#888' }}>{deadline.subtext}</span>
           )}
+        </div>
+      )}
+
+      {/* Boost section */}
+      {(org as { boost_threshold?: number | null }).boost_threshold != null && (isDraft || isOpen) && currentUser && myMembership && (
+        <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.75rem 1.25rem', marginBottom: '1.5rem', background: '#f9f9f9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+            <div>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>Boosts</span>
+              <span style={{ fontSize: 13, color: '#666', marginInlineStart: '0.5rem' }}>
+                {boostTotal} / {(org as { boost_threshold?: number | null }).boost_threshold}
+                {isDraft && boostTotal < ((org as { boost_threshold?: number | null }).boost_threshold ?? 0) && (
+                  <span style={{ color: '#888' }}> — needs {((org as { boost_threshold?: number | null }).boost_threshold ?? 0) - boostTotal} more to go live</span>
+                )}
+                {isDraft && boostTotal >= ((org as { boost_threshold?: number | null }).boost_threshold ?? 0) && (
+                  <span style={{ color: '#2d9a4e' }}> — threshold met</span>
+                )}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {!userBoostAmount ? (
+                <button
+                  type="button"
+                  data-testid="boost-btn"
+                  disabled={boosting}
+                  onClick={async () => {
+                    setBoosting(true);
+                    try {
+                      const r = await boostsApi.boost(id);
+                      setBoostTotal(r.total);
+                      setUserBoostAmount(1);
+                      addToast('Proposal boosted', 'success');
+                    } catch (err) {
+                      addToast(err instanceof Error ? err.message : 'Failed to boost', 'error');
+                    } finally {
+                      setBoosting(false);
+                    }
+                  }}
+                  style={{ fontSize: 13, padding: '0.3rem 0.9rem', cursor: 'pointer', background: '#111', color: '#fff', border: 'none', borderRadius: 4 }}
+                >
+                  {boosting ? 'Boosting…' : '↑ Boost'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  data-testid="unboost-btn"
+                  disabled={boosting}
+                  onClick={async () => {
+                    setBoosting(true);
+                    try {
+                      const r = await boostsApi.unboost(id);
+                      setBoostTotal(r.total);
+                      setUserBoostAmount(null);
+                      addToast('Boost removed', 'info');
+                    } catch (err) {
+                      addToast(err instanceof Error ? err.message : 'Failed to remove boost', 'error');
+                    } finally {
+                      setBoosting(false);
+                    }
+                  }}
+                  style={{ fontSize: 13, padding: '0.3rem 0.9rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4, color: '#888' }}
+                >
+                  Remove boost
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -304,7 +304,7 @@ SLACK_SIGNING_SECRET=
 - [x] **Jury quorum** — quorum is met when all N jury members have voted, regardless of total turnout.
 
 ### Holographic consensus
-- [ ] **Proposal queue with boosting** — a limited number of proposals can be in "active" voting at once. Members stake tokens (or reputation points) to "boost" a proposal into the active queue. Boosted proposals that pass reward boosters; those that fail penalise them. Based on DAOstack's model.
+- [x] **Proposal queue with boosting** — a limited number of proposals can be in "active" voting at once. Members stake tokens (or reputation points) to "boost" a proposal into the active queue. Boosted proposals that pass reward boosters; those that fail penalise them. Based on DAOstack's model.
 
 ### Quadratic voting
 - [x] **Credit allocation** — each member gets a budget of credits per voting period. Casting K votes on a proposal costs K² credits. Encourages expressing preference intensity, not just direction. Schema needs a `credits_balance` per member per period.
@@ -340,7 +340,7 @@ SLACK_SIGNING_SECRET=
 ### White-label
 - [ ] **Custom domains** — organisations can map their own domain (e.g. `vote.acme.com`) to their Ripple org, with automatic TLS via Let's Encrypt.
 - [x] **Custom branding** — org-level: primary colour, logo, font choice. Applied via CSS custom properties so all components pick it up.
-- [ ] **Email white-labelling** — emails sent from the org's own domain using a verified sending address.
+- [x] **Email white-labelling** — emails sent from the org's own domain using a verified sending address.
 
 ---
 
