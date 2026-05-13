@@ -106,7 +106,7 @@
 .memberName:hover { color: var(--color-fg-muted); }
 
 .youLabel {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
   font-size: var(--text-xs);
   color: var(--color-fg-subtle);
 }

@@ -335,7 +335,7 @@
 }
 
 .pinIcon {
-  margin-right: var(--space-1);
+  margin-inline-end: var(--space-1);
   font-size: var(--text-base);
   opacity: 0.5;
 }
@@ -379,7 +379,7 @@
 }
 
 .cardVotes {
-  text-align: right;
+  text-align: end;
   flex-shrink: 0;
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;

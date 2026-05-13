@@ -155,7 +155,7 @@
 }
 
 .selectedDelegateName { font-weight: var(--weight-semibold); }
-.selectedDelegateEmail { color: var(--color-fg-muted); font-size: var(--text-sm); margin-left: var(--space-2); }
+.selectedDelegateEmail { color: var(--color-fg-muted); font-size: var(--text-sm); margin-inline-start: var(--space-2); }
 
 .clearBtn {
   font-size: var(--text-xs);

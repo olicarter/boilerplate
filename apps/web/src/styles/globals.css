@@ -231,7 +231,7 @@ button, input, textarea, select {
 .md-prose h1 { font-size: 1.3em; }
 .md-prose h2 { font-size: 1.15em; }
 .md-prose h3 { font-size: 1em; }
-.md-prose ul, .md-prose ol { margin: 0 0 0.75em; padding-left: 1.5em; }
+.md-prose ul, .md-prose ol { margin: 0 0 0.75em; padding-inline-start: 1.5em; }
 .md-prose li { margin-bottom: 0.25em; }
 .md-prose code {
   background: var(--color-bg-muted);
@@ -251,8 +251,8 @@ button, input, textarea, select {
 .md-prose pre code { background: none; padding: 0; }
 .md-prose blockquote {
   margin: 0 0 0.75em;
-  padding: 0 0 0 0.875em;
-  border-left: 2px solid var(--color-border-strong);
+  padding-inline-start: 0.875em;
+  border-inline-start: 2px solid var(--color-border-strong);
   color: var(--color-fg-muted);
 }
 .md-prose a { text-decoration: underline; text-underline-offset: 2px; }
@@ -264,5 +264,5 @@ button, input, textarea, select {
   margin-bottom: 0.75em;
   font-size: var(--text-base);
 }
-.md-prose th, .md-prose td { border: var(--border); padding: 0.4em 0.75em; text-align: left; }
+.md-prose th, .md-prose td { border: var(--border); padding: 0.4em 0.75em; text-align: start; }
 .md-prose th { background: var(--color-bg-subtle); font-weight: var(--weight-medium); }

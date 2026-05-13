@@ -80,7 +80,7 @@
   font-weight: var(--weight-medium);
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  margin-left: var(--space-1);
+  margin-inline-start: var(--space-1);
   vertical-align: middle;
   flex-shrink: 0;
 }

@@ -172,7 +172,7 @@
 }
 
 .passkeyDate {
-  margin-left: var(--space-3);
+  margin-inline-start: var(--space-3);
   font-size: var(--text-xs);
   color: var(--color-fg-subtle);
 }

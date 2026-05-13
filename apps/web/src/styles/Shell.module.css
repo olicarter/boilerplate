@@ -1,7 +1,7 @@
 .skipLink {
   position: absolute;
   top: -100%;
-  left: var(--space-4);
+  inset-inline-start: var(--space-4);
   background: var(--color-bg);
   color: var(--color-fg);
   padding: var(--space-2) var(--space-4);
@@ -191,7 +191,7 @@
 .drawer {
   position: fixed;
   top: 0;
-  left: 0;
+  inset-inline-start: 0;
   bottom: 0;
   width: var(--sidebar-width);
   z-index: 11;
