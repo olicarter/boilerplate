@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import {
   createRootRoute,
@@ -333,6 +334,7 @@ const navLinkActiveStyle = { className: `${styles.navLink} ${styles.navLinkActiv
 
 function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlug?: string; orgId?: string; onClose?: () => void }) {
   const { data: allMemberships } = useLiveQuery(membershipsCollection);
+  const { t } = useTranslation();
   const isAdmin = user && orgId
     ? (allMemberships ?? []).some((m: Membership) => m.organisation_id === orgId && m.user_id === user.id && m.role === 'admin')
     : false;
@@ -341,20 +343,20 @@ function NavLinks({ user, orgSlug, orgId, onClose }: { user: User | null; orgSlu
     <nav className={styles.nav}>
       {orgSlug ? (
         <>
-          <Link to="/orgs/$slug/proposals" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Proposals</Link>
-          <Link to="/orgs/$slug/delegations" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Delegations</Link>
-          <Link to="/orgs/$slug/members" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Members</Link>
+          <Link to="/orgs/$slug/proposals" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>{t('nav.proposals')}</Link>
+          <Link to="/orgs/$slug/delegations" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>{t('nav.delegations')}</Link>
+          <Link to="/orgs/$slug/members" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>{t('nav.members')}</Link>
           <Link to="/orgs/$slug/activity" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Activity</Link>
           <Link to="/orgs/$slug/decisions" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Decisions</Link>
           {isAdmin && (
-            <Link to="/orgs/$slug/admin" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Admin</Link>
+            <Link to="/orgs/$slug/admin" params={{ slug: orgSlug }} {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>{t('nav.admin')}</Link>
           )}
         </>
       ) : (
         <Link to="/" {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Organisations</Link>
       )}
       {user && (
-        <Link to="/settings" {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Settings</Link>
+        <Link to="/settings" {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>{t('nav.settings')}</Link>
       )}
       <Link to="/pricing" {...navLinkStyle} activeProps={navLinkActiveStyle} onClick={onClose}>Pricing</Link>
     </nav>
@@ -372,6 +374,7 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   const userSection = (
     <div className={styles.userSection}>
@@ -390,7 +393,7 @@ function Shell({ user, onLogout, onSignIn, orgSlug, orgId, children, notificatio
             </div>
             <NotificationBell orgSlug={notificationOrgSlug ?? orgSlug} />
           </div>
-          <button onClick={onLogout} className={styles.signOut}>Sign out</button>
+          <button onClick={onLogout} className={styles.signOut}>{t('nav.signOut')}</button>
         </>
       ) : onSignIn ? (
         <button

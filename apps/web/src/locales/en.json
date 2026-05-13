@@ -1,0 +1,125 @@
+{
+  "nav": {
+    "proposals": "Proposals",
+    "delegations": "Delegations",
+    "members": "Members",
+    "settings": "Settings",
+    "admin": "Admin",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  },
+  "proposal": {
+    "create": "New proposal",
+    "title": "Title",
+    "description": "Description",
+    "topic": "Topic",
+    "deadline": "Deadline",
+    "publish": "Publish",
+    "saveDraft": "Save as draft",
+    "close": "Close",
+    "reopen": "Reopen",
+    "withdraw": "Withdraw",
+    "delete": "Delete",
+    "edit": "Edit",
+    "vote": {
+      "for": "For",
+      "against": "Against",
+      "abstain": "Abstain",
+      "cast": "Cast vote",
+      "change": "Change vote",
+      "remove": "Remove vote",
+      "cast_success": "Vote cast",
+      "update_success": "Vote updated",
+      "remove_success": "Vote removed"
+    },
+    "status": {
+      "open": "Open",
+      "closed": "Closed",
+      "draft": "Draft",
+      "withdrawn": "Withdrawn"
+    },
+    "result": {
+      "passed": "Passed",
+      "failed": "Failed",
+      "no_votes": "No votes",
+      "blocked": "Blocked"
+    },
+    "tally": {
+      "votes_cast": "{{count}} vote cast",
+      "votes_cast_plural": "{{count}} votes cast",
+      "no_votes": "No votes yet"
+    },
+    "empty": {
+      "title": "No proposals yet",
+      "description_member": "Be the first to start a discussion.",
+      "description_guest": "Sign in to create the first proposal.",
+      "filtered_title": "No proposals match these filters",
+      "filtered_description": "Try adjusting your filters or search term."
+    },
+    "type": {
+      "standard": "Vote",
+      "discussion": "Discussion",
+      "multiple_choice": "Multiple choice",
+      "temperature_check": "Temp check",
+      "consent": "Consent",
+      "approval": "Approval",
+      "score_voting": "Score",
+      "ranked_choice": "Ranked choice",
+      "petition": "Petition",
+      "amendment": "Amendment"
+    }
+  },
+  "delegation": {
+    "delegate_to": "Delegate to",
+    "remove": "Remove delegation",
+    "empty": "No delegations yet"
+  },
+  "comment": {
+    "post": "Post comment",
+    "posting": "Posting…",
+    "placeholder": "Add a comment…",
+    "empty": "No comments yet"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "newest": "Newest",
+    "oldest": "Oldest",
+    "most_votes": "Most votes",
+    "all": "All",
+    "mine": "Mine",
+    "voted": "Voted",
+    "open": "Open",
+    "closed": "Closed",
+    "draft": "Draft",
+    "error": "Something went wrong",
+    "success": "Success",
+    "language": "Language"
+  },
+  "settings": {
+    "title": "Settings",
+    "display_name": "Display name",
+    "passkeys": "Passkeys",
+    "add_passkey": "Add passkey",
+    "language": "Language"
+  },
+  "member": {
+    "role": {
+      "admin": "Admin",
+      "moderator": "Moderator",
+      "member": "Member",
+      "observer": "Observer"
+    },
+    "invite": "Invite member",
+    "remove": "Remove member"
+  }
+}

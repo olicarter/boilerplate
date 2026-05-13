@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import { Button } from '../components/ui';
 import { Avatar } from '../components/Avatar';
 import { useTheme } from '../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 import styles from './SettingsPage.module.css';
 
 function resizeToDataUrl(file: File): Promise<string> {
@@ -43,6 +44,7 @@ export function SettingsPage() {
   const currentUser = useCurrentUser();
   const addToast = useToast();
   const { theme, setTheme } = useTheme();
+  const { t, i18n } = useTranslation();
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(currentUser?.avatar_url ?? null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -397,6 +399,34 @@ export function SettingsPage() {
               }}
             >
               {t === 'system' ? 'System' : t === 'light' ? 'Light' : 'Dark'}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>{t('common.language')}</h3>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          {[{ code: 'en', label: 'English' }, { code: 'es', label: 'Español' }].map(({ code, label }) => (
+            <button
+              key={code}
+              onClick={() => i18n.changeLanguage(code)}
+              aria-pressed={i18n.language.startsWith(code)}
+              style={{
+                padding: '0 var(--space-3)',
+                height: 32,
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-base)',
+                fontWeight: i18n.language.startsWith(code) ? 'var(--weight-medium)' : 'var(--weight-normal)',
+                border: i18n.language.startsWith(code) ? '1px solid var(--color-fg)' : 'var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                background: i18n.language.startsWith(code) ? 'var(--color-fg)' : 'var(--color-bg)',
+                color: i18n.language.startsWith(code) ? 'var(--color-bg)' : 'var(--color-fg)',
+                cursor: 'pointer',
+                transition: 'background var(--transition-fast), color var(--transition-fast)',
+              }}
+            >
+              {label}
             </button>
           ))}
         </div>

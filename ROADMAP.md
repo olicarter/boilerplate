@@ -253,8 +253,8 @@ SLACK_SIGNING_SECRET=
 - [x] **Bundle analysis** — run `vite-bundle-visualizer`, identify and eliminate large unused dependencies.
 
 ### Internationalisation
-- [ ] **i18n infrastructure** — integrate `react-i18next`. Extract all UI strings into locale files. This is a large cross-cutting change — do it once and do it properly.
-- [ ] **English (default) + Spanish** — ship two locales to prove the system works before adding more.
+- [x] **i18n infrastructure** — integrate `react-i18next`. Extract all UI strings into locale files. This is a large cross-cutting change — do it once and do it properly.
+- [x] **English (default) + Spanish** — ship two locales to prove the system works before adding more.
 - [ ] **RTL layout support** — use logical CSS properties (`margin-inline-start` etc.) so RTL languages (Arabic, Hebrew) don't break the layout.
 - [x] **Date/number localisation** — use `Intl.DateTimeFormat` and `Intl.NumberFormat` everywhere instead of hardcoded format strings.
 

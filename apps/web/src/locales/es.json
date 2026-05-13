@@ -1,0 +1,125 @@
+{
+  "nav": {
+    "proposals": "Propuestas",
+    "delegations": "Delegaciones",
+    "members": "Miembros",
+    "settings": "Ajustes",
+    "admin": "Admin",
+    "signIn": "Iniciar sesión",
+    "signOut": "Cerrar sesión"
+  },
+  "proposal": {
+    "create": "Nueva propuesta",
+    "title": "Título",
+    "description": "Descripción",
+    "topic": "Tema",
+    "deadline": "Plazo",
+    "publish": "Publicar",
+    "saveDraft": "Guardar como borrador",
+    "close": "Cerrar",
+    "reopen": "Reabrir",
+    "withdraw": "Retirar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "vote": {
+      "for": "A favor",
+      "against": "En contra",
+      "abstain": "Abstención",
+      "cast": "Votar",
+      "change": "Cambiar voto",
+      "remove": "Retirar voto",
+      "cast_success": "Voto emitido",
+      "update_success": "Voto actualizado",
+      "remove_success": "Voto retirado"
+    },
+    "status": {
+      "open": "Abierta",
+      "closed": "Cerrada",
+      "draft": "Borrador",
+      "withdrawn": "Retirada"
+    },
+    "result": {
+      "passed": "Aprobada",
+      "failed": "Rechazada",
+      "no_votes": "Sin votos",
+      "blocked": "Bloqueada"
+    },
+    "tally": {
+      "votes_cast": "{{count}} voto emitido",
+      "votes_cast_plural": "{{count}} votos emitidos",
+      "no_votes": "Sin votos aún"
+    },
+    "empty": {
+      "title": "Aún no hay propuestas",
+      "description_member": "Sé el primero en iniciar un debate.",
+      "description_guest": "Inicia sesión para crear la primera propuesta.",
+      "filtered_title": "Ninguna propuesta coincide con estos filtros",
+      "filtered_description": "Intenta ajustar los filtros o el término de búsqueda."
+    },
+    "type": {
+      "standard": "Votación",
+      "discussion": "Debate",
+      "multiple_choice": "Elección múltiple",
+      "temperature_check": "Sondeo",
+      "consent": "Consentimiento",
+      "approval": "Aprobación",
+      "score_voting": "Puntuación",
+      "ranked_choice": "Clasificación",
+      "petition": "Petición",
+      "amendment": "Enmienda"
+    }
+  },
+  "delegation": {
+    "delegate_to": "Delegar en",
+    "remove": "Eliminar delegación",
+    "empty": "Aún no hay delegaciones"
+  },
+  "comment": {
+    "post": "Publicar comentario",
+    "posting": "Publicando…",
+    "placeholder": "Añade un comentario…",
+    "empty": "Aún no hay comentarios"
+  },
+  "common": {
+    "loading": "Cargando…",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "sort": "Ordenar",
+    "newest": "Más recientes",
+    "oldest": "Más antiguos",
+    "most_votes": "Más votados",
+    "all": "Todas",
+    "mine": "Mías",
+    "voted": "Votadas",
+    "open": "Abiertas",
+    "closed": "Cerradas",
+    "draft": "Borradores",
+    "error": "Algo salió mal",
+    "success": "Éxito",
+    "language": "Idioma"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "display_name": "Nombre de usuario",
+    "passkeys": "Contraseñas de acceso",
+    "add_passkey": "Añadir contraseña de acceso",
+    "language": "Idioma"
+  },
+  "member": {
+    "role": {
+      "admin": "Administrador",
+      "moderator": "Moderador",
+      "member": "Miembro",
+      "observer": "Observador"
+    },
+    "invite": "Invitar miembro",
+    "remove": "Eliminar miembro"
+  }
+}
