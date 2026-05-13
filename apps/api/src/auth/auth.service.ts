@@ -14,6 +14,7 @@ import { Credential } from './credential.entity';
 import { MagicLink } from './magic-link.entity';
 import { User } from '../users/user.entity';
 import { EmailService } from '../email/email.service';
+import { RedisService } from '../redis/redis.service';
 
 const RP_ID = process.env.RP_ID ?? 'localhost';
 const RP_NAME = 'Ripple';
@@ -23,8 +24,9 @@ const ORIGIN = process.env.ORIGIN
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_MAX = 100;
+const CHALLENGE_TTL = 5 * 60;
 
-// In-memory challenge store: challenge (base64url) → userId (for registration) or true (for auth)
+// In-memory fallback when Redis is not available
 const challengeStore = new Map<string, string | true>();
 
 @Injectable()
@@ -38,7 +40,32 @@ export class AuthService {
     private readonly magicLinkRepo: Repository<MagicLink>,
     private readonly dataSource: DataSource,
     private readonly emailService: EmailService,
+    private readonly redisService: RedisService,
   ) {}
+
+  private async challengeSet(challenge: string, value: string): Promise<void> {
+    if (this.redisService.enabled) {
+      await this.redisService.set(`challenge:${challenge}`, value, CHALLENGE_TTL);
+    } else {
+      challengeStore.set(challenge, value === '__auth__' ? true : value);
+      setTimeout(() => challengeStore.delete(challenge), CHALLENGE_TTL * 1000);
+    }
+  }
+
+  private async challengeGet(challenge: string): Promise<string | true | null> {
+    if (this.redisService.enabled) {
+      return this.redisService.get(`challenge:${challenge}`);
+    }
+    return challengeStore.get(challenge) ?? null;
+  }
+
+  private async challengeDel(challenge: string): Promise<void> {
+    if (this.redisService.enabled) {
+      await this.redisService.del(`challenge:${challenge}`);
+    } else {
+      challengeStore.delete(challenge);
+    }
+  }
 
   async registerBegin(data: { name: string; email: string }) {
     const name = data.name?.trim();
@@ -71,8 +98,7 @@ export class AuthService {
       })),
     });
 
-    challengeStore.set(options.challenge, user.id);
-    setTimeout(() => challengeStore.delete(options.challenge), 5 * 60 * 1000);
+    await this.challengeSet(options.challenge, user.id);
 
     return options;
   }
@@ -82,9 +108,9 @@ export class AuthService {
     const clientData = JSON.parse(Buffer.from(clientDataJSON, 'base64url').toString());
     const challenge = clientData.challenge as string;
 
-    const userId = challengeStore.get(challenge);
-    if (!userId || userId === true) throw new UnauthorizedException('Invalid or expired challenge');
-    challengeStore.delete(challenge);
+    const userId = await this.challengeGet(challenge);
+    if (!userId || userId === '__auth__') throw new UnauthorizedException('Invalid or expired challenge');
+    await this.challengeDel(challenge);
 
     const user = await this.userRepo.findOneByOrFail({ id: userId as string });
 
@@ -154,8 +180,7 @@ export class AuthService {
       userVerification: 'preferred',
     });
 
-    challengeStore.set(options.challenge, true);
-    setTimeout(() => challengeStore.delete(options.challenge), 5 * 60 * 1000);
+    await this.challengeSet(options.challenge, '__auth__');
 
     return options;
   }
@@ -165,8 +190,9 @@ export class AuthService {
     const clientData = JSON.parse(Buffer.from(clientDataJSON, 'base64url').toString());
     const challenge = clientData.challenge as string;
 
-    if (!challengeStore.has(challenge)) throw new UnauthorizedException('Invalid or expired challenge');
-    challengeStore.delete(challenge);
+    const storedAuth = await this.challengeGet(challenge);
+    if (!storedAuth) throw new UnauthorizedException('Invalid or expired challenge');
+    await this.challengeDel(challenge);
 
     const credential = await this.credentialRepo.findOne({
       where: { id: response.id },
@@ -220,8 +246,7 @@ export class AuthService {
       })),
     });
 
-    challengeStore.set(options.challenge, userId);
-    setTimeout(() => challengeStore.delete(options.challenge), 5 * 60 * 1000);
+    await this.challengeSet(options.challenge, userId);
 
     return options;
   }
@@ -231,11 +256,11 @@ export class AuthService {
     const clientData = JSON.parse(Buffer.from(clientDataJSON, 'base64url').toString());
     const challenge = clientData.challenge as string;
 
-    const storedUserId = challengeStore.get(challenge);
-    if (!storedUserId || storedUserId === true || storedUserId !== userId) {
+    const storedUserId = await this.challengeGet(challenge);
+    if (!storedUserId || storedUserId === '__auth__' || storedUserId !== userId) {
       throw new UnauthorizedException('Invalid or expired challenge');
     }
-    challengeStore.delete(challenge);
+    await this.challengeDel(challenge);
 
     const verification = await verifyRegistrationResponse({
       response,

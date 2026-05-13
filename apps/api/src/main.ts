@@ -7,16 +7,24 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import type { Request, Response, NextFunction } from 'express';
+import { RedisStore } from 'connect-redis';
+import Redis from 'ioredis';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.setGlobalPrefix('api');
   app.use(helmet({ contentSecurityPolicy: false }));
   app.enableCors({ origin: 'https://localhost:5173', credentials: true });
-  
+
   app.use(cookieParser());
+
+  const sessionStore = process.env.REDIS_URL
+    ? new RedisStore({ client: new Redis(process.env.REDIS_URL), prefix: 'sess:' })
+    : undefined;
+
   app.use(
     session({
+      store: sessionStore,
       secret: process.env.SESSION_SECRET || 'ripple-session-secret',
       resave: false,
       saveUninitialized: false,
