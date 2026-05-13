@@ -329,6 +329,47 @@ export class OrganisationsService {
     });
   }
 
+  async setCustomDomain(slug: string, domain: string | null, actorId: string): Promise<{ item: Organisation; txid: number; verification_token?: string }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin']);
+    const normalised = domain?.trim().toLowerCase() || null;
+    if (normalised && !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(normalised)) {
+      throw new BadRequestException('Invalid domain format');
+    }
+    const verificationToken = normalised ? `ripple-verify=${org.id}` : null;
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Organisation, org.id, {
+        custom_domain: normalised,
+        custom_domain_verified: false,
+        custom_domain_verified_at: null,
+      });
+      const item = await manager.findOneByOrFail(Organisation, { id: org.id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10), ...(verificationToken ? { verification_token: verificationToken } : {}) };
+    });
+  }
+
+  async verifyCustomDomain(slug: string, actorId: string): Promise<{ verified: boolean; message: string }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin']);
+    if (!org.custom_domain) throw new BadRequestException('No custom domain configured');
+
+    const expectedTxt = `ripple-verify=${org.id}`;
+    try {
+      const { promises: dns } = await import('dns');
+      const records = await dns.resolveTxt(org.custom_domain);
+      const flat = records.flat();
+      const found = flat.some((r) => r === expectedTxt);
+      if (found) {
+        await this.orgRepo.update(org.id, { custom_domain_verified: true, custom_domain_verified_at: new Date() });
+        return { verified: true, message: 'Domain verified successfully' };
+      }
+      return { verified: false, message: `TXT record "${expectedTxt}" not found for ${org.custom_domain}` };
+    } catch (err) {
+      return { verified: false, message: `DNS lookup failed: ${err instanceof Error ? err.message : 'unknown error'}` };
+    }
+  }
+
   private async checkEmailDomain(org: Organisation, userId: string): Promise<void> {
     if (!org.allowed_email_domains || org.allowed_email_domains.length === 0) return;
     const user = await this.userRepo.findOneBy({ id: userId });

@@ -17,3 +17,30 @@ localhost:5174 {
         reverse_proxy localhost:5173
     }
 }
+
+# Custom domain support — Caddy automatically provisions TLS via Let's Encrypt
+# for any domain that resolves to this server.
+#
+# To enable a custom domain for an org:
+#   1. Configure the domain in the org's admin settings
+#   2. Add a DNS A record pointing the domain to this server's IP
+#   3. Add a DNS TXT record: ripple-verify=<org-id>
+#   4. Click "Verify domain" in admin settings
+#   5. Add the domain block below (or use the Caddy API for dynamic config)
+#
+# Example:
+# vote.example.com {
+#     handle /api/* {
+#         reverse_proxy localhost:3001
+#     }
+#     handle {
+#         reverse_proxy localhost:5173
+#     }
+# }
+#
+# For production deployments with many orgs, use the Caddy admin API
+# (http://localhost:2019) to add/remove site configs dynamically:
+#
+#   curl -X POST http://localhost:2019/config/apps/http/servers/srv0/routes \
+#     -H "Content-Type: application/json" \
+#     -d '{"match":[{"host":["vote.example.com"]}],...}'

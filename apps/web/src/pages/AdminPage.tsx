@@ -133,6 +133,12 @@ export function AdminPage() {
   const [generatingScim, setGeneratingScim] = useState(false);
   const [scimEnabled] = useState<boolean>(!!(org as { scim_token?: string | null }).scim_token);
 
+  const [customDomain, setCustomDomain] = useState<string>(org.custom_domain ?? '');
+  const [customDomainVerified, setCustomDomainVerified] = useState<boolean>(org.custom_domain_verified ?? false);
+  const [domainVerificationToken, setDomainVerificationToken] = useState<string | null>(null);
+  const [savingCustomDomain, setSavingCustomDomain] = useState(false);
+  const [verifyingDomain, setVerifyingDomain] = useState(false);
+
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
@@ -1631,6 +1637,116 @@ export function AdminPage() {
             </div>
           )}
         </div>
+      </section>
+
+      {/* Custom domain */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Custom domain</h3>
+        <p className={styles.sectionHint}>
+          Map your own domain (e.g. <code>vote.acme.com</code>) to this organisation. TLS is provisioned automatically via Let's Encrypt.
+          Point a DNS A record at this server and add a TXT record for verification.
+        </p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSavingCustomDomain(true);
+            try {
+              const result = await orgsApi.setCustomDomain(org.slug, customDomain.trim() || null);
+              if (result.verification_token) setDomainVerificationToken(result.verification_token);
+              setCustomDomainVerified(false);
+              addToast('Custom domain saved', 'success');
+            } catch (err) {
+              addToast(err instanceof Error ? err.message : 'Failed to save custom domain', 'error');
+            } finally {
+              setSavingCustomDomain(false);
+            }
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxWidth: 480 }}
+        >
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <input
+              type="text"
+              value={customDomain}
+              onChange={(e) => setCustomDomain(e.target.value)}
+              placeholder="vote.example.com"
+              style={{ flex: 1, padding: '0 var(--space-3)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+            />
+            <Button type="submit" size="sm" disabled={savingCustomDomain}>
+              {savingCustomDomain ? 'Saving…' : 'Save'}
+            </Button>
+            {customDomain && org.custom_domain && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={savingCustomDomain}
+                onClick={async () => {
+                  setSavingCustomDomain(true);
+                  try {
+                    await orgsApi.setCustomDomain(org.slug, null);
+                    setCustomDomain('');
+                    setCustomDomainVerified(false);
+                    setDomainVerificationToken(null);
+                    addToast('Custom domain removed', 'info');
+                  } catch {
+                    addToast('Failed to remove custom domain', 'error');
+                  } finally {
+                    setSavingCustomDomain(false);
+                  }
+                }}
+              >
+                Remove
+              </Button>
+            )}
+          </div>
+          {domainVerificationToken && (
+            <div style={{ background: 'var(--color-bg-subtle)', border: 'var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-3)', fontSize: 'var(--text-sm)' }}>
+              <p style={{ margin: '0 0 var(--space-1)', fontWeight: 500 }}>DNS verification required</p>
+              <p style={{ margin: '0 0 var(--space-2)', color: 'var(--color-fg-muted)' }}>
+                Add a TXT record to <strong>{customDomain}</strong>:
+              </p>
+              <code style={{ display: 'block', background: 'var(--color-bg)', border: 'var(--border)', borderRadius: 3, padding: '4px 8px', fontSize: 'var(--text-xs)', wordBreak: 'break-all' }}>
+                {domainVerificationToken}
+              </code>
+            </div>
+          )}
+          {org.custom_domain && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              {customDomainVerified ? (
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-success)' }}>✓ Verified</span>
+              ) : (
+                <>
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>Not verified</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={verifyingDomain}
+                    onClick={async () => {
+                      setVerifyingDomain(true);
+                      try {
+                        const result = await orgsApi.verifyCustomDomain(org.slug);
+                        if (result.verified) {
+                          setCustomDomainVerified(true);
+                          setDomainVerificationToken(null);
+                          addToast('Domain verified!', 'success');
+                        } else {
+                          addToast(result.message, 'error');
+                        }
+                      } catch {
+                        addToast('Verification check failed', 'error');
+                      } finally {
+                        setVerifyingDomain(false);
+                      }
+                    }}
+                  >
+                    {verifyingDomain ? 'Checking…' : 'Verify now'}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </form>
       </section>
 
       {/* Billing */}

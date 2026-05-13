@@ -335,10 +335,10 @@ SLACK_SIGNING_SECRET=
 - [x] **Horizontal API scaling** — move in-memory challenge store (WebAuthn) to Redis. Move session store to Redis. Both are needed before running more than one API instance.
 - [x] **Background job queue** — use BullMQ (backed by Redis) for: sending emails, auto-closing expired proposals, computing complex tallies, sending webhooks. Currently these happen synchronously or not at all.
 - [x] **Database connection pooling** — add PgBouncer in front of Postgres. Required at scale.
-- [ ] **Read replicas** — point Electric SQL at a read replica so the sync load doesn't compete with write throughput on the primary.
+- [x] **Read replicas** — point Electric SQL at a read replica so the sync load doesn't compete with write throughput on the primary.
 
 ### White-label
-- [ ] **Custom domains** — organisations can map their own domain (e.g. `vote.acme.com`) to their Ripple org, with automatic TLS via Let's Encrypt.
+- [x] **Custom domains** — organisations can map their own domain (e.g. `vote.acme.com`) to their Ripple org, with automatic TLS via Let's Encrypt.
 - [x] **Custom branding** — org-level: primary colour, logo, font choice. Applied via CSS custom properties so all components pick it up.
 - [x] **Email white-labelling** — emails sent from the org's own domain using a verified sending address.
 

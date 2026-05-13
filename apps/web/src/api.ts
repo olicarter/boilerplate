@@ -104,6 +104,8 @@ export interface Organisation {
   oidc_issuer: string | null;
   oidc_client_id: string | null;
   sso_required: boolean;
+  custom_domain: string | null;
+  custom_domain_verified: boolean;
   created_at: string;
   [key: string]: unknown;
 }
@@ -307,6 +309,10 @@ export const orgsApi = {
     request<{ token: string; item: Organisation; txid: number }>(`/orgs/${slug}/scim-token`, { method: 'POST' }),
   revokeScimToken: (slug: string) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}/scim-token`, { method: 'DELETE' }),
+  setCustomDomain: (slug: string, domain: string | null) =>
+    request<{ item: Organisation; txid: number; verification_token?: string }>(`/orgs/${slug}/custom-domain`, { method: 'PATCH', body: JSON.stringify({ domain }) }),
+  verifyCustomDomain: (slug: string) =>
+    request<{ verified: boolean; message: string }>(`/orgs/${slug}/custom-domain/verify`, { method: 'POST' }),
   listAuditLog: (slug: string, page = 1, pageSize = 50) =>
     request<{ items: AuditLogEntry[]; total: number; page: number; pageSize: number; totalPages: number }>(`/orgs/${slug}/audit-log?page=${page}&pageSize=${pageSize}`),
   getPublicResults: (slug: string) => request<{ org: Organisation; proposals: Proposal[] }>(`/orgs/${slug}/results`),

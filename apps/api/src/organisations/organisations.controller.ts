@@ -205,6 +205,22 @@ export class OrganisationsController {
     return this.orgsService.revokeScimToken(slug, req.user!.id);
   }
 
+  @Patch(':slug/custom-domain')
+  @UseGuards(AuthGuard)
+  setCustomDomain(
+    @Param('slug') slug: string,
+    @Body() body: { domain: string | null },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.orgsService.setCustomDomain(slug, body.domain ?? null, req.user!.id);
+  }
+
+  @Post(':slug/custom-domain/verify')
+  @UseGuards(AuthGuard)
+  verifyCustomDomain(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.verifyCustomDomain(slug, req.user!.id);
+  }
+
   @Get(':slug/audit-log')
   @UseGuards(AuthGuard)
   async getAuditLog(

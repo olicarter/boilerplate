@@ -60,6 +60,13 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
         min: 2,
         idleTimeoutMillis: 30_000,
         connectionTimeoutMillis: 5_000,
+        // Read replica: set REPLICA_DATABASE_URL to route reads to a standby
+        ...(process.env.REPLICA_DATABASE_URL ? {
+          replication: {
+            master: { connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:password@localhost:5432/ripple' },
+            slaves: [{ connectionString: process.env.REPLICA_DATABASE_URL }],
+          },
+        } : {}),
       },
       entities: [User, Topic, Proposal, ProposalOption, ProposalReaction, Delegation, Vote, Credential, MagicLink, Comment, CommentReaction, ProposalVersion, Organisation, Membership, OrgInvite, Argument, AuditLogEntry, Veto, Endorsement, Notification, WebhookEndpoint, ApiKey],
       migrations: [__dirname + '/db/migrations/*.ts'],

@@ -131,6 +131,15 @@ export class Organisation {
   @Column({ name: 'scim_token', type: 'text', nullable: true, default: null })
   scim_token!: string | null;
 
+  @Column({ name: 'custom_domain', type: 'text', nullable: true, default: null })
+  custom_domain!: string | null;
+
+  @Column({ name: 'custom_domain_verified', type: 'boolean', default: false })
+  custom_domain_verified!: boolean;
+
+  @Column({ name: 'custom_domain_verified_at', type: 'timestamptz', nullable: true, default: null })
+  custom_domain_verified_at!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }
