@@ -1,0 +1,51 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /apps/api
+    schedule:
+      interval: monthly
+    groups:
+      nestjs:
+        patterns:
+          - "@nestjs/*"
+      typeorm:
+        patterns:
+          - typeorm
+          - pg
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: monthly
+    groups:
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react*"
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: monthly
+    groups:
+      playwright:
+        patterns:
+          - "@playwright/*"
+          - playwright
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly

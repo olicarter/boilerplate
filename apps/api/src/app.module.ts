@@ -53,6 +53,13 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
       url:
         process.env.DATABASE_URL ??
         'postgresql://postgres:password@localhost:5432/ripple',
+      poolSize: Number(process.env.DB_POOL_SIZE ?? 10),
+      extra: {
+        max: Number(process.env.DB_POOL_SIZE ?? 10),
+        min: 2,
+        idleTimeoutMillis: 30_000,
+        connectionTimeoutMillis: 5_000,
+      },
       entities: [User, Topic, Proposal, ProposalOption, ProposalReaction, Delegation, Vote, Credential, MagicLink, Comment, CommentReaction, ProposalVersion, Organisation, Membership, OrgInvite, Argument, AuditLogEntry, Veto, Endorsement, Notification, WebhookEndpoint, ApiKey],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,

@@ -334,7 +334,7 @@ SLACK_SIGNING_SECRET=
 ### Scalability
 - [x] **Horizontal API scaling** — move in-memory challenge store (WebAuthn) to Redis. Move session store to Redis. Both are needed before running more than one API instance.
 - [x] **Background job queue** — use BullMQ (backed by Redis) for: sending emails, auto-closing expired proposals, computing complex tallies, sending webhooks. Currently these happen synchronously or not at all.
-- [ ] **Database connection pooling** — add PgBouncer in front of Postgres. Required at scale.
+- [x] **Database connection pooling** — add PgBouncer in front of Postgres. Required at scale.
 - [ ] **Read replicas** — point Electric SQL at a read replica so the sync load doesn't compete with write throughput on the primary.
 
 ### White-label
@@ -366,6 +366,6 @@ These items apply across all phases and should be maintained continuously.
 - [ ] **Test coverage** — maintain Playwright e2e tests for every new user-facing feature. Target: no feature ships without at least a happy-path e2e test.
 - [x] **Migration discipline** — every DB schema change ships with a TypeORM migration. No exceptions.
 - [x] **Changelog** — maintain a `CHANGELOG.md` updated with every release. Use conventional commit format.
-- [ ] **Dependency updates** — monthly Dependabot PR reviews. Keep `@simplewebauthn`, ElectricSQL, and TanStack packages current — they move fast.
+- [x] **Dependency updates** — monthly Dependabot PR reviews. Keep `@simplewebauthn`, ElectricSQL, and TanStack packages current — they move fast.
 - [x] **Security headers** — add `helmet` to the NestJS app for CSP, HSTS, X-Frame-Options etc. Review and tighten the CSP allowlist regularly.
 - [ ] **Load testing** — before any public launch, run k6 load tests against the API simulating concurrent voting on a high-traffic proposal.
