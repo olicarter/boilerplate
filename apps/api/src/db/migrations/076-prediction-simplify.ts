@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class PredictionSimplify1700000076 implements MigrationInterface {
+export class PredictionSimplify1748600000076 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE predictions DROP COLUMN IF EXISTS stake`);
     await qr.query(`ALTER TABLE predictions DROP COLUMN IF EXISTS resolved`);

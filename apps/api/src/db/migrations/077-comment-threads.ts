@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CommentThreads1700000077 implements MigrationInterface {
+export class CommentThreads1748600000077 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`
       ALTER TABLE comments

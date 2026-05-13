@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class Nonprofit1700000079 implements MigrationInterface {
+export class Nonprofit1748600000079 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS nonprofit_name TEXT DEFAULT NULL`);
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS nonprofit_registration_number TEXT DEFAULT NULL`);

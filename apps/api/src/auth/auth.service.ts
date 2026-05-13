@@ -357,8 +357,8 @@ export class AuthService {
       [TEST_ORG_ID, 'Ripple Test', TEST_ORG_SLUG],
     );
     await this.dataSource.query(
-      `INSERT INTO memberships (id, organisation_id, user_id, role)
-       VALUES ($1, $2, $3, 'admin')
+      `INSERT INTO memberships (id, organisation_id, user_id, role, unsubscribe_token)
+       VALUES ($1, $2, $3, 'admin', md5(random()::text || clock_timestamp()::text))
        ON CONFLICT (organisation_id, user_id) DO NOTHING`,
       [randomUUID(), TEST_ORG_ID, user.id],
     );

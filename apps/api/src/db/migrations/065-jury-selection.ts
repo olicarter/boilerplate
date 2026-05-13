@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class JurySelection065 implements MigrationInterface {
+export class JurySelection1748600000065 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS jury_size INTEGER DEFAULT NULL`);
     await qr.query(`

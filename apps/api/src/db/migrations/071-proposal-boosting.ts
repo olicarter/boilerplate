@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ProposalBoosting1700000071 implements MigrationInterface {
+export class ProposalBoosting1748600000071 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS boost_threshold INTEGER DEFAULT NULL`);
     await qr.query(`

@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class PredictionMarket1700000075 implements MigrationInterface {
+export class PredictionMarket1748600000075 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`
       CREATE TABLE IF NOT EXISTS predictions (

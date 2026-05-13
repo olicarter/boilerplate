@@ -4,7 +4,7 @@ import { DataSource, IsNull, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Notification, NotificationType } from './notification.entity';
 import { EmailService } from '../email/email.service';
-import { generateVoteEmailToken } from '../votes/votes.service';
+import { generateVoteEmailToken } from '../votes/vote-email.utils';
 
 @Injectable()
 export class NotificationsService {

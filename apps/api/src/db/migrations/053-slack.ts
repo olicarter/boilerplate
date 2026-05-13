@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class Slack1053 implements MigrationInterface {
+export class Slack1748600000053 implements MigrationInterface {
   async up(runner: QueryRunner): Promise<void> {
     await runner.query(`
       ALTER TABLE organisations

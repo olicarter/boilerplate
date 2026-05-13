@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
-import { VotesService, verifyVoteEmailToken } from './votes.service';
+import { VotesService } from './votes.service';
+import { verifyVoteEmailToken } from './vote-email.utils';
 import { VoteChoice } from './vote.entity';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 

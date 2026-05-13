@@ -1,6 +1,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class MagicLinks055 implements MigrationInterface {
+export class MagicLinks1748600000055 implements MigrationInterface {
   async up(runner: QueryRunner) {
     await runner.query(`
       CREATE TABLE magic_links (

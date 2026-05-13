@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class DataRetention063 implements MigrationInterface {
+export class DataRetention1748600000063 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS data_retention_months INTEGER DEFAULT NULL`);
   }

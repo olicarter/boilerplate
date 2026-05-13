@@ -1,6 +1,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class EmailPreferences056 implements MigrationInterface {
+export class EmailPreferences1748600000056 implements MigrationInterface {
   async up(runner: QueryRunner) {
     await runner.query(`
       ALTER TABLE memberships
@@ -10,7 +10,7 @@ export class EmailPreferences056 implements MigrationInterface {
     `);
     // Backfill unsubscribe tokens for existing memberships
     await runner.query(`
-      UPDATE memberships SET unsubscribe_token = encode(gen_random_bytes(24), 'hex')
+      UPDATE memberships SET unsubscribe_token = md5(random()::text || clock_timestamp()::text || id::text)
       WHERE unsubscribe_token IS NULL
     `);
     await runner.query(`ALTER TABLE memberships ALTER COLUMN unsubscribe_token SET NOT NULL`);

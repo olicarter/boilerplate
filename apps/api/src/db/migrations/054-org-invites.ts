@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class OrgInvites054 implements MigrationInterface {
+export class OrgInvites1748600000054 implements MigrationInterface {
   async up(runner: QueryRunner) {
     await runner.query(`
       CREATE TABLE org_invites (

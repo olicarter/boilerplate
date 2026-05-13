@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class Billing1052 implements MigrationInterface {
+export class Billing1748600000052 implements MigrationInterface {
   async up(runner: QueryRunner): Promise<void> {
     await runner.query(`
       ALTER TABLE organisations

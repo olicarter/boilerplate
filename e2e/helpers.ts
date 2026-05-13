@@ -63,6 +63,14 @@ export async function createComment(
   return json.item as { id: string; body: string; author_id: string };
 }
 
+export async function createOrg(request: APIRequestContext, name: string) {
+  const res = await request.post(`${API}/api/orgs`, {
+    data: { name, description: '' },
+  });
+  const body = await res.json();
+  return body.item as { id: string; slug: string; name: string };
+}
+
 export async function createDelegation(
   request: APIRequestContext,
   delegatorId: string,

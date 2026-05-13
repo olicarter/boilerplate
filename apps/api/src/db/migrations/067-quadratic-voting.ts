@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class QuadraticVoting067 implements MigrationInterface {
+export class QuadraticVoting1748600000067 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS quadratic_voting BOOLEAN DEFAULT FALSE`);
     await qr.query(`ALTER TABLE votes ADD COLUMN IF NOT EXISTS vote_count INTEGER DEFAULT 1`);

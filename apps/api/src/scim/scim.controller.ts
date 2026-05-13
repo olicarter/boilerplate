@@ -129,7 +129,7 @@ export class ScimController {
     ))[0];
     if (!existing) {
       await this.db.query(
-        `INSERT INTO memberships (id, organisation_id, user_id, role, status) VALUES ($1, $2, $3, 'member', 'approved')`,
+        `INSERT INTO memberships (id, organisation_id, user_id, role, status, unsubscribe_token) VALUES ($1, $2, $3, 'member', 'approved', md5(random()::text || clock_timestamp()::text))`,
         [randomUUID(), org.id, user.id],
       );
     }

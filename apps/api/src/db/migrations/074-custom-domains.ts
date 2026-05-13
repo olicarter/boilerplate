@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CustomDomains1700000074 implements MigrationInterface {
+export class CustomDomains1748600000074 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS custom_domain TEXT DEFAULT NULL`);
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS custom_domain_verified BOOLEAN NOT NULL DEFAULT FALSE`);

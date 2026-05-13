@@ -1,17 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createHmac } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
-
-const VOTE_EMAIL_SECRET = () => process.env.VOTE_EMAIL_SECRET ?? process.env.RECEIPT_SECRET ?? 'ripple-insecure';
-
-export function generateVoteEmailToken(proposalId: string, userId: string, choice: string): string {
-  return createHmac('sha256', VOTE_EMAIL_SECRET()).update(`${proposalId}:${userId}:${choice}`).digest('hex');
-}
-
-export function verifyVoteEmailToken(proposalId: string, userId: string, choice: string, token: string): boolean {
-  return generateVoteEmailToken(proposalId, userId, choice) === token;
-}
 import { Vote, VoteChoice } from './vote.entity';
 import { Proposal } from '../proposals/proposal.entity';
 import { Organisation } from '../organisations/organisation.entity';

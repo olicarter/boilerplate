@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ConstitutionalTopics069 implements MigrationInterface {
+export class ConstitutionalTopics1748600000069 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE topics ADD COLUMN IF NOT EXISTS is_constitutional BOOLEAN NOT NULL DEFAULT FALSE`);
     await qr.query(`

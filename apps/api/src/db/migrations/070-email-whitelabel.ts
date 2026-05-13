@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class EmailWhitelabel1700000070 implements MigrationInterface {
+export class EmailWhitelabel1748600000070 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS email_from_name TEXT DEFAULT NULL`);
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS email_from_address TEXT DEFAULT NULL`);

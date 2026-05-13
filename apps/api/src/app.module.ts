@@ -45,6 +45,10 @@ import { ScimModule } from './scim/scim.module';
 import { Notification } from './notifications/notification.entity';
 import { ProposalOption } from './proposals/proposal-option.entity';
 import { ProposalReaction } from './proposals/proposal-reaction.entity';
+import { ProposalSignature } from './proposals/proposal-signature.entity';
+import { ProposalLink } from './proposals/proposal-link.entity';
+import { ProposalBoost } from './proposals/proposal-boost.entity';
+import { Prediction } from './proposals/prediction.entity';
 import { AiModule } from './ai/ai.module';
 
 @Module({
@@ -69,7 +73,7 @@ import { AiModule } from './ai/ai.module';
           },
         } : {}),
       },
-      entities: [User, Topic, Proposal, ProposalOption, ProposalReaction, Delegation, Vote, Credential, MagicLink, Comment, CommentReaction, ProposalVersion, Organisation, Membership, OrgInvite, Argument, AuditLogEntry, Veto, Endorsement, Notification, WebhookEndpoint, ApiKey],
+      entities: [User, Topic, Proposal, ProposalOption, ProposalReaction, ProposalVersion, ProposalSignature, ProposalLink, ProposalBoost, Prediction, Delegation, Vote, Credential, MagicLink, Comment, CommentReaction, Organisation, Membership, OrgInvite, Argument, AuditLogEntry, Veto, Endorsement, Notification, WebhookEndpoint, ApiKey],
       migrations: [__dirname + '/db/migrations/*.ts'],
       migrationsRun: true,
       synchronize: false,

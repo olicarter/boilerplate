@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class OidcSso1700000072 implements MigrationInterface {
+export class OidcSso1748600000072 implements MigrationInterface {
   async up(qr: QueryRunner) {
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS oidc_issuer TEXT DEFAULT NULL`);
     await qr.query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS oidc_client_id TEXT DEFAULT NULL`);
