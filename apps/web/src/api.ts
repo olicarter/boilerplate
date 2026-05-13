@@ -681,9 +681,6 @@ export interface Prediction {
   user_id: string;
   prediction: 'pass' | 'fail';
   confidence: number;
-  stake: number;
-  resolved: boolean;
-  payout: number | null;
   created_at: string;
 }
 

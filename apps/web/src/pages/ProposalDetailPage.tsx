@@ -1319,19 +1319,25 @@ export function ProposalDetailPage() {
         </div>
       )}
 
-      {/* Prediction market */}
+      {/* Sentiment poll */}
       {predictionMarket && currentUser && myMembership && !isDiscussion && (
         <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.75rem 1.25rem', marginBottom: '1.5rem', background: '#f9f9f9' }}>
-          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: '0.5rem' }}>Community Prediction</div>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: '0.5rem' }}>Community Sentiment</div>
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem', fontSize: 13 }}>
-            <span style={{ color: '#2d9a4e' }}>Pass: {predictionMarket.pass_count} ({predictionMarket.pass_confidence}% avg confidence)</span>
-            <span style={{ color: '#c0392b' }}>Fail: {predictionMarket.fail_count} ({predictionMarket.fail_confidence}% avg confidence)</span>
+            <span style={{ color: '#2d9a4e' }}>
+              Will pass: {predictionMarket.pass_count}
+              {predictionMarket.pass_count > 0 && <span style={{ color: '#888' }}> ({predictionMarket.pass_confidence}% avg confidence)</span>}
+            </span>
+            <span style={{ color: '#c0392b' }}>
+              Will fail: {predictionMarket.fail_count}
+              {predictionMarket.fail_count > 0 && <span style={{ color: '#888' }}> ({predictionMarket.fail_confidence}% avg confidence)</span>}
+            </span>
           </div>
           {(isOpen || isDraft) && (
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               {!predictionMarket.user_prediction ? (
                 <>
-                  <span style={{ fontSize: 12, color: '#666' }}>Your prediction:</span>
+                  <span style={{ fontSize: 12, color: '#666' }}>What do you expect?</span>
                   <button
                     type="button"
                     disabled={predicting}
@@ -1340,9 +1346,8 @@ export function ProposalDetailPage() {
                       try {
                         const r = await predictionsApi.predict(id, 'pass', 70);
                         setPredictionMarket((m) => m ? { ...m, user_prediction: r, pass_count: m.pass_count + 1 } : m);
-                        addToast('Predicted: Pass', 'success');
                       } catch (err) {
-                        addToast(err instanceof Error ? err.message : 'Failed to predict', 'error');
+                        addToast(err instanceof Error ? err.message : 'Failed to submit', 'error');
                       } finally {
                         setPredicting(false);
                       }
@@ -1359,9 +1364,8 @@ export function ProposalDetailPage() {
                       try {
                         const r = await predictionsApi.predict(id, 'fail', 70);
                         setPredictionMarket((m) => m ? { ...m, user_prediction: r, fail_count: m.fail_count + 1 } : m);
-                        addToast('Predicted: Fail', 'success');
                       } catch (err) {
-                        addToast(err instanceof Error ? err.message : 'Failed to predict', 'error');
+                        addToast(err instanceof Error ? err.message : 'Failed to submit', 'error');
                       } finally {
                         setPredicting(false);
                       }
@@ -1374,42 +1378,34 @@ export function ProposalDetailPage() {
               ) : (
                 <>
                   <span style={{ fontSize: 12, color: '#666' }}>
-                    Your prediction: <strong style={{ color: predictionMarket.user_prediction.prediction === 'pass' ? '#2d9a4e' : '#c0392b' }}>
-                      {predictionMarket.user_prediction.prediction === 'pass' ? 'Pass' : 'Fail'}
+                    Your expectation: <strong style={{ color: predictionMarket.user_prediction.prediction === 'pass' ? '#2d9a4e' : '#c0392b' }}>
+                      {predictionMarket.user_prediction.prediction === 'pass' ? 'Will pass' : 'Will fail'}
                     </strong>
-                    {predictionMarket.user_prediction.resolved && (
-                      <span style={{ marginInlineStart: '0.5rem', color: predictionMarket.user_prediction.payout && predictionMarket.user_prediction.payout > 0 ? '#2d9a4e' : '#888' }}>
-                        {predictionMarket.user_prediction.payout && predictionMarket.user_prediction.payout > 0 ? `✓ Correct (+${predictionMarket.user_prediction.payout - predictionMarket.user_prediction.stake})` : '✗ Incorrect'}
-                      </span>
-                    )}
                   </span>
-                  {!predictionMarket.user_prediction.resolved && (
-                    <button
-                      type="button"
-                      disabled={predicting}
-                      onClick={async () => {
-                        setPredicting(true);
-                        try {
-                          await predictionsApi.unpredict(id);
-                          const prev = predictionMarket.user_prediction!;
-                          setPredictionMarket((m) => m ? {
-                            ...m,
-                            user_prediction: null,
-                            pass_count: prev.prediction === 'pass' ? m.pass_count - 1 : m.pass_count,
-                            fail_count: prev.prediction === 'fail' ? m.fail_count - 1 : m.fail_count,
-                          } : m);
-                          addToast('Prediction removed', 'info');
-                        } catch (err) {
-                          addToast(err instanceof Error ? err.message : 'Failed to remove prediction', 'error');
-                        } finally {
-                          setPredicting(false);
-                        }
-                      }}
-                      style={{ fontSize: 12, padding: '0.25rem 0.75rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4, color: '#888' }}
-                    >
-                      Remove
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    disabled={predicting}
+                    onClick={async () => {
+                      setPredicting(true);
+                      try {
+                        await predictionsApi.unpredict(id);
+                        const prev = predictionMarket.user_prediction!;
+                        setPredictionMarket((m) => m ? {
+                          ...m,
+                          user_prediction: null,
+                          pass_count: prev.prediction === 'pass' ? m.pass_count - 1 : m.pass_count,
+                          fail_count: prev.prediction === 'fail' ? m.fail_count - 1 : m.fail_count,
+                        } : m);
+                      } catch (err) {
+                        addToast(err instanceof Error ? err.message : 'Failed to remove', 'error');
+                      } finally {
+                        setPredicting(false);
+                      }
+                    }}
+                    style={{ fontSize: 12, padding: '0.25rem 0.75rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4, color: '#888' }}
+                  >
+                    Remove
+                  </button>
                 </>
               )}
             </div>

@@ -470,7 +470,6 @@ export class ProposalsService {
       this.slack.postProposalClosed(closedOrg.id, result.item.title, passed ? 'passed' : 'failed', `${appUrl}/orgs/${closedOrg.slug}/proposals/${id}`).catch(() => {});
       this.discord.postProposalClosed(closedOrg.id, result.item.title, passed ? 'passed' : 'failed', `${appUrl}/orgs/${closedOrg.slug}/proposals/${id}`).catch(() => {});
       this.webhooks.dispatch(result.item.organisation_id, 'proposal.closed', { id, title: result.item.title, passed }).catch(() => {});
-      this.resolveMarket(id, passed ? 'pass' : 'fail').catch(() => {});
     }
     return result;
   }
@@ -1445,24 +1444,5 @@ export class ProposalsService {
 
   async unpredict(proposalId: string, userId: string): Promise<void> {
     await this.predictionRepo.delete({ proposal_id: proposalId, user_id: userId });
-  }
-
-  private async resolveMarket(proposalId: string, outcome: 'pass' | 'fail'): Promise<void> {
-    const predictions = await this.predictionRepo.find({ where: { proposal_id: proposalId, resolved: false } });
-    if (!predictions.length) return;
-
-    const correct = predictions.filter((p) => p.prediction === outcome);
-    const incorrect = predictions.filter((p) => p.prediction !== outcome);
-    const totalStake = predictions.reduce((s, p) => s + p.stake, 0);
-    const correctStake = correct.reduce((s, p) => s + p.stake, 0);
-
-    for (const p of correct) {
-      const share = correctStake > 0 ? p.stake / correctStake : 1 / correct.length;
-      const payout = Math.round(totalStake * share);
-      await this.predictionRepo.update({ id: p.id }, { resolved: true, payout });
-    }
-    for (const p of incorrect) {
-      await this.predictionRepo.update({ id: p.id }, { resolved: true, payout: 0 });
-    }
   }
 }

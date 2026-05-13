@@ -17,15 +17,6 @@ export class Prediction {
   @Column({ type: 'int', default: 50 })
   confidence!: number;
 
-  @Column({ type: 'int', default: 10 })
-  stake!: number;
-
-  @Column({ type: 'boolean', default: false })
-  resolved!: boolean;
-
-  @Column({ type: 'int', nullable: true, default: null })
-  payout!: number | null;
-
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 
