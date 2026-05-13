@@ -306,6 +306,29 @@ export class OrganisationsService {
     });
   }
 
+  async generateScimToken(slug: string, actorId: string): Promise<{ token: string; item: Organisation; txid: number }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin']);
+    const token = randomBytes(32).toString('hex');
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Organisation, org.id, { scim_token: token });
+      const item = await manager.findOneByOrFail(Organisation, { id: org.id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { token, item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
+  async revokeScimToken(slug: string, actorId: string): Promise<{ item: Organisation; txid: number }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin']);
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Organisation, org.id, { scim_token: null });
+      const item = await manager.findOneByOrFail(Organisation, { id: org.id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
   private async checkEmailDomain(org: Organisation, userId: string): Promise<void> {
     if (!org.allowed_email_domains || org.allowed_email_domains.length === 0) return;
     const user = await this.userRepo.findOneBy({ id: userId });

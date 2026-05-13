@@ -322,7 +322,7 @@ SLACK_SIGNING_SECRET=
 
 ### Single sign-on
 - [x] **SAML 2.0 / OIDC** — allow enterprise customers to connect their Identity Provider (Okta, Azure AD, Google Workspace). Users sign in via SSO and are automatically provisioned to the correct org.
-- [ ] **SCIM provisioning** — automatically sync membership from the IdP: when an employee is offboarded from Okta, they're removed from Ripple.
+- [x] **SCIM provisioning** — automatically sync membership from the IdP: when an employee is offboarded from Okta, they're removed from Ripple.
 - [x] **Enforce SSO** — org setting to require SSO (disable passkey/magic-link login for that org's members).
 
 ### Compliance

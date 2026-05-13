@@ -128,6 +128,9 @@ export class Organisation {
   @Column({ name: 'sso_required', type: 'boolean', default: false })
   sso_required!: boolean;
 
+  @Column({ name: 'scim_token', type: 'text', nullable: true, default: null })
+  scim_token!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

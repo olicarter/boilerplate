@@ -129,6 +129,10 @@ export function AdminPage() {
   const [ssoRequired, setSsoRequired] = useState<boolean>(org.sso_required ?? false);
   const [savingOidc, setSavingOidc] = useState(false);
 
+  const [scimToken, setScimToken] = useState<string | null>(null);
+  const [generatingScim, setGeneratingScim] = useState(false);
+  const [scimEnabled] = useState<boolean>(!!(org as { scim_token?: string | null }).scim_token);
+
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
@@ -1561,6 +1565,72 @@ export function AdminPage() {
             Remove SSO configuration
           </Button>
         )}
+      </section>
+
+      {/* SCIM provisioning */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>SCIM provisioning</h3>
+        <p className={styles.sectionHint}>
+          Allow your Identity Provider (Okta, Azure AD, Google Workspace) to automatically sync membership. When a user is offboarded from your IdP, they'll be removed from this organisation.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxWidth: 480 }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-fg-muted)' }}>
+            <strong>SCIM base URL:</strong>{' '}
+            <code style={{ background: 'var(--color-bg-subtle)', padding: '2px 6px', borderRadius: 3, fontSize: 'var(--text-xs)' }}>
+              {window.location.origin}/api/scim/v2
+            </code>
+          </div>
+          {scimToken ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+              <p style={{ fontSize: 'var(--text-sm)', fontWeight: 500, margin: 0 }}>SCIM Bearer token (copy now — it won't be shown again):</p>
+              <code style={{ display: 'block', background: 'var(--color-bg-subtle)', padding: 'var(--space-2) var(--space-3)', borderRadius: 4, fontSize: 'var(--text-xs)', wordBreak: 'break-all', border: 'var(--border)' }}>
+                {scimToken}
+              </code>
+              <Button size="sm" variant="ghost" onClick={() => setScimToken(null)}>Dismiss</Button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              <Button
+                size="sm"
+                disabled={generatingScim}
+                onClick={async () => {
+                  setGeneratingScim(true);
+                  try {
+                    const result = await orgsApi.generateScimToken(org.slug);
+                    setScimToken(result.token);
+                    addToast('SCIM token generated', 'success');
+                  } catch {
+                    addToast('Failed to generate SCIM token', 'error');
+                  } finally {
+                    setGeneratingScim(false);
+                  }
+                }}
+              >
+                {generatingScim ? 'Generating…' : scimEnabled ? 'Rotate SCIM token' : 'Generate SCIM token'}
+              </Button>
+              {scimEnabled && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={generatingScim}
+                  onClick={async () => {
+                    setGeneratingScim(true);
+                    try {
+                      await orgsApi.revokeScimToken(org.slug);
+                      addToast('SCIM token revoked', 'info');
+                    } catch {
+                      addToast('Failed to revoke SCIM token', 'error');
+                    } finally {
+                      setGeneratingScim(false);
+                    }
+                  }}
+                >
+                  Revoke SCIM token
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Billing */}

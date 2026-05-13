@@ -303,6 +303,10 @@ export const orgsApi = {
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'POST' }),
   revokeInviteToken: (slug: string) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}/invite-token`, { method: 'DELETE' }),
+  generateScimToken: (slug: string) =>
+    request<{ token: string; item: Organisation; txid: number }>(`/orgs/${slug}/scim-token`, { method: 'POST' }),
+  revokeScimToken: (slug: string) =>
+    request<MutationResult<Organisation>>(`/orgs/${slug}/scim-token`, { method: 'DELETE' }),
   listAuditLog: (slug: string, page = 1, pageSize = 50) =>
     request<{ items: AuditLogEntry[]; total: number; page: number; pageSize: number; totalPages: number }>(`/orgs/${slug}/audit-log?page=${page}&pageSize=${pageSize}`),
   getPublicResults: (slug: string) => request<{ org: Organisation; proposals: Proposal[] }>(`/orgs/${slug}/results`),

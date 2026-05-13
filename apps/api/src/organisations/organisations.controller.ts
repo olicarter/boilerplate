@@ -193,6 +193,18 @@ export class OrganisationsController {
     return this.orgsService.revokeInviteToken(slug, req.user!.id);
   }
 
+  @Post(':slug/scim-token')
+  @UseGuards(AuthGuard)
+  generateScimToken(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.generateScimToken(slug, req.user!.id);
+  }
+
+  @Delete(':slug/scim-token')
+  @UseGuards(AuthGuard)
+  revokeScimToken(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {
+    return this.orgsService.revokeScimToken(slug, req.user!.id);
+  }
+
   @Get(':slug/audit-log')
   @UseGuards(AuthGuard)
   async getAuditLog(

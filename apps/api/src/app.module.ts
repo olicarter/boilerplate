@@ -41,6 +41,7 @@ import { ApiKeysModule } from './api-keys/api-keys.module';
 import { ApiKey } from './api-keys/api-key.entity';
 import { JobsModule } from './jobs/jobs.module';
 import { RedisModule } from './redis/redis.module';
+import { ScimModule } from './scim/scim.module';
 import { Notification } from './notifications/notification.entity';
 import { ProposalOption } from './proposals/proposal-option.entity';
 import { ProposalReaction } from './proposals/proposal-reaction.entity';
@@ -85,6 +86,7 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
     ApiKeysModule,
     RedisModule,
     JobsModule,
+    ScimModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
