@@ -368,4 +368,4 @@ These items apply across all phases and should be maintained continuously.
 - [x] **Changelog** — maintain a `CHANGELOG.md` updated with every release. Use conventional commit format.
 - [x] **Dependency updates** — monthly Dependabot PR reviews. Keep `@simplewebauthn`, ElectricSQL, and TanStack packages current — they move fast.
 - [x] **Security headers** — add `helmet` to the NestJS app for CSP, HSTS, X-Frame-Options etc. Review and tighten the CSP allowlist regularly.
-- [ ] **Load testing** — before any public launch, run k6 load tests against the API simulating concurrent voting on a high-traffic proposal.
+- [x] **Load testing** — before any public launch, run k6 load tests against the API simulating concurrent voting on a high-traffic proposal.
