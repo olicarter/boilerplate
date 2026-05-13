@@ -112,6 +112,10 @@ export function AdminPage() {
 
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState<string>(org.discord_webhook_url ?? '');
   const [savingDiscord, setSavingDiscord] = useState(false);
+
+  const [emailFromName, setEmailFromName] = useState<string>(org.email_from_name ?? '');
+  const [emailFromAddress, setEmailFromAddress] = useState<string>(org.email_from_address ?? '');
+  const [savingEmailFrom, setSavingEmailFrom] = useState(false);
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
@@ -1333,6 +1337,54 @@ export function AdminPage() {
               Remove
             </Button>
           )}
+        </form>
+      </section>
+
+      {/* Email white-labelling */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Email sender</h3>
+        <p className={styles.sectionHint}>Customise the "From" name and address used for notification emails sent from this organisation. Leave blank to use the Ripple defaults.</p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSavingEmailFrom(true);
+            try {
+              await orgsApi.update(org.slug, {
+                email_from_name: emailFromName.trim() || null,
+                email_from_address: emailFromAddress.trim() || null,
+              });
+              addToast('Email sender settings saved', 'success');
+            } catch {
+              addToast('Failed to save email sender settings', 'error');
+            } finally {
+              setSavingEmailFrom(false);
+            }
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxWidth: 400 }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>Sender name</label>
+            <input
+              type="text"
+              value={emailFromName}
+              onChange={(e) => setEmailFromName(e.target.value)}
+              placeholder="Acme Governance"
+              style={{ padding: '0 var(--space-3)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>Sender address</label>
+            <input
+              type="email"
+              value={emailFromAddress}
+              onChange={(e) => setEmailFromAddress(e.target.value)}
+              placeholder="governance@example.com"
+              style={{ padding: '0 var(--space-3)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+            />
+          </div>
+          <div>
+            <Button type="submit" size="sm" disabled={savingEmailFrom}>{savingEmailFrom ? 'Saving…' : 'Save'}</Button>
+          </div>
         </form>
       </section>
 

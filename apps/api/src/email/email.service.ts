@@ -49,13 +49,13 @@ export class EmailService {
     }
   }
 
-  async send(opts: { to: string; subject: string; html: string; text?: string }): Promise<void> {
+  async send(opts: { to: string; subject: string; html: string; text?: string; from?: string }): Promise<void> {
     if (!this.enabled || !this.resend) {
       this.logger.log(`[EMAIL SKIPPED] to=${opts.to} subject="${opts.subject}"`);
       return;
     }
     const { error } = await this.resend.emails.send({
-      from: this.from,
+      from: opts.from ?? this.from,
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
@@ -65,6 +65,11 @@ export class EmailService {
       this.logger.error(`Failed to send email to ${opts.to}: ${error.message}`);
       throw new Error(`Email send failed: ${error.message}`);
     }
+  }
+
+  buildFrom(name?: string | null, address?: string | null): string | undefined {
+    if (!address) return undefined;
+    return name ? `${name} <${address}>` : address;
   }
 
   async sendWelcome(to: string, name: string, loginUrl: string): Promise<void> {
@@ -129,9 +134,9 @@ export class EmailService {
     });
   }
 
-  async sendProposalOpen(to: string, proposalTitle: string, proposalUrl: string): Promise<void> {
+  async sendProposalOpen(to: string, proposalTitle: string, proposalUrl: string, from?: string): Promise<void> {
     await this.send({
-      to,
+      to, from,
       subject: `New proposal: ${proposalTitle}`,
       html: layout(`
         <p>A new proposal is open for voting in your organisation:</p>
@@ -143,12 +148,12 @@ export class EmailService {
     });
   }
 
-  async sendVoteReminder(to: string, proposalTitle: string, proposalUrl: string, closesAt: Date | null): Promise<void> {
+  async sendVoteReminder(to: string, proposalTitle: string, proposalUrl: string, closesAt: Date | null, from?: string): Promise<void> {
     const deadline = closesAt
       ? ` Voting closes on ${closesAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.`
       : '';
     await this.send({
-      to,
+      to, from,
       subject: `Reminder: vote on "${proposalTitle}"`,
       html: layout(`
         <p>You haven't voted on this proposal yet:</p>
@@ -160,9 +165,9 @@ export class EmailService {
     });
   }
 
-  async sendDelegateVoted(to: string, delegateName: string, proposalTitle: string, choice: string, proposalUrl: string): Promise<void> {
+  async sendDelegateVoted(to: string, delegateName: string, proposalTitle: string, choice: string, proposalUrl: string, from?: string): Promise<void> {
     await this.send({
-      to,
+      to, from,
       subject: `Your delegate voted on "${proposalTitle}"`,
       html: layout(`
         <p><strong>${delegateName}</strong>, who you've delegated your vote to, voted <strong>${choice}</strong> on:</p>
@@ -174,9 +179,9 @@ export class EmailService {
     });
   }
 
-  async sendProposalClosed(to: string, proposalTitle: string, outcome: string, proposalUrl: string, unsubscribeUrl?: string): Promise<void> {
+  async sendProposalClosed(to: string, proposalTitle: string, outcome: string, proposalUrl: string, unsubscribeUrl?: string, from?: string): Promise<void> {
     await this.send({
-      to,
+      to, from,
       subject: `Result: ${proposalTitle}`,
       html: layout(`
         <p>The following proposal has closed:</p>

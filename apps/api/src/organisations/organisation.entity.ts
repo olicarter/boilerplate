@@ -107,6 +107,12 @@ export class Organisation {
   @Column({ name: 'credits_allocated_at', type: 'timestamptz', nullable: true, default: null })
   credits_allocated_at!: Date | null;
 
+  @Column({ name: 'email_from_name', type: 'text', nullable: true, default: null })
+  email_from_name!: string | null;
+
+  @Column({ name: 'email_from_address', type: 'text', nullable: true, default: null })
+  email_from_address!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

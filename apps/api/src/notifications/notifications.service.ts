@@ -33,25 +33,31 @@ export class NotificationsService {
       const proposalTitle = String(metadata.proposalTitle ?? metadata.title ?? '');
 
       let orgSlug = String(metadata.orgSlug ?? '');
-      if (!orgSlug && orgId) {
-        const rows: { slug: string }[] = await this.dataSource.query(`SELECT slug FROM organisations WHERE id = $1`, [orgId]);
-        orgSlug = rows[0]?.slug ?? '';
+      let orgFromName: string | null = null;
+      let orgFromAddress: string | null = null;
+      if (orgId) {
+        const rows: { slug: string; email_from_name: string | null; email_from_address: string | null }[] =
+          await this.dataSource.query(`SELECT slug, email_from_name, email_from_address FROM organisations WHERE id = $1`, [orgId]);
+        if (!orgSlug) orgSlug = rows[0]?.slug ?? '';
+        orgFromName = rows[0]?.email_from_name ?? null;
+        orgFromAddress = rows[0]?.email_from_address ?? null;
       }
 
+      const from = this.emailService.buildFrom(orgFromName, orgFromAddress);
       const proposalId = String(targetId ?? metadata.proposalId ?? '');
       const url = this.proposalUrl(orgSlug, proposalId);
 
       if (type === 'proposal.opened') {
-        await this.emailService.sendProposalOpen(userEmail, proposalTitle, url);
+        await this.emailService.sendProposalOpen(userEmail, proposalTitle, url, from);
       } else if (type === 'proposal.closed') {
         const outcome = String(metadata.outcome ?? 'closed');
-        await this.emailService.sendProposalClosed(userEmail, proposalTitle, outcome, url);
+        await this.emailService.sendProposalClosed(userEmail, proposalTitle, outcome, url, undefined, from);
       } else if (type === 'delegate.voted') {
         const delegateName = String(metadata.delegateName ?? metadata.actorName ?? 'Your delegate');
         const choice = String(metadata.choice ?? '');
-        await this.emailService.sendDelegateVoted(userEmail, delegateName, proposalTitle, choice, url);
+        await this.emailService.sendDelegateVoted(userEmail, delegateName, proposalTitle, choice, url, from);
       } else if (type === 'proposal.vote_reminder') {
-        await this.emailService.sendVoteReminder(userEmail, proposalTitle, url, null);
+        await this.emailService.sendVoteReminder(userEmail, proposalTitle, url, null, from);
       }
     } catch { /* email failures are non-critical */ }
   }

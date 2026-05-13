@@ -98,6 +98,8 @@ export interface Organisation {
   quadratic_credits: number | null;
   credit_period_days: number | null;
   credits_allocated_at: string | null;
+  email_from_name: string | null;
+  email_from_address: string | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -270,7 +272,7 @@ export const orgsApi = {
   get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
   create: (data: { name: string; slug?: string; description?: string }) =>
     request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
-  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'weight_mode' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days'>>) =>
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'weight_mode' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days' | 'email_from_name' | 'email_from_address'>>) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
   transferOwnership: (slug: string, toUserId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
