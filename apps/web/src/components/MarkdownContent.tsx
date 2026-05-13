@@ -3,6 +3,13 @@ import DOMPurify from 'dompurify';
 
 marked.setOptions({ breaks: true });
 
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'IMG') {
+    node.setAttribute('loading', 'lazy');
+    node.setAttribute('decoding', 'async');
+  }
+});
+
 const proseStyle: React.CSSProperties = {
   fontSize: 14,
   lineHeight: 1.7,

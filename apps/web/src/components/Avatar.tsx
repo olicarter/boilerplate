@@ -33,6 +33,8 @@ export function Avatar({ name, avatarUrl, size = 28 }: Props) {
       <img
         src={avatarUrl}
         alt={name}
+        loading="lazy"
+        decoding="async"
         style={{ ...style, objectFit: 'cover' }}
       />
     );

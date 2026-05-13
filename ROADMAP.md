@@ -234,11 +234,11 @@ SLACK_SIGNING_SECRET=
 > The difference between a tool people tolerate and one they enjoy.
 
 ### Design system
-- [ ] **Design tokens** — replace inline `style` objects with CSS custom properties (colour, spacing, radius, shadow tokens). This is the prerequisite for all visual work below.
-- [ ] **Component library** — extract Button, Badge, Card, Input, Select, Modal, Toast, Skeleton into reusable components with consistent props. Stop copy-pasting inline styles.
+- [x] **Design tokens** — replace inline `style` objects with CSS custom properties (colour, spacing, radius, shadow tokens). This is the prerequisite for all visual work below.
+- [x] **Component library** — extract Button, Badge, Card, Input, Select, Modal, Toast, Skeleton into reusable components with consistent props. Stop copy-pasting inline styles.
 - [x] **Dark mode** — use `prefers-color-scheme` media query + a manual toggle stored in `localStorage`. All tokens have dark variants.
-- [ ] **Typography system** — consistent type scale (rem-based), line heights, and weight usage. Replace ad hoc `fontSize: 13` everywhere.
-- [ ] **Illustration set** — a small set of consistent SVG illustrations for empty states, error pages, onboarding steps.
+- [x] **Typography system** — consistent type scale (rem-based), line heights, and weight usage. Replace ad hoc `fontSize: 13` everywhere.
+- [x] **Illustration set** — a small set of consistent SVG illustrations for empty states, error pages, onboarding steps.
 
 ### Accessibility
 - [x] **WCAG 2.1 AA audit** — run axe-core against all pages, fix all critical issues: colour contrast, focus ring visibility, skip-to-content link, landmark roles.
@@ -249,7 +249,7 @@ SLACK_SIGNING_SECRET=
 ### Performance
 - [x] **Virtualised proposal list** — use a virtual list (e.g. TanStack Virtual) for the proposals page when there are hundreds of proposals, avoiding DOM bloat.
 - [x] **Optimistic updates** — votes and delegations should feel instant. TanStack DB optimistic mutations are already partially there; audit and fix any cases where the UI waits for server confirmation before updating.
-- [ ] **Image optimisation** — avatar images served via a CDN with responsive sizes. Lazy-loaded.
+- [x] **Image optimisation** — avatar images served via a CDN with responsive sizes. Lazy-loaded.
 - [x] **Bundle analysis** — run `vite-bundle-visualizer`, identify and eliminate large unused dependencies.
 
 ### Internationalisation
