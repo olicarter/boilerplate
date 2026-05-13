@@ -321,9 +321,9 @@ SLACK_SIGNING_SECRET=
 > For larger organisations with stricter requirements.
 
 ### Single sign-on
-- [ ] **SAML 2.0 / OIDC** — allow enterprise customers to connect their Identity Provider (Okta, Azure AD, Google Workspace). Users sign in via SSO and are automatically provisioned to the correct org.
+- [x] **SAML 2.0 / OIDC** — allow enterprise customers to connect their Identity Provider (Okta, Azure AD, Google Workspace). Users sign in via SSO and are automatically provisioned to the correct org.
 - [ ] **SCIM provisioning** — automatically sync membership from the IdP: when an employee is offboarded from Okta, they're removed from Ripple.
-- [ ] **Enforce SSO** — org setting to require SSO (disable passkey/magic-link login for that org's members).
+- [x] **Enforce SSO** — org setting to require SSO (disable passkey/magic-link login for that org's members).
 
 ### Compliance
 - [x] **GDPR data export** — one-click export of all personal data for a user (profile, votes, delegations, comments, audit log entries). Returns a JSON archive.
@@ -363,7 +363,7 @@ Features shipped that extend beyond the original spec:
 
 These items apply across all phases and should be maintained continuously.
 
-- [ ] **Test coverage** — maintain Playwright e2e tests for every new user-facing feature. Target: no feature ships without at least a happy-path e2e test.
+- [x] **Test coverage** — maintain Playwright e2e tests for every new user-facing feature. Target: no feature ships without at least a happy-path e2e test.
 - [x] **Migration discipline** — every DB schema change ships with a TypeORM migration. No exceptions.
 - [x] **Changelog** — maintain a `CHANGELOG.md` updated with every release. Use conventional commit format.
 - [x] **Dependency updates** — monthly Dependabot PR reviews. Keep `@simplewebauthn`, ElectricSQL, and TanStack packages current — they move fast.

@@ -64,8 +64,55 @@ function useIsMobile() {
   return isMobile;
 }
 
+function SsoSignInForm({ onBack }: { onBack: () => void }) {
+  const [orgSlug, setOrgSlug] = useState('');
+  const [error, setError] = useState('');
+
+  function handleSso(e: React.FormEvent) {
+    e.preventDefault();
+    const slug = orgSlug.trim();
+    if (!slug) { setError('Enter your organisation slug'); return; }
+    const apiBase = import.meta.env.VITE_API_URL ?? '/api';
+    window.location.href = `${apiBase}/auth/sso/${encodeURIComponent(slug)}`;
+  }
+
+  return (
+    <form onSubmit={handleSso} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+      <div>
+        <label htmlFor="sso-slug" style={{ display: 'block', marginBottom: 'var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--color-fg-muted)' }}>Organisation slug</label>
+        <input
+          id="sso-slug"
+          type="text"
+          value={orgSlug}
+          onChange={(e) => setOrgSlug(e.target.value)}
+          required
+          autoFocus
+          placeholder="my-company"
+          style={{ width: '100%', height: 32, padding: '0 var(--space-3)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', border: 'var(--border)', borderRadius: 'var(--radius-sm)', outline: 'none', color: 'var(--color-fg)' }}
+        />
+      </div>
+      {error && <p style={{ fontSize: 'var(--text-sm)', color: 'red', margin: 0 }}>{error}</p>}
+      <button
+        type="submit"
+        style={{ width: '100%', height: 36, background: 'var(--color-accent)', color: 'var(--color-accent-fg)', border: 'none', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-medium)', cursor: 'pointer' }}
+      >
+        Continue with SSO
+      </button>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: 0 }}>
+        <button
+          type="button"
+          onClick={onBack}
+          style={{ background: 'none', border: 'none', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', cursor: 'pointer', padding: 0, fontWeight: 'var(--weight-medium)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+        >
+          ← Back to sign in
+        </button>
+      </p>
+    </form>
+  );
+}
+
 function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDismiss?: () => void }) {
-  const [mode, setMode] = useState<'login' | 'register' | 'magic'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'magic' | 'sso'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [magicSent, setMagicSent] = useState(false);
@@ -159,10 +206,10 @@ function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDi
             Ripple
           </div>
           <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-1)' }}>
-            {mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Email sign-in'}
+            {mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : mode === 'sso' ? 'Sign in with SSO' : 'Email sign-in'}
           </h1>
           <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)' }}>
-            {mode === 'login' ? 'Use your passkey to continue.' : mode === 'register' ? 'Register with a passkey.' : 'We\'ll send a sign-in link to your email.'}
+            {mode === 'login' ? 'Use your passkey to continue.' : mode === 'register' ? 'Register with a passkey.' : mode === 'sso' ? 'Enter your organisation slug to sign in via your Identity Provider.' : 'We\'ll send a sign-in link to your email.'}
           </p>
         </div>
 
@@ -198,7 +245,7 @@ function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDi
                 Register
               </button>
             </p>
-            <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: 0 }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: '0 0 var(--space-2)' }}>
               No passkey?{' '}
               <button
                 onClick={() => { setMode('magic'); setError(''); }}
@@ -207,7 +254,18 @@ function AuthPanel({ onLogin, onDismiss }: { onLogin: (user: User) => void; onDi
                 Sign in with email
               </button>
             </p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-fg-muted)', margin: 0 }}>
+              Using corporate SSO?{' '}
+              <button
+                onClick={() => { setMode('sso'); setError(''); }}
+                style={{ background: 'none', border: 'none', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-base)', cursor: 'pointer', padding: 0, fontWeight: 'var(--weight-medium)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+              >
+                Sign in with SSO
+              </button>
+            </p>
           </>
+        ) : mode === 'sso' ? (
+          <SsoSignInForm onBack={() => { setMode('login'); setError(''); }} />
         ) : mode === 'magic' ? (
           magicSent ? (
             <div>

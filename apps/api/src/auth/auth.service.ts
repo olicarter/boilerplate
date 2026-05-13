@@ -365,4 +365,18 @@ export class AuthService {
 
     return { ...user, org: { id: TEST_ORG_ID, slug: TEST_ORG_SLUG, name: 'Ripple Test' } };
   }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepo.findOneBy({ email: email.toLowerCase() });
+  }
+
+  async createUserFromSso(data: { email: string; name: string; ssoSub: string }): Promise<User> {
+    const user = this.userRepo.create({
+      id: randomUUID(),
+      email: data.email.toLowerCase(),
+      name: data.name,
+      email_verified: true,
+    });
+    return this.userRepo.save(user);
+  }
 }

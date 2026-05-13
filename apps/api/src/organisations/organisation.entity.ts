@@ -116,6 +116,18 @@ export class Organisation {
   @Column({ name: 'boost_threshold', type: 'int', nullable: true, default: null })
   boost_threshold!: number | null;
 
+  @Column({ name: 'oidc_issuer', type: 'text', nullable: true, default: null })
+  oidc_issuer!: string | null;
+
+  @Column({ name: 'oidc_client_id', type: 'text', nullable: true, default: null })
+  oidc_client_id!: string | null;
+
+  @Column({ name: 'oidc_client_secret', type: 'text', nullable: true, default: null })
+  oidc_client_secret!: string | null;
+
+  @Column({ name: 'sso_required', type: 'boolean', default: false })
+  sso_required!: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

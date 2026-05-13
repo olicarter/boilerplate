@@ -122,6 +122,13 @@ export function AdminPage() {
   const [emailFromName, setEmailFromName] = useState<string>(org.email_from_name ?? '');
   const [emailFromAddress, setEmailFromAddress] = useState<string>(org.email_from_address ?? '');
   const [savingEmailFrom, setSavingEmailFrom] = useState(false);
+
+  const [oidcIssuer, setOidcIssuer] = useState<string>(org.oidc_issuer ?? '');
+  const [oidcClientId, setOidcClientId] = useState<string>(org.oidc_client_id ?? '');
+  const [oidcClientSecret, setOidcClientSecret] = useState<string>('');
+  const [ssoRequired, setSsoRequired] = useState<boolean>(org.sso_required ?? false);
+  const [savingOidc, setSavingOidc] = useState(false);
+
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
@@ -1449,6 +1456,111 @@ export function AdminPage() {
             <Button type="submit" size="sm" disabled={savingEmailFrom}>{savingEmailFrom ? 'Saving…' : 'Save'}</Button>
           </div>
         </form>
+      </section>
+
+      {/* SSO / OIDC */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Single Sign-On (OIDC)</h3>
+        <p className={styles.sectionHint}>
+          Connect an OpenID Connect Identity Provider (Google Workspace, Okta, Azure AD) so members can sign in with their corporate credentials.
+          Members are automatically provisioned to this organisation on first sign-in.
+        </p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSavingOidc(true);
+            try {
+              await orgsApi.update(org.slug, {
+                oidc_issuer: oidcIssuer.trim() || null,
+                oidc_client_id: oidcClientId.trim() || null,
+                oidc_client_secret: oidcClientSecret.trim() || null,
+                sso_required: ssoRequired,
+              } as Parameters<typeof orgsApi.update>[1]);
+              addToast('SSO settings saved', 'success');
+              setOidcClientSecret('');
+            } catch {
+              addToast('Failed to save SSO settings', 'error');
+            } finally {
+              setSavingOidc(false);
+            }
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxWidth: 480 }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>Issuer URL</label>
+            <input
+              type="url"
+              value={oidcIssuer}
+              onChange={(e) => setOidcIssuer(e.target.value)}
+              placeholder="https://accounts.google.com"
+              style={{ padding: '0 var(--space-3)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>Client ID</label>
+            <input
+              type="text"
+              value={oidcClientId}
+              onChange={(e) => setOidcClientId(e.target.value)}
+              placeholder="your-client-id"
+              style={{ padding: '0 var(--space-3)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <label style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>Client secret</label>
+            <input
+              type="password"
+              value={oidcClientSecret}
+              onChange={(e) => setOidcClientSecret(e.target.value)}
+              placeholder={org.oidc_client_id ? '(leave blank to keep existing)' : 'your-client-secret'}
+              style={{ padding: '0 var(--space-3)', height: 32, border: 'var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-fg)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)' }}
+            />
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={ssoRequired}
+              onChange={(e) => setSsoRequired(e.target.checked)}
+            />
+            Require SSO — members must sign in via this provider (disables passkey/magic-link for org members)
+          </label>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Button type="submit" size="sm" disabled={savingOidc}>{savingOidc ? 'Saving…' : 'Save'}</Button>
+            {org.oidc_issuer && (
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-fg-muted)' }}>
+                SSO login: <code style={{ background: 'var(--color-bg-subtle)', padding: '1px 4px', borderRadius: 3 }}>/api/auth/sso/{org.slug}</code>
+              </span>
+            )}
+          </div>
+        </form>
+        {org.oidc_client_id && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={savingOidc}
+            style={{ marginTop: 'var(--space-2)' }}
+            onClick={async () => {
+              setSavingOidc(true);
+              try {
+                await orgsApi.update(org.slug, {
+                  oidc_issuer: null, oidc_client_id: null, oidc_client_secret: null, sso_required: false,
+                } as Parameters<typeof orgsApi.update>[1]);
+                setOidcIssuer('');
+                setOidcClientId('');
+                setOidcClientSecret('');
+                setSsoRequired(false);
+                addToast('SSO configuration removed', 'info');
+              } catch {
+                addToast('Failed to remove SSO configuration', 'error');
+              } finally {
+                setSavingOidc(false);
+              }
+            }}
+          >
+            Remove SSO configuration
+          </Button>
+        )}
       </section>
 
       {/* Billing */}

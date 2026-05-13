@@ -7,6 +7,9 @@ import type { Request } from 'express';
 declare module 'express-session' {
   interface Session {
     userId?: string;
+    oidcState?: string;
+    oidcCodeVerifier?: string;
+    oidcOrgSlug?: string;
   }
 }
 
