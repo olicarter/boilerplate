@@ -22,6 +22,21 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 
+type OrgType = 'company' | 'cooperative' | 'community' | 'dao' | 'nonprofit' | 'other';
+
+function defaultFeaturesForType(type: OrgType | null | undefined) {
+  const all = { delegation: true, advanced_voting: true, argumentation: true, proposal_queue: true, sentiment: true };
+  const presets: Record<OrgType, typeof all> = {
+    company:     { delegation: false, advanced_voting: false, argumentation: true,  proposal_queue: false, sentiment: true  },
+    cooperative: { delegation: true,  advanced_voting: false, argumentation: true,  proposal_queue: false, sentiment: true  },
+    community:   { delegation: false, advanced_voting: false, argumentation: false, proposal_queue: false, sentiment: false },
+    dao:         { delegation: true,  advanced_voting: true,  argumentation: true,  proposal_queue: true,  sentiment: true  },
+    nonprofit:   { delegation: false, advanced_voting: false, argumentation: true,  proposal_queue: false, sentiment: false },
+    other:       all,
+  };
+  return type ? (presets[type] ?? all) : all;
+}
+
 function toSlug(value: string): string {
   return value
     .toLowerCase()
@@ -79,7 +94,7 @@ export class OrganisationsService {
   }
 
   async create(
-    data: { name: string; slug?: string; description?: string },
+    data: { name: string; slug?: string; description?: string; org_type?: string; features?: Record<string, boolean> },
     creatorId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const slug = data.slug ? toSlug(data.slug) : toSlug(data.name);
@@ -93,6 +108,8 @@ export class OrganisationsService {
         name: data.name.trim(),
         slug,
         description: data.description?.trim() ?? '',
+        org_type: data.org_type ?? null,
+        features: data.features ?? defaultFeaturesForType(data.org_type as OrgType | null),
       });
       const saved = await manager.save(org);
 
@@ -112,7 +129,7 @@ export class OrganisationsService {
 
   async update(
     slug: string,
-    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days' | 'email_from_name' | 'email_from_address' | 'boost_threshold' | 'oidc_issuer' | 'oidc_client_id' | 'oidc_client_secret' | 'sso_required'>>,
+    data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days' | 'email_from_name' | 'email_from_address' | 'boost_threshold' | 'oidc_issuer' | 'oidc_client_id' | 'oidc_client_secret' | 'sso_required' | 'org_type' | 'features'>>,
     userId: string,
   ): Promise<{ item: Organisation; txid: number }> {
     const org = await this.findBySlug(slug);
@@ -147,6 +164,8 @@ export class OrganisationsService {
       if (data.oidc_client_id !== undefined) updates.oidc_client_id = data.oidc_client_id;
       if (data.oidc_client_secret !== undefined) updates.oidc_client_secret = data.oidc_client_secret;
       if (data.sso_required !== undefined) updates.sso_required = data.sso_required;
+      if (data.org_type !== undefined) updates.org_type = data.org_type;
+      if (data.features !== undefined) updates.features = data.features;
       await manager.update(Organisation, org.id, updates);
       const item = await manager.findOneByOrFail(Organisation, { id: org.id });
       const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);

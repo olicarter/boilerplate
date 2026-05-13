@@ -140,6 +140,18 @@ export class Organisation {
   @Column({ name: 'custom_domain_verified_at', type: 'timestamptz', nullable: true, default: null })
   custom_domain_verified_at!: Date | null;
 
+  @Column({ name: 'org_type', type: 'varchar', length: 30, nullable: true, default: null })
+  org_type!: string | null;
+
+  @Column({ name: 'features', type: 'jsonb', default: {} })
+  features!: {
+    delegation?: boolean;
+    advanced_voting?: boolean;
+    argumentation?: boolean;
+    proposal_queue?: boolean;
+    sentiment?: boolean;
+  };
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 }

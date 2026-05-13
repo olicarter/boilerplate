@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, boostsApi, predictionsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement, type PredictionMarket } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, boostsApi, predictionsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, DEFAULT_FEATURES, type OrgFeatures, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement, type PredictionMarket } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -64,6 +64,7 @@ export function ProposalDetailPage() {
   const { id } = useParams({ strict: false }) as { id: string };
   const currentUser = useCurrentUser();
   const { org, collections: { proposalsCollection, topicsCollection, votesCollection, commentsCollection, commentReactionsCollection, argumentsCollection, proposalOptionsCollection } } = useOrg();
+  const features: OrgFeatures = { ...DEFAULT_FEATURES, ...(org.features ?? {}) };
 
   const { data: allProposals } = useLiveQuery(proposalsCollection);
   const { data: allTopics } = useLiveQuery(topicsCollection);
@@ -1271,7 +1272,7 @@ export function ProposalDetailPage() {
       )}
 
       {/* Boost section */}
-      {(org as { boost_threshold?: number | null }).boost_threshold != null && (isDraft || isOpen) && currentUser && myMembership && (
+      {features.proposal_queue && (org as { boost_threshold?: number | null }).boost_threshold != null && (isDraft || isOpen) && currentUser && myMembership && (
         <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.75rem 1.25rem', marginBottom: '1.5rem', background: '#f9f9f9' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
             <div>
@@ -1338,7 +1339,7 @@ export function ProposalDetailPage() {
       )}
 
       {/* Sentiment poll */}
-      {predictionMarket && currentUser && myMembership && !isDiscussion && (
+      {features.sentiment && predictionMarket && currentUser && myMembership && !isDiscussion && (
         <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.75rem 1.25rem', marginBottom: '1.5rem', background: '#f9f9f9' }}>
           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: '0.5rem' }}>Community Sentiment</div>
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem', fontSize: 13 }}>
@@ -1940,7 +1941,7 @@ export function ProposalDetailPage() {
           </h3>
 
           {/* Delegation override notice */}
-          {currentUser && !myVote && delegationChain && (
+          {features.delegation && currentUser && !myVote && delegationChain && (
             <div style={{
               background: '#f0f7ff',
               border: '1px solid #c3d6fb',
@@ -1985,7 +1986,7 @@ export function ProposalDetailPage() {
             </div>
           )}
 
-          {delegationSuggestions.length > 0 && (
+          {features.delegation && delegationSuggestions.length > 0 && (
             <div style={{ background: '#f5f9ff', border: '1px solid #c3d6fb', borderRadius: 4, padding: '0.6rem 0.75rem', marginBottom: '0.75rem', fontSize: 13 }}>
               <p style={{ margin: '0 0 0.4rem', color: '#555' }}>Suggested delegates (high participation):</p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -2375,7 +2376,7 @@ export function ProposalDetailPage() {
       )}
 
       {/* Arguments */}
-      <div style={{ marginTop: '2.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+      {features.argumentation && <div style={{ marginTop: '2.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
         <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Arguments ({proposalArguments.length})
         </h3>
@@ -2450,7 +2451,7 @@ export function ProposalDetailPage() {
             </div>
           </form>
         )}
-      </div>
+      </div>}
 
       {/* Related proposals (links) */}
       {(links.length > 0 || (currentUser && myMembership)) && (

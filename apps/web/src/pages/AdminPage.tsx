@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { useOrg } from '../OrgContext';
 import { useCurrentUser } from '../context';
 import { usersCollection, membershipsCollection } from '../collections';
-import { orgsApi, billingApi, slackApi, webhooksApi, apiKeysApi, proposalsApi, topicsApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint, type ApiKeyRecord, type Topic } from '../api';
+import { orgsApi, billingApi, slackApi, webhooksApi, apiKeysApi, proposalsApi, topicsApi, type AuditLogEntry, type Membership, type User, type Organisation, type OrgAnalytics, type WebhookEndpoint, type ApiKeyRecord, type Topic, type OrgType, type OrgFeatures, DEFAULT_FEATURES } from '../api';
 import { formatDate, formatDatetime } from '../utils/format';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { useToast } from '../components/Toast';
@@ -18,6 +18,14 @@ const ROLE_LABELS: Record<CreationRole, string> = {
   moderator: 'Moderator and above',
   admin: 'Admin only',
 };
+
+const FEATURE_DEFS = [
+  { key: 'delegation',      label: 'Delegation',       desc: 'Members can delegate their vote to a trusted representative.' },
+  { key: 'advanced_voting', label: 'Advanced voting',  desc: 'Weighted, quadratic, ranked choice, approval, and conviction voting types.' },
+  { key: 'argumentation',   label: 'Argumentation',    desc: 'For/against argument threads on each proposal.' },
+  { key: 'proposal_queue',  label: 'Proposal queue',   desc: 'Draft proposals can be boosted by members to promote them to a live vote.' },
+  { key: 'sentiment',       label: 'Sentiment poll',   desc: 'Members predict pass/fail before the vote closes as a community signal.' },
+] as const;
 
 export function AdminPage() {
   const { org, collections: { topicsCollection } } = useOrg();
@@ -68,6 +76,7 @@ export function AdminPage() {
       : '',
   );
   const [savingBoostThreshold, setSavingBoostThreshold] = useState(false);
+  const [savingFeatures, setSavingFeatures] = useState(false);
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsError, setDefaultsError] = useState('');
 
@@ -2130,6 +2139,41 @@ export function AdminPage() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Features</h3>
+        <p className={styles.sectionHint}>Control which features are visible to members. Disabled features are hidden entirely, not locked.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
+          {FEATURE_DEFS.map(({ key, label, desc }) => {
+            const enabled = (org.features ?? DEFAULT_FEATURES)[key as keyof OrgFeatures] ?? true;
+            return (
+              <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', padding: '0.5rem 0.75rem', border: '1px solid #eee', borderRadius: 4, background: enabled ? '#fafafa' : 'transparent' }}>
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={async (e) => {
+                    const newFeatures = { ...(org.features ?? DEFAULT_FEATURES), [key]: e.target.checked };
+                    setSavingFeatures(true);
+                    try {
+                      await orgsApi.update(org.slug, { features: newFeatures as OrgFeatures });
+                    } catch (err) {
+                      addToast(err instanceof Error ? err.message : 'Failed to update features', 'error');
+                    } finally {
+                      setSavingFeatures(false);
+                    }
+                  }}
+                  style={{ marginTop: 2, flexShrink: 0 }}
+                />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
+                  <div style={{ fontSize: 12, color: '#888' }}>{desc}</div>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+        {savingFeatures && <p className={styles.sectionHint} style={{ margin: 0 }}>Saving…</p>}
       </section>
 
       {/* Danger zone */}

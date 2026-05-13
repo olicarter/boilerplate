@@ -44,6 +44,33 @@ export const authApi = {
     request<User>(`/auth/magic/verify?token=${encodeURIComponent(token)}`, { method: 'POST' }),
 };
 
+export type OrgType = 'company' | 'cooperative' | 'community' | 'dao' | 'nonprofit' | 'other';
+
+export interface OrgFeatures {
+  delegation: boolean;
+  advanced_voting: boolean;
+  argumentation: boolean;
+  proposal_queue: boolean;
+  sentiment: boolean;
+}
+
+export const DEFAULT_FEATURES: OrgFeatures = {
+  delegation: true,
+  advanced_voting: true,
+  argumentation: true,
+  proposal_queue: true,
+  sentiment: true,
+};
+
+export const ORG_TYPE_FEATURES: Record<OrgType, OrgFeatures> = {
+  company:     { delegation: false, advanced_voting: false, argumentation: true,  proposal_queue: false, sentiment: true  },
+  cooperative: { delegation: true,  advanced_voting: false, argumentation: true,  proposal_queue: false, sentiment: true  },
+  community:   { delegation: false, advanced_voting: false, argumentation: false, proposal_queue: false, sentiment: false },
+  dao:         { delegation: true,  advanced_voting: true,  argumentation: true,  proposal_queue: true,  sentiment: true  },
+  nonprofit:   { delegation: false, advanced_voting: false, argumentation: true,  proposal_queue: false, sentiment: false },
+  other:       { delegation: true,  advanced_voting: true,  argumentation: true,  proposal_queue: true,  sentiment: true  },
+};
+
 export interface MutationResult<T> {
   item: T;
   txid: number;
@@ -106,6 +133,8 @@ export interface Organisation {
   sso_required: boolean;
   custom_domain: string | null;
   custom_domain_verified: boolean;
+  org_type: OrgType | null;
+  features: OrgFeatures;
   created_at: string;
   [key: string]: unknown;
 }
@@ -276,9 +305,9 @@ export const usersApi = {
 export const orgsApi = {
   list: () => request<Organisation[]>('/orgs'),
   get: (slug: string) => request<Organisation>(`/orgs/${slug}`),
-  create: (data: { name: string; slug?: string; description?: string }) =>
+  create: (data: { name: string; slug?: string; description?: string; org_type?: OrgType; features?: OrgFeatures }) =>
     request<MutationResult<Organisation>>('/orgs', { method: 'POST', body: JSON.stringify(data) }),
-  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'weight_mode' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days' | 'email_from_name' | 'email_from_address' | 'boost_threshold' | 'oidc_issuer' | 'oidc_client_id' | 'sso_required'> & { oidc_client_secret?: string | null }>) =>
+  update: (slug: string, data: Partial<Pick<Organisation, 'name' | 'description' | 'proposal_creation_role' | 'topic_creation_role' | 'default_voting_duration_days' | 'default_threshold' | 'voting_visibility' | 'default_quorum' | 'is_public' | 'veto_role' | 'min_endorsements' | 'require_member_approval' | 'weight_mode' | 'proposal_templates' | 'allowed_email_domains' | 'primary_color' | 'logo_url' | 'data_retention_months' | 'discord_webhook_url' | 'quadratic_credits' | 'credit_period_days' | 'email_from_name' | 'email_from_address' | 'boost_threshold' | 'oidc_issuer' | 'oidc_client_id' | 'sso_required' | 'org_type' | 'features'> & { oidc_client_secret?: string | null }>) =>
     request<MutationResult<Organisation>>(`/orgs/${slug}`, { method: 'PATCH', body: JSON.stringify(data) }),
   transferOwnership: (slug: string, toUserId: string) =>
     request<{ txid: number }>(`/orgs/${slug}/transfer-ownership`, { method: 'POST', body: JSON.stringify({ to_user_id: toUserId }) }),
