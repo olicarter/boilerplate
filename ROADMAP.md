@@ -333,7 +333,7 @@ SLACK_SIGNING_SECRET=
 
 ### Scalability
 - [ ] **Horizontal API scaling** — move in-memory challenge store (WebAuthn) to Redis. Move session store to Redis. Both are needed before running more than one API instance.
-- [ ] **Background job queue** — use BullMQ (backed by Redis) for: sending emails, auto-closing expired proposals, computing complex tallies, sending webhooks. Currently these happen synchronously or not at all.
+- [x] **Background job queue** — use BullMQ (backed by Redis) for: sending emails, auto-closing expired proposals, computing complex tallies, sending webhooks. Currently these happen synchronously or not at all.
 - [ ] **Database connection pooling** — add PgBouncer in front of Postgres. Required at scale.
 - [ ] **Read replicas** — point Electric SQL at a read replica so the sync load doesn't compete with write throughput on the primary.
 

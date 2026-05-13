@@ -9,6 +9,7 @@
     "seed": "ts-node src/db/seed.ts"
   },
   "dependencies": {
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11",
     "@nestjs/core": "^11",
     "@nestjs/platform-express": "^11",
@@ -21,6 +22,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express-session": "^1.18.2",
     "@types/helmet": "^0.0.48",
+    "bullmq": "^5.76.8",
     "cookie-parser": "^1.4.7",
     "express-session": "^1.19.0",
     "helmet": "^8.1.0",

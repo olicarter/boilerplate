@@ -39,6 +39,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { WebhookEndpoint } from './webhooks/webhook-endpoint.entity';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { ApiKey } from './api-keys/api-key.entity';
+import { JobsModule } from './jobs/jobs.module';
 import { Notification } from './notifications/notification.entity';
 import { ProposalOption } from './proposals/proposal-option.entity';
 import { ProposalReaction } from './proposals/proposal-reaction.entity';
@@ -74,6 +75,7 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
     SlackModule,
     WebhooksModule,
     ApiKeysModule,
+    JobsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
