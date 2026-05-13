@@ -45,6 +45,7 @@ import { ScimModule } from './scim/scim.module';
 import { Notification } from './notifications/notification.entity';
 import { ProposalOption } from './proposals/proposal-option.entity';
 import { ProposalReaction } from './proposals/proposal-reaction.entity';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { ProposalReaction } from './proposals/proposal-reaction.entity';
     RedisModule,
     JobsModule,
     ScimModule,
+    AiModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

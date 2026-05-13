@@ -9,7 +9,7 @@ import { useCurrentUser } from '../context';
 import { useToast } from '../components/Toast';
 import { EmptyState } from '../components/EmptyState';
 import { Button } from '../components/ui';
-import { proposalOptionsApi } from '../api';
+import { proposalOptionsApi, aiApi } from '../api';
 import type { Topic, Proposal, Vote, User, Comment, Membership } from '../api';
 import styles from './ProposalsPage.module.css';
 
@@ -132,6 +132,9 @@ export function ProposalsPage() {
   const [opensAt, setOpensAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [nlDraftInput, setNlDraftInput] = useState('');
+  const [draftingProposal, setDraftingProposal] = useState(false);
+  const [showNlDraft, setShowNlDraft] = useState(false);
 
   const myVotedProposalIds = currentUser
     ? new Set((allVotes ?? []).filter((v: Vote) => v.user_id === currentUser.id).map((v: Vote) => v.proposal_id))
@@ -338,6 +341,58 @@ export function ProposalsPage() {
               </select>
             )}
           </div>
+
+          {/* AI draft */}
+          {showNlDraft ? (
+            <div style={{ marginBottom: '1rem', padding: '0.75rem', border: '1px solid #eee', borderRadius: 6, background: '#fafafa' }}>
+              <label style={{ fontSize: 13, color: '#555', display: 'block', marginBottom: '0.4rem' }}>Describe what you want to propose</label>
+              <textarea
+                value={nlDraftInput}
+                onChange={(e) => setNlDraftInput(e.target.value)}
+                placeholder="e.g. I want to propose we reduce the working week to 4 days for all staff, maintaining current pay..."
+                rows={3}
+                style={{ width: '100%', padding: '0.4rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical', marginBottom: '0.5rem' }}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  disabled={draftingProposal || !nlDraftInput.trim()}
+                  onClick={async () => {
+                    setDraftingProposal(true);
+                    try {
+                      const draft = await aiApi.draftProposal(nlDraftInput);
+                      setTitle(draft.title);
+                      setDescription(draft.description);
+                      setProposalType(draft.suggested_type);
+                      setThreshold(draft.suggested_threshold);
+                      setShowNlDraft(false);
+                      setNlDraftInput('');
+                    } catch (err) {
+                      addToast(err instanceof Error ? err.message : 'Failed to draft proposal', 'error');
+                    } finally {
+                      setDraftingProposal(false);
+                    }
+                  }}
+                  style={{ fontSize: 12, padding: '0.3rem 0.8rem', background: '#111', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                >
+                  {draftingProposal ? 'Drafting…' : 'Draft proposal'}
+                </button>
+                <button type="button" onClick={() => { setShowNlDraft(false); setNlDraftInput(''); }} style={{ fontSize: 12, padding: '0.3rem 0.8rem', border: '1px solid #ddd', borderRadius: 4, background: 'transparent', cursor: 'pointer', color: '#888' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setShowNlDraft(true)}
+                style={{ fontSize: 12, padding: '0.2rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, background: 'transparent', cursor: 'pointer', color: '#888' }}
+              >
+                &#10022; Draft with AI
+              </button>
+            </div>
+          )}
 
           <div className={styles.formField} style={{ marginBottom: 'var(--space-3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>

@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, boostsApi, predictionsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, DEFAULT_FEATURES, type OrgFeatures, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement, type PredictionMarket } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, boostsApi, predictionsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, aiApi, DEFAULT_FEATURES, type OrgFeatures, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement, type PredictionMarket, type ArgumentCluster, type InterpretedVote } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -149,6 +149,16 @@ export function ProposalDetailPage() {
   const [predictionMarket, setPredictionMarket] = useState<PredictionMarket | null>(null);
   const [predicting, setPredicting] = useState(false);
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summarising, setSummarising] = useState(false);
+  const [plainLanguage, setPlainLanguage] = useState<string | null>(null);
+  const [rewriting, setRewriting] = useState(false);
+  const [showPlainLanguage, setShowPlainLanguage] = useState(false);
+  const [argumentClusters, setArgumentClusters] = useState<ArgumentCluster[] | null>(null);
+  const [clustering, setClustering] = useState(false);
+  const [nlVoteInput, setNlVoteInput] = useState('');
+  const [interpretingVote, setInterpretingVote] = useState(false);
+  const [interpretedVote, setInterpretedVote] = useState<InterpretedVote | null>(null);
   const [replyBody, setReplyBody] = useState('');
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
@@ -1043,9 +1053,76 @@ export function ProposalDetailPage() {
               </div>
             </div>
           )}
+          {/* AI summary */}
+          {!isDiscussion && currentUser && (
+            <div style={{ marginBottom: '1rem' }}>
+              {!summary ? (
+                <button
+                  type="button"
+                  disabled={summarising}
+                  onClick={async () => {
+                    setSummarising(true);
+                    try {
+                      const r = await aiApi.summarise(id);
+                      setSummary(r.summary);
+                    } catch (err) {
+                      addToast(err instanceof Error ? err.message : 'Failed to summarise', 'error');
+                    } finally {
+                      setSummarising(false);
+                    }
+                  }}
+                  style={{ fontSize: 12, padding: '0.2rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, background: 'transparent', cursor: 'pointer', color: '#888' }}
+                >
+                  {summarising ? 'Summarising…' : '✦ Summarise'}
+                </button>
+              ) : (
+                <div style={{ background: '#f7f7f7', border: '1px solid #eee', borderRadius: 6, padding: '0.75rem 1rem', fontSize: 13, color: '#444', lineHeight: 1.6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Summary</span>
+                    <button type="button" onClick={() => setSummary(null)} style={{ fontSize: 11, color: '#bbb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>&times;</button>
+                  </div>
+                  <p style={{ margin: '0.4rem 0 0' }}>{summary}</p>
+                </div>
+              )}
+            </div>
+          )}
           {proposal.description && (
             <div style={{ margin: '0 0 0.75rem' }}>
-              <MarkdownContent content={proposal.description} />
+              {currentUser && !isDiscussion && (
+                <div style={{ marginBottom: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {plainLanguage && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPlainLanguage((v) => !v)}
+                      style={{ fontSize: 11, padding: '0.15rem 0.5rem', border: '1px solid #ddd', borderRadius: 4, background: showPlainLanguage ? '#111' : 'transparent', color: showPlainLanguage ? '#fff' : '#888', cursor: 'pointer' }}
+                    >
+                      {showPlainLanguage ? 'Original' : 'Plain language'}
+                    </button>
+                  )}
+                  {!plainLanguage && (
+                    <button
+                      type="button"
+                      disabled={rewriting}
+                      onClick={async () => {
+                        setRewriting(true);
+                        try {
+                          const r = await aiApi.rewrite(id);
+                          setPlainLanguage(r.rewritten);
+                          setShowPlainLanguage(true);
+                        } catch (err) {
+                          addToast(err instanceof Error ? err.message : 'Failed to rewrite', 'error');
+                        } finally {
+                          setRewriting(false);
+                        }
+                      }}
+                      style={{ fontSize: 11, padding: '0.15rem 0.5rem', border: '1px solid #ddd', borderRadius: 4, background: 'transparent', color: '#888', cursor: 'pointer' }}
+                    >
+                      {rewriting ? 'Rewriting…' : '✦ Plain language'}
+                    </button>
+                  )}
+                </div>
+              )}
+              <MarkdownContent content={showPlainLanguage && plainLanguage ? plainLanguage : proposal.description} />
             </div>
           )}
           {versions !== null && versions.length > 0 && (
@@ -2288,6 +2365,68 @@ export function ProposalDetailPage() {
             </div>
           )}
 
+          {/* Natural language vote */}
+          {isOpen && currentUser && !myVote && (
+            <div style={{ marginTop: '1rem', borderTop: '1px solid #f0f0f0', paddingTop: '1rem' }}>
+              {!interpretedVote ? (
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!nlVoteInput.trim()) return;
+                  setInterpretingVote(true);
+                  try {
+                    const r = await aiApi.interpretVote(id, nlVoteInput);
+                    setInterpretedVote(r);
+                  } catch (err) {
+                    addToast(err instanceof Error ? err.message : 'Failed to interpret', 'error');
+                  } finally {
+                    setInterpretingVote(false);
+                  }
+                }}>
+                  <label style={{ fontSize: 12, color: '#888', display: 'block', marginBottom: '0.4rem' }}>&#10022; Or describe your vote in your own words</label>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <input
+                      type="text"
+                      value={nlVoteInput}
+                      onChange={(e) => setNlVoteInput(e.target.value)}
+                      placeholder="e.g. I think this is too expensive but the idea is good…"
+                      style={{ flex: 1, padding: '0.35rem 0.6rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+                    />
+                    <button type="submit" disabled={interpretingVote || !nlVoteInput.trim()} style={{ fontSize: 12, padding: '0.35rem 0.75rem', border: '1px solid #ddd', borderRadius: 4, background: 'transparent', cursor: 'pointer', color: '#555' }}>
+                      {interpretingVote ? '…' : '→'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div style={{ background: '#f7f7f7', border: '1px solid #eee', borderRadius: 6, padding: '0.75rem 1rem' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>AI interpreted your vote as</div>
+                  <div style={{ fontSize: 14, marginBottom: '0.5rem' }}>
+                    <strong style={{ color: interpretedVote.choice === 'yes' ? '#2d9a4e' : interpretedVote.choice === 'no' ? '#c0392b' : '#888' }}>
+                      {interpretedVote.choice.charAt(0).toUpperCase() + interpretedVote.choice.slice(1)}
+                    </strong>
+                    {interpretedVote.rationale && <span style={{ color: '#555', fontSize: 13 }}> — {interpretedVote.rationale}</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVoteReason(interpretedVote.rationale ?? '');
+                        castVote(interpretedVote.choice);
+                        setInterpretedVote(null);
+                        setNlVoteInput('');
+                      }}
+                      style={{ fontSize: 12, padding: '0.3rem 0.8rem', background: '#111', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                    >
+                      Confirm vote
+                    </button>
+                    <button type="button" onClick={() => { setInterpretedVote(null); }} style={{ fontSize: 12, padding: '0.3rem 0.8rem', border: '1px solid #ddd', borderRadius: 4, background: 'transparent', cursor: 'pointer', color: '#888' }}>
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {voteError && (
             <p style={{ color: '#d94040', fontSize: 13, margin: '0.75rem 0 0' }}>{voteError}</p>
           )}
@@ -2380,6 +2519,47 @@ export function ProposalDetailPage() {
         <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Arguments ({proposalArguments.length})
         </h3>
+        {/* Argument clustering */}
+        {currentUser && (forArguments.length + againstArguments.length >= 3) && (
+          <div style={{ marginBottom: '1rem' }}>
+            {!argumentClusters ? (
+              <button
+                type="button"
+                disabled={clustering}
+                onClick={async () => {
+                  setClustering(true);
+                  try {
+                    const r = await aiApi.clusterArguments(id);
+                    setArgumentClusters(r.clusters);
+                  } catch (err) {
+                    addToast(err instanceof Error ? err.message : 'Failed to cluster', 'error');
+                  } finally {
+                    setClustering(false);
+                  }
+                }}
+                style={{ fontSize: 12, padding: '0.2rem 0.6rem', border: '1px solid #ddd', borderRadius: 4, background: 'transparent', cursor: 'pointer', color: '#888' }}
+              >
+                {clustering ? 'Analysing…' : '✦ Find themes'}
+              </button>
+            ) : (
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Themes</span>
+                  <button type="button" onClick={() => setArgumentClusters(null)} style={{ fontSize: 11, color: '#bbb', background: 'none', border: 'none', cursor: 'pointer' }}>&times;</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {argumentClusters.map((c, i) => (
+                    <div key={i} style={{ border: '1px solid #eee', borderRadius: 6, padding: '0.6rem 0.9rem', background: '#fafafa' }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: '0.4rem' }}>{c.theme}</div>
+                      {c.for_points.length > 0 && <div style={{ fontSize: 12, color: '#2d9a4e', marginBottom: '0.2rem' }}>{c.for_points.map((p, j) => <div key={j}>&uarr; {p}</div>)}</div>}
+                      {c.against_points.length > 0 && <div style={{ fontSize: 12, color: '#c0392b' }}>{c.against_points.map((p, j) => <div key={j}>&darr; {p}</div>)}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
           {(['for', 'against'] as const).map((side) => {
             const items = side === 'for' ? forArguments : againstArguments;

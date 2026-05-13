@@ -792,3 +792,35 @@ export const votesApi = {
   setRankings: (proposalId: string, optionIds: string[]) =>
     request<{ txid: number }>(`/votes/proposals/${proposalId}/rankings`, { method: 'POST', body: JSON.stringify({ option_ids: optionIds }) }),
 };
+
+export interface ProposalDraft {
+  title: string;
+  description: string;
+  suggested_type: 'standard' | 'discussion' | 'multiple_choice' | 'consent' | 'temperature_check';
+  suggested_threshold: number;
+}
+
+export interface InterpretedVote {
+  choice: 'yes' | 'no' | 'abstain';
+  rationale: string;
+  confidence: number;
+}
+
+export interface ArgumentCluster {
+  theme: string;
+  for_points: string[];
+  against_points: string[];
+}
+
+export const aiApi = {
+  summarise: (proposal_id: string) =>
+    request<{ summary: string }>('/ai/summarise', { method: 'POST', body: JSON.stringify({ proposal_id }) }),
+  rewrite: (proposal_id: string) =>
+    request<{ rewritten: string }>('/ai/rewrite', { method: 'POST', body: JSON.stringify({ proposal_id }) }),
+  clusterArguments: (proposal_id: string) =>
+    request<{ clusters: ArgumentCluster[] }>('/ai/cluster-arguments', { method: 'POST', body: JSON.stringify({ proposal_id }) }),
+  draftProposal: (description: string) =>
+    request<ProposalDraft>('/ai/draft-proposal', { method: 'POST', body: JSON.stringify({ description }) }),
+  interpretVote: (proposal_id: string, input: string) =>
+    request<InterpretedVote>('/ai/interpret-vote', { method: 'POST', body: JSON.stringify({ proposal_id, input }) }),
+};

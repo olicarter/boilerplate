@@ -348,11 +348,11 @@ SLACK_SIGNING_SECRET=
 
 > Requires Anthropic API key. Items are sequenced roughly by implementation complexity and standalone value.
 
-- [ ] **Proposal summariser** — one-click TL;DR for long proposals. Shown as a collapsible banner below the title. Uses the proposal body + any linked documents as context.
-- [ ] **Plain-language rewriter** — button to rewrite a proposal in plain English, stripping legal/policy jargon. Useful for neighbourhood associations, unions, school boards where members aren't policy-literate.
-- [ ] **Argument clustering** — group semantically similar for/against comments and vote rationales into themes (e.g. "Cost concerns", "Implementation risk"). Surfaces consensus and minority views at a glance.
-- [ ] **Natural language proposal creation** — author describes what they want in plain text; the AI drafts a structured proposal (title, description, suggested vote type, suggested threshold). Author reviews and edits before publishing.
-- [ ] **Natural language voting interface** — members can type "I want to vote yes because X" and the platform interprets intent, casts the vote, and saves the rationale. Needs careful guardrails and explicit confirmation step.
+- [x] **Proposal summariser** — one-click TL;DR for long proposals. Shown as a collapsible banner below the title. Uses the proposal body + any linked documents as context.
+- [x] **Plain-language rewriter** — button to rewrite a proposal in plain English, stripping legal/policy jargon. Useful for neighbourhood associations, unions, school boards where members aren't policy-literate.
+- [x] **Argument clustering** — group semantically similar for/against comments and vote rationales into themes (e.g. "Cost concerns", "Implementation risk"). Surfaces consensus and minority views at a glance.
+- [x] **Natural language proposal creation** — author describes what they want in plain text; the AI drafts a structured proposal (title, description, suggested vote type, suggested threshold). Author reviews and edits before publishing.
+- [x] **Natural language voting interface** — members can type "I want to vote yes because X" and the platform interprets intent, casts the vote, and saves the rationale. Needs careful guardrails and explicit confirmation step.
 - [ ] **Translation** — auto-translate proposals and comments into the member's preferred language. Important for international orgs and multilingual communities.
 
 ### Environment variables needed
