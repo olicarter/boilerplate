@@ -9,6 +9,7 @@ import { ProposalSignature } from './proposal-signature.entity';
 import { ProposalVersion } from './proposal-version.entity';
 import { ProposalLink, ProposalLinkType } from './proposal-link.entity';
 import { ProposalBoost } from './proposal-boost.entity';
+import { Prediction } from './prediction.entity';
 import { Endorsement } from '../endorsements/endorsement.entity';
 import { Topic } from '../topics/topic.entity';
 import { Vote } from '../votes/vote.entity';
@@ -65,6 +66,8 @@ export class ProposalsService {
     private readonly reactionRepo: Repository<ProposalReaction>,
     @InjectRepository(ProposalBoost)
     private readonly boostRepo: Repository<ProposalBoost>,
+    @InjectRepository(Prediction)
+    private readonly predictionRepo: Repository<Prediction>,
     private readonly dataSource: DataSource,
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
@@ -467,6 +470,7 @@ export class ProposalsService {
       this.slack.postProposalClosed(closedOrg.id, result.item.title, passed ? 'passed' : 'failed', `${appUrl}/orgs/${closedOrg.slug}/proposals/${id}`).catch(() => {});
       this.discord.postProposalClosed(closedOrg.id, result.item.title, passed ? 'passed' : 'failed', `${appUrl}/orgs/${closedOrg.slug}/proposals/${id}`).catch(() => {});
       this.webhooks.dispatch(result.item.organisation_id, 'proposal.closed', { id, title: result.item.title, passed }).catch(() => {});
+      this.resolveMarket(id, passed ? 'pass' : 'fail').catch(() => {});
     }
     return result;
   }
@@ -1401,5 +1405,64 @@ export class ProposalsService {
     const boosts = await this.boostRepo.find({ where: { proposal_id: proposalId } });
     const total = boosts.reduce((sum, b) => sum + b.amount, 0);
     return { total };
+  }
+
+  async getPredictions(proposalId: string, userId: string | null): Promise<{
+    pass_count: number;
+    fail_count: number;
+    pass_confidence: number;
+    fail_confidence: number;
+    user_prediction: Prediction | null;
+  }> {
+    const predictions = await this.predictionRepo.find({ where: { proposal_id: proposalId } });
+    const pass = predictions.filter((p) => p.prediction === 'pass');
+    const fail = predictions.filter((p) => p.prediction === 'fail');
+    const avg = (arr: Prediction[]) => arr.length ? Math.round(arr.reduce((s, p) => s + p.confidence, 0) / arr.length) : 0;
+    const user_prediction = userId ? (predictions.find((p) => p.user_id === userId) ?? null) : null;
+    return {
+      pass_count: pass.length,
+      fail_count: fail.length,
+      pass_confidence: avg(pass),
+      fail_confidence: avg(fail),
+      user_prediction,
+    };
+  }
+
+  async predict(proposalId: string, userId: string, prediction: 'pass' | 'fail', confidence: number): Promise<Prediction> {
+    if (confidence < 1 || confidence > 100) throw new BadRequestException('Confidence must be between 1 and 100');
+    const proposal = await this.proposalRepo.findOneBy({ id: proposalId });
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    if (proposal.status === 'closed') throw new BadRequestException('Cannot predict on a closed proposal');
+
+    const existing = await this.predictionRepo.findOneBy({ proposal_id: proposalId, user_id: userId });
+    if (existing) {
+      await this.predictionRepo.update({ id: existing.id }, { prediction, confidence });
+      return this.predictionRepo.findOneByOrFail({ id: existing.id });
+    }
+    const entity = this.predictionRepo.create({ id: randomUUID(), proposal_id: proposalId, user_id: userId, prediction, confidence });
+    return this.predictionRepo.save(entity);
+  }
+
+  async unpredict(proposalId: string, userId: string): Promise<void> {
+    await this.predictionRepo.delete({ proposal_id: proposalId, user_id: userId });
+  }
+
+  private async resolveMarket(proposalId: string, outcome: 'pass' | 'fail'): Promise<void> {
+    const predictions = await this.predictionRepo.find({ where: { proposal_id: proposalId, resolved: false } });
+    if (!predictions.length) return;
+
+    const correct = predictions.filter((p) => p.prediction === outcome);
+    const incorrect = predictions.filter((p) => p.prediction !== outcome);
+    const totalStake = predictions.reduce((s, p) => s + p.stake, 0);
+    const correctStake = correct.reduce((s, p) => s + p.stake, 0);
+
+    for (const p of correct) {
+      const share = correctStake > 0 ? p.stake / correctStake : 1 / correct.length;
+      const payout = Math.round(totalStake * share);
+      await this.predictionRepo.update({ id: p.id }, { resolved: true, payout });
+    }
+    for (const p of incorrect) {
+      await this.predictionRepo.update({ id: p.id }, { resolved: true, payout: 0 });
+    }
   }
 }

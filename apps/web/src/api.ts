@@ -675,6 +675,35 @@ export const boostsApi = {
     request<{ total: number }>(`/proposals/${proposalId}/boost`, { method: 'DELETE' }),
 };
 
+export interface Prediction {
+  id: string;
+  proposal_id: string;
+  user_id: string;
+  prediction: 'pass' | 'fail';
+  confidence: number;
+  stake: number;
+  resolved: boolean;
+  payout: number | null;
+  created_at: string;
+}
+
+export interface PredictionMarket {
+  pass_count: number;
+  fail_count: number;
+  pass_confidence: number;
+  fail_confidence: number;
+  user_prediction: Prediction | null;
+}
+
+export const predictionsApi = {
+  get: (proposalId: string) =>
+    request<PredictionMarket>(`/proposals/${proposalId}/predictions`),
+  predict: (proposalId: string, prediction: 'pass' | 'fail', confidence: number) =>
+    request<Prediction>(`/proposals/${proposalId}/predict`, { method: 'POST', body: JSON.stringify({ prediction, confidence }) }),
+  unpredict: (proposalId: string) =>
+    request<void>(`/proposals/${proposalId}/predict`, { method: 'DELETE' }),
+};
+
 export const endorsementsApi = {
   list: (proposalId: string) =>
     request<Endorsement[]>(`/proposals/${proposalId}/endorsements`),

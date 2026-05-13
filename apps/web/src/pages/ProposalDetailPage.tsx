@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { v4 as uuid } from 'uuid';
 import { usersCollection, membershipsCollection } from '../collections';
 import { useOrg } from '../OrgContext';
-import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, boostsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement } from '../api';
+import { proposalsApi, commentsApi, argumentsApi, vetoesApi, endorsementsApi, boostsApi, predictionsApi, orgsApi, votesApi, proposalSignaturesApi, proposalLinksApi, type TallyResult, type DelegationVote, type DelegationChain, type Proposal, type ProposalOption, type ProposalReaction, type ProposalSignature, type ProposalLinkItem, type Topic, type Vote, type User, type Comment, type CommentReaction, type ProposalVersion, type Membership, type Argument, type Veto, type Endorsement, type PredictionMarket } from '../api';
 import { VoteTally } from '../components/VoteTally';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { EmptyState } from '../components/EmptyState';
@@ -145,6 +145,8 @@ export function ProposalDetailPage() {
   const [boostTotal, setBoostTotal] = useState<number>(0);
   const [userBoostAmount, setUserBoostAmount] = useState<number | null>(null);
   const [boosting, setBoosting] = useState(false);
+  const [predictionMarket, setPredictionMarket] = useState<PredictionMarket | null>(null);
+  const [predicting, setPredicting] = useState(false);
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -222,6 +224,7 @@ export function ProposalDetailPage() {
     fetchVetoes();
     fetchEndorsements();
     boostsApi.get(id).then((r) => { setBoostTotal(r.total); setUserBoostAmount(r.user_amount); }).catch(() => {});
+    predictionsApi.get(id).then(setPredictionMarket).catch(() => {});
     proposalsApi.versions(id).then(setVersions).catch(() => setVersions([]));
     orgsApi.get(org.slug).then((o) => setMinEndorsementsLive(o.min_endorsements ?? 0)).catch(() => {});
     proposalsApi.listReactions(id).then(setReactions).catch(() => {});
@@ -1313,6 +1316,104 @@ export function ProposalDetailPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Prediction market */}
+      {predictionMarket && currentUser && myMembership && !isDiscussion && (
+        <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.75rem 1.25rem', marginBottom: '1.5rem', background: '#f9f9f9' }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: '0.5rem' }}>Community Prediction</div>
+          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem', fontSize: 13 }}>
+            <span style={{ color: '#2d9a4e' }}>Pass: {predictionMarket.pass_count} ({predictionMarket.pass_confidence}% avg confidence)</span>
+            <span style={{ color: '#c0392b' }}>Fail: {predictionMarket.fail_count} ({predictionMarket.fail_confidence}% avg confidence)</span>
+          </div>
+          {(isOpen || isDraft) && (
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {!predictionMarket.user_prediction ? (
+                <>
+                  <span style={{ fontSize: 12, color: '#666' }}>Your prediction:</span>
+                  <button
+                    type="button"
+                    disabled={predicting}
+                    onClick={async () => {
+                      setPredicting(true);
+                      try {
+                        const r = await predictionsApi.predict(id, 'pass', 70);
+                        setPredictionMarket((m) => m ? { ...m, user_prediction: r, pass_count: m.pass_count + 1 } : m);
+                        addToast('Predicted: Pass', 'success');
+                      } catch (err) {
+                        addToast(err instanceof Error ? err.message : 'Failed to predict', 'error');
+                      } finally {
+                        setPredicting(false);
+                      }
+                    }}
+                    style={{ fontSize: 12, padding: '0.25rem 0.75rem', cursor: 'pointer', background: '#2d9a4e', color: '#fff', border: 'none', borderRadius: 4 }}
+                  >
+                    Will pass
+                  </button>
+                  <button
+                    type="button"
+                    disabled={predicting}
+                    onClick={async () => {
+                      setPredicting(true);
+                      try {
+                        const r = await predictionsApi.predict(id, 'fail', 70);
+                        setPredictionMarket((m) => m ? { ...m, user_prediction: r, fail_count: m.fail_count + 1 } : m);
+                        addToast('Predicted: Fail', 'success');
+                      } catch (err) {
+                        addToast(err instanceof Error ? err.message : 'Failed to predict', 'error');
+                      } finally {
+                        setPredicting(false);
+                      }
+                    }}
+                    style={{ fontSize: 12, padding: '0.25rem 0.75rem', cursor: 'pointer', background: '#c0392b', color: '#fff', border: 'none', borderRadius: 4 }}
+                  >
+                    Will fail
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: 12, color: '#666' }}>
+                    Your prediction: <strong style={{ color: predictionMarket.user_prediction.prediction === 'pass' ? '#2d9a4e' : '#c0392b' }}>
+                      {predictionMarket.user_prediction.prediction === 'pass' ? 'Pass' : 'Fail'}
+                    </strong>
+                    {predictionMarket.user_prediction.resolved && (
+                      <span style={{ marginInlineStart: '0.5rem', color: predictionMarket.user_prediction.payout && predictionMarket.user_prediction.payout > 0 ? '#2d9a4e' : '#888' }}>
+                        {predictionMarket.user_prediction.payout && predictionMarket.user_prediction.payout > 0 ? `✓ Correct (+${predictionMarket.user_prediction.payout - predictionMarket.user_prediction.stake})` : '✗ Incorrect'}
+                      </span>
+                    )}
+                  </span>
+                  {!predictionMarket.user_prediction.resolved && (
+                    <button
+                      type="button"
+                      disabled={predicting}
+                      onClick={async () => {
+                        setPredicting(true);
+                        try {
+                          await predictionsApi.unpredict(id);
+                          const prev = predictionMarket.user_prediction!;
+                          setPredictionMarket((m) => m ? {
+                            ...m,
+                            user_prediction: null,
+                            pass_count: prev.prediction === 'pass' ? m.pass_count - 1 : m.pass_count,
+                            fail_count: prev.prediction === 'fail' ? m.fail_count - 1 : m.fail_count,
+                          } : m);
+                          addToast('Prediction removed', 'info');
+                        } catch (err) {
+                          addToast(err instanceof Error ? err.message : 'Failed to remove prediction', 'error');
+                        } finally {
+                          setPredicting(false);
+                        }
+                      }}
+                      style={{ fontSize: 12, padding: '0.25rem 0.75rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4, color: '#888' }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 

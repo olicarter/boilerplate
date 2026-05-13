@@ -317,4 +317,26 @@ export class ProposalsController {
   unboost(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.proposalsService.unboost(id, req.user!.id);
   }
+
+  @Get(':id/predictions')
+  @UseGuards(AuthGuard)
+  getPredictions(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.getPredictions(id, req.user?.id ?? null);
+  }
+
+  @Post(':id/predict')
+  @UseGuards(AuthGuard)
+  predict(
+    @Param('id') id: string,
+    @Body() body: { prediction: 'pass' | 'fail'; confidence: number },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.proposalsService.predict(id, req.user!.id, body.prediction, body.confidence ?? 50);
+  }
+
+  @Delete(':id/predict')
+  @UseGuards(AuthGuard)
+  unpredict(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.proposalsService.unpredict(id, req.user!.id);
+  }
 }
