@@ -160,6 +160,16 @@ export function ProposalDetailPage() {
   const [interpretingVote, setInterpretingVote] = useState(false);
   const [interpretedVote, setInterpretedVote] = useState<InterpretedVote | null>(null);
   const [replyBody, setReplyBody] = useState('');
+  const [translatedDescription, setTranslatedDescription] = useState<string | null>(null);
+  const [translatingDescription, setTranslatingDescription] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translatedComments, setTranslatedComments] = useState<Record<string, string>>({});
+  const [translatingComments, setTranslatingComments] = useState<Set<string>>(new Set());
+  const browserLanguage = (() => {
+    try {
+      return new Intl.DisplayNames(['en'], { type: 'language' }).of(navigator.language.split('-')[0]) ?? null;
+    } catch { return null; }
+  })();
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -1120,9 +1130,39 @@ export function ProposalDetailPage() {
                       {rewriting ? 'Rewriting…' : '✦ Plain language'}
                     </button>
                   )}
+                  {browserLanguage && !translatedDescription && (
+                    <button
+                      type="button"
+                      disabled={translatingDescription}
+                      onClick={async () => {
+                        setTranslatingDescription(true);
+                        try {
+                          const r = await aiApi.translate(`${proposal.title}\n\n${proposal.description ?? ''}`, browserLanguage);
+                          setTranslatedDescription(r.translated);
+                          setShowTranslation(true);
+                        } catch (err) {
+                          addToast(err instanceof Error ? err.message : 'Failed to translate', 'error');
+                        } finally {
+                          setTranslatingDescription(false);
+                        }
+                      }}
+                      style={{ fontSize: 11, padding: '0.15rem 0.5rem', border: '1px solid #ddd', borderRadius: 4, background: 'transparent', color: '#888', cursor: 'pointer' }}
+                    >
+                      {translatingDescription ? 'Translating…' : `✦ Translate to ${browserLanguage}`}
+                    </button>
+                  )}
+                  {translatedDescription && (
+                    <button
+                      type="button"
+                      onClick={() => setShowTranslation((v) => !v)}
+                      style={{ fontSize: 11, padding: '0.15rem 0.5rem', border: '1px solid #ddd', borderRadius: 4, background: showTranslation ? '#111' : 'transparent', color: showTranslation ? '#fff' : '#888', cursor: 'pointer' }}
+                    >
+                      {showTranslation ? 'Original' : `${browserLanguage}`}
+                    </button>
+                  )}
                 </div>
               )}
-              <MarkdownContent content={showPlainLanguage && plainLanguage ? plainLanguage : proposal.description} />
+              <MarkdownContent content={showTranslation && translatedDescription ? translatedDescription : showPlainLanguage && plainLanguage ? plainLanguage : proposal.description} />
             </div>
           )}
           {versions !== null && versions.length > 0 && (
@@ -2929,7 +2969,7 @@ export function ProposalDetailPage() {
                         ) : (
                           <>
                             <div style={{ fontSize: 14, color: '#333', lineHeight: 1.5 }}>
-                              <MarkdownContent content={c.body} />
+                              <MarkdownContent content={translatedComments[c.id] ?? c.body} />
                             </div>
                             <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                               {currentUser && (
@@ -2939,6 +2979,35 @@ export function ProposalDetailPage() {
                                   style={{ fontSize: 11, padding: '1px 6px', border: '1px solid #e0e0e0', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: '#555' }}
                                 >
                                   Reply
+                                </button>
+                              )}
+                              {browserLanguage && !translatedComments[c.id] && (
+                                <button
+                                  type="button"
+                                  disabled={translatingComments.has(c.id)}
+                                  onClick={async () => {
+                                    setTranslatingComments((prev) => new Set(prev).add(c.id));
+                                    try {
+                                      const r = await aiApi.translate(c.body, browserLanguage);
+                                      setTranslatedComments((prev) => ({ ...prev, [c.id]: r.translated }));
+                                    } catch {
+                                      // silent fail on comment translation
+                                    } finally {
+                                      setTranslatingComments((prev) => { const next = new Set(prev); next.delete(c.id); return next; });
+                                    }
+                                  }}
+                                  style={{ fontSize: 11, padding: '1px 6px', border: '1px solid #e0e0e0', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: '#aaa' }}
+                                >
+                                  {translatingComments.has(c.id) ? '…' : 'Translate'}
+                                </button>
+                              )}
+                              {translatedComments[c.id] && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTranslatedComments((prev) => { const next = { ...prev }; delete next[c.id]; return next; })}
+                                  style={{ fontSize: 11, padding: '1px 6px', border: '1px solid #e0e0e0', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: '#aaa' }}
+                                >
+                                  Original
                                 </button>
                               )}
                               {['👍', '👎', '❤️', '🤔'].map((emoji) => {

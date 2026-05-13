@@ -353,7 +353,7 @@ SLACK_SIGNING_SECRET=
 - [x] **Argument clustering** — group semantically similar for/against comments and vote rationales into themes (e.g. "Cost concerns", "Implementation risk"). Surfaces consensus and minority views at a glance.
 - [x] **Natural language proposal creation** — author describes what they want in plain text; the AI drafts a structured proposal (title, description, suggested vote type, suggested threshold). Author reviews and edits before publishing.
 - [x] **Natural language voting interface** — members can type "I want to vote yes because X" and the platform interprets intent, casts the vote, and saves the rationale. Needs careful guardrails and explicit confirmation step.
-- [ ] **Translation** — auto-translate proposals and comments into the member's preferred language. Important for international orgs and multilingual communities.
+- [x] **Translation** — auto-translate proposals and comments into the member's preferred language. Important for international orgs and multilingual communities.
 
 ### Environment variables needed
 ```
@@ -366,15 +366,15 @@ ANTHROPIC_API_KEY=    # https://console.anthropic.com
 
 > Ripple should feel right for a DAO, a co-op, a school board, and a company all without configuration burden. The approach: a short onboarding questionnaire sets sensible defaults; everything remains adjustable in admin settings.
 
-- [ ] **Organisation type selector** — during org creation, choose from: Company, Co-operative, Community group, DAO / Web3, Non-profit, Other. Each type sets a default profile (see below).
-- [ ] **Complexity tier** — a "how powerful do you need this?" slider (Simple / Standard / Advanced) shown during onboarding. Controls which features are visible in the UI by default — e.g. Simple hides delegation, quadratic voting, conviction voting, and constitutional proposals.
-- [ ] **Feature visibility settings** — per-org toggles in admin to show/hide: delegation, weighted voting, quadratic voting, ranked choice, conviction voting, proposal boosting, sentiment poll, arguments section. Defaults set by org type + complexity tier.
-- [ ] **Default org type profiles** — preset bundles of feature flags and vote type defaults:
-  - *Company* — Standard voting, anonymous option on, delegation off, no quorum by default
-  - *Co-operative* — Yes/No voting, delegation on, quorum required, consent voting available
-  - *Community group* — Simple UI, plain-language defaults, email-based auth preferred
-  - *DAO* — All voting types on, quadratic + conviction enabled, boosting on, on-chain export
-  - *Non-profit* — Standard voting, GDPR export prominent, data retention policy prompted
+- [x] **Organisation type selector** — during org creation, choose from: Company, Co-operative, Community group, DAO / Web3, Non-profit, Other. Each type sets a default feature profile.
+- [x] **Complexity tier** — feature toggle approach (user-preferred over a slider): per-feature on/off checkboxes in onboarding and admin settings. Each org type preset sets appropriate defaults.
+- [x] **Feature visibility settings** — per-org toggles in admin to show/hide: delegation, advanced voting, argumentation, proposal queue, sentiment poll. Defaults set by org type.
+- [x] **Default org type profiles** — preset bundles of feature flags per org type:
+  - *Company* — delegation off, advanced voting off, arguments on, sentiment on
+  - *Co-operative* — delegation on, arguments on
+  - *Community group* — all optional features off for simplicity
+  - *DAO* — all features on
+  - *Non-profit* — delegation off, advanced voting off, arguments on
 
 ---
 

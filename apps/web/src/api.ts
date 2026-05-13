@@ -828,4 +828,6 @@ export const aiApi = {
     request<ProposalDraft>('/ai/draft-proposal', { method: 'POST', body: JSON.stringify({ description }) }),
   interpretVote: (proposal_id: string, input: string) =>
     request<InterpretedVote>('/ai/interpret-vote', { method: 'POST', body: JSON.stringify({ proposal_id, input }) }),
+  translate: (text: string, targetLanguage: string) =>
+    request<{ translated: string }>('/ai/translate', { method: 'POST', body: JSON.stringify({ text, target_language: targetLanguage }) }),
 };

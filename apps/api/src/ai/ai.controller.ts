@@ -52,4 +52,12 @@ export class AiController {
     if (!proposal) throw new NotFoundException('Proposal not found');
     return this.aiService.interpretVote(proposal.title, proposal.description ?? '', body.input);
   }
+
+  @Post('translate')
+  async translate(@Body() body: { text: string; target_language: string }): Promise<{ translated: string }> {
+    if (!body.text?.trim()) throw new NotFoundException('Text is required');
+    if (!body.target_language?.trim()) throw new NotFoundException('Target language is required');
+    const translated = await this.aiService.translate(body.text, body.target_language);
+    return { translated };
+  }
 }

@@ -103,4 +103,12 @@ export class AiService {
       return { choice: 'abstain', rationale: input, confidence: 0 };
     }
   }
+
+  async translate(text: string, targetLanguage: string): Promise<string> {
+    return this.call(
+      `Translate the following text into ${targetLanguage}. Preserve any markdown formatting. Return only the translated text, no preamble or explanation.\n\n${text}`,
+      'You are a professional translator. Translate text accurately while preserving formatting, tone, and meaning.',
+      2048,
+    );
+  }
 }
