@@ -147,6 +147,8 @@ export function ProposalDetailPage() {
   const [boosting, setBoosting] = useState(false);
   const [predictionMarket, setPredictionMarket] = useState<PredictionMarket | null>(null);
   const [predicting, setPredicting] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState('');
 
   const proposal = (allProposals ?? []).find((p: Proposal) => p.id === id);
   const topic = proposal
@@ -462,14 +464,18 @@ export function ProposalDetailPage() {
   const result = proposal.status === 'closed' && tally && !isApproval && !isScoreVoting && !isRankedChoice
     ? computeResult(tally, threshold, proposal.quorum_type as 'soft' | 'hard', vetoes.length > 0, proposal.proposal_type)
     : null;
-  const comments = (allComments ?? [])
-    .filter((c: Comment) => c.proposal_id === id)
+  const allProposalComments = (allComments ?? []).filter((c: Comment) => c.proposal_id === id);
+  const comments = allProposalComments
+    .filter((c: Comment) => !c.parent_comment_id)
     .sort((a: Comment, b: Comment) => {
-      // Pinned first, then chronological
       if (a.pinned_at && !b.pinned_at) return -1;
       if (!a.pinned_at && b.pinned_at) return 1;
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
+  const repliesFor = (parentId: string) =>
+    allProposalComments
+      .filter((c: Comment) => c.parent_comment_id === parentId)
+      .sort((a: Comment, b: Comment) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const proposalArguments = (allArguments ?? [])
     .filter((a: Argument) => a.proposal_id === id)
     .sort((a: Argument, b: Argument) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -527,13 +533,25 @@ export function ProposalDetailPage() {
     }
   }
 
-  function quoteReply(body: string) {
-    const quoted = body
-      .split('\n')
-      .map((line) => `> ${line}`)
-      .join('\n');
-    setCommentBody((prev) => (prev ? `${prev}\n\n${quoted}\n\n` : `${quoted}\n\n`));
-    requestAnimationFrame(() => commentTextareaRef.current?.focus());
+  async function postReply(parentId: string, e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentUser || !replyBody.trim()) return;
+    try {
+      const tx = commentsCollection.insert({
+        id: uuid(),
+        proposal_id: id,
+        organisation_id: org.id,
+        author_id: currentUser.id,
+        body: replyBody.trim(),
+        parent_comment_id: parentId,
+        created_at: new Date().toISOString(),
+      } as Comment);
+      await tx.isPersisted.promise;
+      setReplyBody('');
+      setReplyingToId(null);
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to post reply', 'error');
+    }
   }
 
   async function deleteComment(commentId: string) {
@@ -2601,7 +2619,7 @@ export function ProposalDetailPage() {
       {/* Comments */}
       <div style={{ marginTop: '2.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
         <h3 style={{ margin: '0 0 1rem', fontSize: 14, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Discussion ({comments.length})
+          Discussion ({allProposalComments.length})
         </h3>
 
         {comments.length === 0 && (
@@ -2736,8 +2754,7 @@ export function ProposalDetailPage() {
                               {currentUser && (
                                 <button
                                   type="button"
-                                  data-testid="quote-reply-btn"
-                                  onClick={() => quoteReply(c.body)}
+                                  onClick={() => { setReplyingToId(replyingToId === c.id ? null : c.id); setReplyBody(''); }}
                                   style={{ fontSize: 11, padding: '1px 6px', border: '1px solid #e0e0e0', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: '#555' }}
                                 >
                                   Reply
@@ -2776,6 +2793,58 @@ export function ProposalDetailPage() {
                           </>
                         )}
                       </>
+                    )}
+                    {/* Threaded replies */}
+                    {(repliesFor(c.id).length > 0 || replyingToId === c.id) && (
+                      <div style={{ marginTop: '0.75rem', borderLeft: '2px solid #e8e8e8', paddingLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {repliesFor(c.id).map((reply: Comment) => {
+                          const replyAuthor = reply.author_id ? userMap[reply.author_id] : undefined;
+                          const isOwnReply = currentUser?.id === reply.author_id;
+                          return (
+                            <div key={reply.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                              <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#e8e8e8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#999', flexShrink: 0 }}>
+                                {replyAuthor ? replyAuthor.name.charAt(0).toUpperCase() : '?'}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                                  <span style={{ fontSize: 13, fontWeight: 600 }}>{replyAuthor?.name ?? 'Unknown'}</span>
+                                  <span style={{ fontSize: 11, color: '#aaa' }}>{formatDate(reply.created_at)}</span>
+                                  {(isOwnReply || isModerator) && (
+                                    <span style={{ marginLeft: 'auto' }}>
+                                      <ConfirmButton
+                                        label="Delete"
+                                        confirmLabel="Yes"
+                                        onConfirm={() => deleteComment(reply.id)}
+                                        style={{ fontSize: 11, padding: '0.1rem 0.4rem', color: '#aaa', border: '1px solid #e0e0e0', background: 'none', borderRadius: 3, cursor: 'pointer' }}
+                                        confirmStyle={{ background: 'none', border: '1px solid #ddd', borderRadius: 3, color: '#d94040' }}
+                                      />
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: 13, color: '#333', lineHeight: 1.5 }}>
+                                  <MarkdownContent content={reply.body} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {replyingToId === c.id && (
+                          <form onSubmit={(e) => postReply(c.id, e)} style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
+                            <textarea
+                              autoFocus
+                              value={replyBody}
+                              onChange={(e) => setReplyBody(e.target.value.slice(0, COMMENT_MAX))}
+                              placeholder="Write a reply…"
+                              rows={2}
+                              style={{ flex: 1, padding: '0.35rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4, resize: 'vertical' }}
+                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              <button type="submit" disabled={!replyBody.trim()} style={{ fontSize: 12, padding: '0.25rem 0.6rem', cursor: 'pointer', background: '#111', color: '#fff', border: 'none', borderRadius: 4 }}>Post</button>
+                              <button type="button" onClick={() => setReplyingToId(null)} style={{ fontSize: 12, padding: '0.25rem 0.6rem', cursor: 'pointer', background: 'none', border: '1px solid #ddd', borderRadius: 4 }}>Cancel</button>
+                            </div>
+                          </form>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

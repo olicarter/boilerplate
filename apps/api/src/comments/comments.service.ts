@@ -41,6 +41,7 @@ export class CommentsService {
     proposal_id: string;
     author_id: string;
     body: string;
+    parent_comment_id?: string | null;
   }): Promise<{ item: Comment; txid: number }> {
     if (!data.body.trim()) throw new BadRequestException('Comment body is required');
     if (data.body.length > BODY_MAX) throw new BadRequestException(`Comment exceeds ${BODY_MAX} characters`);

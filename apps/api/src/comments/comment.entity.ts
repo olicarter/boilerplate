@@ -31,4 +31,7 @@ export class Comment {
 
   @Column({ name: 'pinned_at', type: 'timestamptz', nullable: true, default: null })
   pinned_at!: Date | null;
+
+  @Column({ name: 'parent_comment_id', type: 'uuid', nullable: true, default: null })
+  parent_comment_id!: string | null;
 }

@@ -603,6 +603,7 @@ export interface Comment {
   hidden_by: string | null;
   hidden_reason: string | null;
   pinned_at: string | null;
+  parent_comment_id: string | null;
   [key: string]: unknown;
 }
 
@@ -626,7 +627,7 @@ export interface ProposalVersion {
 }
 
 export const commentsApi = {
-  create: (proposalId: string, data: { id: string; body: string }) =>
+  create: (proposalId: string, data: { id: string; body: string; parent_comment_id?: string | null }) =>
     request<MutationResult<Comment>>(`/proposals/${proposalId}/comments`, { method: 'POST', body: JSON.stringify(data) }),
   edit: (id: string, body: string) =>
     request<MutationResult<Comment>>(`/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) }),

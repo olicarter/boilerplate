@@ -15,7 +15,7 @@ export class CommentsController {
   @UseGuards(AuthGuard)
   create(
     @Param('proposalId') proposalId: string,
-    @Body() body: { id: string; body: string },
+    @Body() body: { id: string; body: string; parent_comment_id?: string | null },
     @Req() req: AuthenticatedRequest,
   ) {
     return this.commentsService.create({
@@ -23,6 +23,7 @@ export class CommentsController {
       proposal_id: proposalId,
       author_id: req.user!.id,
       body: body.body,
+      parent_comment_id: body.parent_comment_id ?? null,
     });
   }
 
