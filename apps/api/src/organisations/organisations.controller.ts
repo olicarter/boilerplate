@@ -78,6 +78,16 @@ export class OrganisationsController {
     return this.orgsService.update(slug, body, req.user!.id);
   }
 
+  @Post(':slug/nonprofit')
+  @UseGuards(AuthGuard)
+  applyNonprofit(
+    @Param('slug') slug: string,
+    @Body() body: { nonprofit_name: string; nonprofit_registration_number?: string; nonprofit_country?: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.orgsService.applyNonprofit(slug, req.user!.id, body);
+  }
+
   @Delete(':slug')
   @UseGuards(AuthGuard)
   delete(@Param('slug') slug: string, @Req() req: AuthenticatedRequest) {

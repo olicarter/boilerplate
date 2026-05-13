@@ -27,7 +27,7 @@ export class BillingService {
   }
 
   async getStatus(orgId: string): Promise<{
-    plan: 'free' | 'pro';
+    plan: 'free' | 'pro' | 'nonprofit';
     memberCount: number;
     memberLimit: number | null;
     canUpgrade: boolean;
@@ -36,10 +36,11 @@ export class BillingService {
     const memberCount = await this.memberRepo.count({
       where: { organisation_id: orgId, status: 'approved' as any },
     });
+    const isPaid = org.plan === 'pro' || org.plan === 'nonprofit';
     return {
-      plan: org.plan ?? 'free',
+      plan: (org.plan as 'free' | 'pro' | 'nonprofit') ?? 'free',
       memberCount,
-      memberLimit: org.plan === 'pro' ? null : FREE_MEMBER_LIMIT,
+      memberLimit: isPaid ? null : FREE_MEMBER_LIMIT,
       canUpgrade: !!this.stripe && !!process.env.STRIPE_PRO_PRICE_ID,
     };
   }
@@ -53,7 +54,7 @@ export class BillingService {
     if (membership?.role !== 'admin') throw new ForbiddenException('Admin only');
 
     const org = await this.orgRepo.findOneByOrFail({ id: orgId });
-    if (org.plan === 'pro') throw new BadRequestException('Already on Pro plan');
+    if (org.plan === 'pro' || org.plan === 'nonprofit') throw new BadRequestException('Already on Pro plan');
 
     let customerId = org.stripe_customer_id ?? undefined;
     if (!customerId) {

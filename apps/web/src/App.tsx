@@ -40,6 +40,8 @@ import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { MagicLinkPage } from './pages/MagicLinkPage';
 import { UnsubscribePage } from './pages/UnsubscribePage';
 import { EmbedProposalPage } from './pages/EmbedProposalPage';
+import { VoteConfirmedPage } from './pages/VoteConfirmedPage';
+import { SetupPage } from './pages/SetupPage';
 import { OrgProvider } from './OrgContext';
 import styles from './styles/Shell.module.css';
 
@@ -777,9 +779,21 @@ const embedProposalRoute = createRoute({
   component: EmbedProposalPage,
 });
 
+const voteConfirmedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/vote-confirmed',
+  component: VoteConfirmedPage,
+});
+
+const setupRoute = createRoute({
+  getParentRoute: () => orgLayout,
+  path: '/setup',
+  component: SetupPage,
+});
+
 const routeTree = rootRoute.addChildren([
   globalLayout.addChildren([indexRoute, settingsRoute]),
-  orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute, decisionRecordRoute]),
+  orgLayout.addChildren([orgIndexRoute, proposalsRoute, proposalDetailRoute, delegationsRoute, delegationNetworkRoute, membersRoute, userProfileRoute, joinRoute, activityRoute, adminRoute, decisionRecordRoute, setupRoute]),
   publicResultsRoute,
   verifyEmailRoute,
   pricingRoute,
@@ -787,6 +801,7 @@ const routeTree = rootRoute.addChildren([
   magicLinkRoute,
   unsubscribeRoute,
   embedProposalRoute,
+  voteConfirmedRoute,
 ]);
 
 const router = createRouter({ routeTree });

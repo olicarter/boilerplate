@@ -175,6 +175,27 @@ export class OrganisationsService {
     return result;
   }
 
+  async applyNonprofit(
+    slug: string,
+    actorId: string,
+    data: { nonprofit_name: string; nonprofit_registration_number?: string; nonprofit_country?: string },
+  ): Promise<{ item: Organisation; txid: number }> {
+    const org = await this.findBySlug(slug);
+    await this.requireRole(org.id, actorId, ['admin']);
+    if (!data.nonprofit_name.trim()) throw new BadRequestException('Organisation name is required');
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Organisation, org.id, {
+        plan: 'nonprofit',
+        nonprofit_name: data.nonprofit_name.trim(),
+        nonprofit_registration_number: data.nonprofit_registration_number?.trim() ?? null,
+        nonprofit_country: data.nonprofit_country?.trim() ?? null,
+      });
+      const item = await manager.findOneByOrFail(Organisation, { id: org.id });
+      const [row] = await manager.query(`SELECT pg_current_xact_id()::text AS txid`);
+      return { item, txid: parseInt(row.txid, 10) };
+    });
+  }
+
   async delete(slug: string, userId: string): Promise<{ txid: number }> {
     const org = await this.findBySlug(slug);
     await this.requireRole(org.id, userId, ['admin']);

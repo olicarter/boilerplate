@@ -119,7 +119,7 @@ export function OrgListPage() {
       setDescription('');
       setOrgType(null);
       setFeatures(DEFAULT_FEATURES);
-      navigate({ to: '/orgs/$slug', params: { slug: result.item.slug } });
+      navigate({ to: '/orgs/$slug/setup', params: { slug: result.item.slug } });
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed to create organisation', 'error');
     } finally {

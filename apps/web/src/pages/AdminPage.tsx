@@ -116,7 +116,11 @@ export function AdminPage() {
   const [auditLogLoading, setAuditLogLoading] = useState(true);
   const [analytics, setAnalytics] = useState<OrgAnalytics | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const [billingStatus, setBillingStatus] = useState<{ plan: 'free' | 'pro'; memberCount: number; memberLimit: number | null; canUpgrade: boolean } | null>(null);
+  const [billingStatus, setBillingStatus] = useState<{ plan: 'free' | 'pro' | 'nonprofit'; memberCount: number; memberLimit: number | null; canUpgrade: boolean } | null>(null);
+  const [nonprofitName, setNonprofitName] = useState('');
+  const [nonprofitRegNumber, setNonprofitRegNumber] = useState('');
+  const [nonprofitCountry, setNonprofitCountry] = useState('');
+  const [applyingNonprofit, setApplyingNonprofit] = useState(false);
   const [upgradingToStripe, setUpgradingToStripe] = useState(false);
   const [managingBilling, setManagingBilling] = useState(false);
   const [slackChannels, setSlackChannels] = useState<Array<{ id: string; name: string }> | null>(null);
@@ -176,6 +180,12 @@ export function AdminPage() {
   const [importJson, setImportJson] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ created: number; errors: Array<{ index: number; message: string }> } | null>(null);
+
+  useEffect(() => {
+    if ((org as { nonprofit_name?: string | null }).nonprofit_name) setNonprofitName((org as { nonprofit_name?: string | null }).nonprofit_name!);
+    if ((org as { nonprofit_registration_number?: string | null }).nonprofit_registration_number) setNonprofitRegNumber((org as { nonprofit_registration_number?: string | null }).nonprofit_registration_number!);
+    if ((org as { nonprofit_country?: string | null }).nonprofit_country) setNonprofitCountry((org as { nonprofit_country?: string | null }).nonprofit_country!);
+  }, [org.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     orgsApi.listAuditLog(org.slug).then(({ items }) => setAuditLog(items)).catch(() => {}).finally(() => setAuditLogLoading(false));
@@ -1775,6 +1785,11 @@ export function AdminPage() {
                   Unlimited members · $29/mo
                 </span>
               )}
+              {billingStatus.plan === 'nonprofit' && (
+                <span style={{ fontSize: 13, color: '#2d9a4e', marginLeft: 8 }}>
+                  Nonprofit — unlimited members, free
+                </span>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {billingStatus.plan === 'free' && billingStatus.canUpgrade && (
@@ -1782,7 +1797,7 @@ export function AdminPage() {
                   {upgradingToStripe ? 'Redirecting…' : 'Upgrade to Pro'}
                 </Button>
               )}
-              {billingStatus.plan === 'pro' && (
+              {(billingStatus.plan === 'pro') && (
                 <Button size="sm" variant="secondary" onClick={handleManageBilling} disabled={managingBilling}>
                   {managingBilling ? 'Redirecting…' : 'Manage billing'}
                 </Button>
@@ -2174,6 +2189,66 @@ export function AdminPage() {
           })}
         </div>
         {savingFeatures && <p className={styles.sectionHint} style={{ margin: 0 }}>Saving…</p>}
+      </section>
+
+      {/* Nonprofit status */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Nonprofit status</h3>
+        {org.plan === 'nonprofit' ? (
+          <div>
+            <p className={styles.sectionHint} style={{ color: '#2d9a4e' }}>✓ This organisation has nonprofit status — all Pro features are included free of charge.</p>
+            <p className={styles.sectionHint}>{(org as { nonprofit_name?: string | null }).nonprofit_name}{(org as { nonprofit_country?: string | null }).nonprofit_country ? ` · ${(org as { nonprofit_country?: string | null }).nonprofit_country}` : ''}</p>
+          </div>
+        ) : (
+          <div>
+            <p className={styles.sectionHint}>Registered charities, nonprofits, and community organisations get all Pro features free. Enter your organisation's registered details to apply.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem', maxWidth: 400 }}>
+              <input
+                type="text"
+                placeholder="Registered organisation name *"
+                value={nonprofitName}
+                onChange={(e) => setNonprofitName(e.target.value)}
+                style={{ padding: '0.4rem 0.6rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+              />
+              <input
+                type="text"
+                placeholder="Charity / registration number (optional)"
+                value={nonprofitRegNumber}
+                onChange={(e) => setNonprofitRegNumber(e.target.value)}
+                style={{ padding: '0.4rem 0.6rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+              />
+              <input
+                type="text"
+                placeholder="Country (optional)"
+                value={nonprofitCountry}
+                onChange={(e) => setNonprofitCountry(e.target.value)}
+                style={{ padding: '0.4rem 0.6rem', fontSize: 13, border: '1px solid #ddd', borderRadius: 4 }}
+              />
+            </div>
+            <button
+              type="button"
+              disabled={applyingNonprofit || !nonprofitName.trim()}
+              onClick={async () => {
+                setApplyingNonprofit(true);
+                try {
+                  await orgsApi.applyNonprofit(org.slug, {
+                    nonprofit_name: nonprofitName,
+                    nonprofit_registration_number: nonprofitRegNumber || undefined,
+                    nonprofit_country: nonprofitCountry || undefined,
+                  });
+                  addToast('Nonprofit status applied', 'success');
+                } catch (err) {
+                  addToast(err instanceof Error ? err.message : 'Failed to apply', 'error');
+                } finally {
+                  setApplyingNonprofit(false);
+                }
+              }}
+              style={{ padding: '0.4rem 1rem', background: '#111', color: '#fff', border: 'none', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}
+            >
+              {applyingNonprofit ? 'Applying…' : 'Apply for nonprofit status'}
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Danger zone */}

@@ -134,17 +134,25 @@ export class EmailService {
     });
   }
 
-  async sendProposalOpen(to: string, proposalTitle: string, proposalUrl: string, from?: string): Promise<void> {
+  async sendProposalOpen(to: string, proposalTitle: string, proposalUrl: string, from?: string, voteUrls?: { yes: string; no: string; abstain: string }): Promise<void> {
+    const voteButtons = voteUrls ? `
+    <p style="margin:16px 0 8px;font-size:13px;color:#888">Or vote directly:</p>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <a href="${voteUrls.yes}" style="display:inline-block;padding:8px 16px;background:#2d9a4e;color:#fff!important;text-decoration:none;border-radius:4px;font-size:13px;font-weight:500">✓ Yes</a>
+      <a href="${voteUrls.no}" style="display:inline-block;padding:8px 16px;background:#c0392b;color:#fff!important;text-decoration:none;border-radius:4px;font-size:13px;font-weight:500">✗ No</a>
+      <a href="${voteUrls.abstain}" style="display:inline-block;padding:8px 16px;background:#888;color:#fff!important;text-decoration:none;border-radius:4px;font-size:13px;font-weight:500">— Abstain</a>
+    </div>
+  ` : '';
     await this.send({
       to, from,
       subject: `New proposal: ${proposalTitle}`,
       html: layout(`
         <p>A new proposal is open for voting in your organisation:</p>
         <p><strong>${proposalTitle}</strong></p>
-        <a href="${proposalUrl}" class="btn">Cast your vote</a>
-        <p>Your voice matters — vote before it closes.</p>
+        <a href="${proposalUrl}" class="btn">View proposal</a>
+        ${voteButtons}
       `),
-      text: `New proposal: ${proposalTitle}\n\nVote here: ${proposalUrl}`,
+      text: `New proposal: ${proposalTitle}\n\nView and vote: ${proposalUrl}`,
     });
   }
 

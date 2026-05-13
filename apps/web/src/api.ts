@@ -112,7 +112,10 @@ export interface Organisation {
     threshold: number;
   }>;
   allowed_email_domains: string[];
-  plan: 'free' | 'pro';
+  plan: 'free' | 'pro' | 'nonprofit';
+  nonprofit_name: string | null;
+  nonprofit_registration_number: string | null;
+  nonprofit_country: string | null;
   stripe_customer_id: string | null;
   slack_team_id: string | null;
   slack_team_name: string | null;
@@ -373,6 +376,8 @@ export const orgsApi = {
     request<{ success: boolean; org_name: string }>(`/orgs/unsubscribe?token=${encodeURIComponent(token)}`),
   allocateCredits: (slug: string) =>
     request<{ count: number }>(`/orgs/${slug}/credits/allocate`, { method: 'POST' }),
+  applyNonprofit: (slug: string, data: { nonprofit_name: string; nonprofit_registration_number?: string; nonprofit_country?: string }) =>
+    request<MutationResult<Organisation>>(`/orgs/${slug}/nonprofit`, { method: 'POST', body: JSON.stringify(data) }),
   exportDecisionRecord: async (slug: string): Promise<void> => {
     const res = await fetch(`/api/orgs/${slug}/decisions/export`, { credentials: 'include' });
     if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -436,7 +441,7 @@ export const apiKeysApi = {
 
 export const billingApi = {
   getStatus: (orgId: string) =>
-    request<{ plan: 'free' | 'pro'; memberCount: number; memberLimit: number | null; canUpgrade: boolean }>(`/billing/${orgId}/status`),
+    request<{ plan: 'free' | 'pro' | 'nonprofit'; memberCount: number; memberLimit: number | null; canUpgrade: boolean }>(`/billing/${orgId}/status`),
   createCheckout: (orgId: string, returnUrl: string) =>
     request<{ url: string }>(`/billing/${orgId}/checkout`, { method: 'POST', body: JSON.stringify({ return_url: returnUrl }) }),
   createPortal: (orgId: string, returnUrl: string) =>

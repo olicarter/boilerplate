@@ -63,7 +63,7 @@ export class Organisation {
   allowed_email_domains!: string[];
 
   @Column({ type: 'text', default: 'free' })
-  plan!: 'free' | 'pro';
+  plan!: 'free' | 'pro' | 'nonprofit';
 
   @Column({ name: 'slack_team_id', type: 'text', nullable: true, default: null })
   slack_team_id!: string | null;
@@ -142,6 +142,15 @@ export class Organisation {
 
   @Column({ name: 'org_type', type: 'varchar', length: 30, nullable: true, default: null })
   org_type!: string | null;
+
+  @Column({ name: 'nonprofit_name', type: 'text', nullable: true, default: null })
+  nonprofit_name!: string | null;
+
+  @Column({ name: 'nonprofit_registration_number', type: 'text', nullable: true, default: null })
+  nonprofit_registration_number!: string | null;
+
+  @Column({ name: 'nonprofit_country', type: 'text', nullable: true, default: null })
+  nonprofit_country!: string | null;
 
   @Column({ name: 'features', type: 'jsonb', default: {} })
   features!: {

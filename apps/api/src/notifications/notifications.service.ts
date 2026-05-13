@@ -4,6 +4,7 @@ import { DataSource, IsNull, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Notification, NotificationType } from './notification.entity';
 import { EmailService } from '../email/email.service';
+import { generateVoteEmailToken } from '../votes/votes.service';
 
 @Injectable()
 export class NotificationsService {
@@ -28,6 +29,7 @@ export class NotificationsService {
     orgId: string | null | undefined,
     targetId: string | null | undefined,
     metadata: Record<string, unknown>,
+    userId?: string,
   ): Promise<void> {
     try {
       const proposalTitle = String(metadata.proposalTitle ?? metadata.title ?? '');
@@ -48,7 +50,15 @@ export class NotificationsService {
       const url = this.proposalUrl(orgSlug, proposalId);
 
       if (type === 'proposal.opened') {
-        await this.emailService.sendProposalOpen(userEmail, proposalTitle, url, from);
+        let voteUrls: { yes: string; no: string; abstain: string } | undefined;
+        if (userId && proposalId) {
+          const makeVoteUrl = (choice: string) => {
+            const token = generateVoteEmailToken(proposalId, userId, choice);
+            return `${this.appUrl}/api/votes/by-email?proposal_id=${proposalId}&user_id=${userId}&choice=${choice}&token=${token}`;
+          };
+          voteUrls = { yes: makeVoteUrl('yes'), no: makeVoteUrl('no'), abstain: makeVoteUrl('abstain') };
+        }
+        await this.emailService.sendProposalOpen(userEmail, proposalTitle, url, from, voteUrls);
       } else if (type === 'proposal.closed') {
         const outcome = String(metadata.outcome ?? 'closed');
         await this.emailService.sendProposalClosed(userEmail, proposalTitle, outcome, url, undefined, from);
@@ -109,7 +119,7 @@ export class NotificationsService {
     if (this.EMAIL_NOTIFICATION_TYPES.has(data.type)) {
       const rows: { email: string }[] = await this.dataSource.query(`SELECT email FROM users WHERE id = $1`, [data.userId]);
       if (rows[0]?.email && await this.emailEnabledForMember(data.userId, data.orgId)) {
-        await this.sendEmailForNotification(rows[0].email, data.type, data.orgId, data.targetId, data.metadata ?? {});
+        await this.sendEmailForNotification(rows[0].email, data.type, data.orgId, data.targetId, data.metadata ?? {}, data.userId);
       }
     }
   }
@@ -167,7 +177,7 @@ export class NotificationsService {
         emailBatch.map((n) => {
           const email = emailMap[n.userId];
           const enabled = prefEnabled.get(prefKey(n.userId, n.orgId)) !== false;
-          return email && enabled ? this.sendEmailForNotification(email, n.type, n.orgId, n.targetId, n.metadata ?? {}) : Promise.resolve();
+          return email && enabled ? this.sendEmailForNotification(email, n.type, n.orgId, n.targetId, n.metadata ?? {}, n.userId) : Promise.resolve();
         }),
       );
     }
